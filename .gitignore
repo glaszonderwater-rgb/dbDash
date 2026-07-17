@@ -1,0 +1,5 @@
+# Niets met persoonlijke data of geheimen mag in git terechtkomen.
+.cache/
+*.local
+.streamlit/secrets.toml
+.DS_Store
