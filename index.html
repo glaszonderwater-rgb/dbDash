@@ -150,6 +150,12 @@ h2.sect::after{content:"";flex:1;height:1px;background:var(--line)}
 .muted{color:var(--muted);font-size:.76rem;line-height:1.5}
 .qa{padding:.7rem 0;border-top:1px solid var(--line)} .qa:first-child{border-top:0;padding-top:0}
 .qa .q{font-weight:650;font-size:.92rem;color:var(--ink)} .qa .a{font-size:.86rem;color:var(--muted);margin-top:.2rem;line-height:1.5} .qa .a b{color:var(--ink);font-weight:600}
+.prof3{display:grid;grid-template-columns:repeat(3,1fr);gap:.5rem;margin-top:.8rem}
+.pcol{border:1px solid var(--line);border-radius:.6rem;padding:.55rem .5rem;background:var(--bg)}
+.pcol .ph{font-size:.64rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:.35rem}
+.prow{display:flex;justify-content:space-between;align-items:baseline;font-size:.82rem;padding:.12rem 0}
+.prow span{color:var(--muted);font-family:var(--mono);font-size:.72rem} .prow b{color:var(--ink);font-weight:650}
+.pcol .pu{font-size:.64rem;color:var(--muted);margin-top:.35rem;text-align:right}
 .empty{font-family:var(--mono);font-size:.8rem;color:var(--muted);text-align:center;padding:3.5rem 1rem;line-height:1.9}
 
 /* ── Verdieping ────────────────────────────────────────────────────────────── */
@@ -293,6 +299,11 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
     </div>
   </section>
 
+  <section id="secProfile" hidden>
+    <h2 class="sect">Profiel — je instellingen</h2>
+    <div class="card" id="profile"></div>
+  </section>
+
   <section id="secTrend" hidden>
     <h2 class="sect">Trend — word je beter?</h2>
     <div class="card">
@@ -313,7 +324,7 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
   Alles blijft op dit apparaat: cache in IndexedDB, token in localStorage. Er gaat niets naar een
   server behalve leesverzoeken aan je eigen Nightscout.<br>
   Observaties, geen instelwaarden. Wat je met een patroon doet is een gesprek met je behandelteam.<br>
-  <span style="opacity:.8">DiaMetric · versie <b>2.3 · 18 jul 2026</b> — jouw vragen beantwoord · beweging · band-verdeling · hypo-detail · insuline &amp; koolhydraten · AGP · trend · verdieping</span>
+  <span style="opacity:.8">DiaMetric · versie <b>2.4 · 18 jul 2026</b> — profiel (basaal/ISF/KH-ratio) · jouw vragen beantwoord · beweging · band-verdeling · hypo-detail · insuline &amp; koolhydraten · AGP · trend · verdieping</span>
 </footer>
 
 <dialog id="cfgDlg">
@@ -545,6 +556,102 @@ function profileAt(timeline, ts){
   return { basal:lookupTimeSeries(store.basal,tod)*f, isf:toM(lookupTimeSeries(store.sens,tod))/f,
     ic:lookupTimeSeries(store.carbratio,tod)/f, dia:Math.max(5,dia), source:sw&&sw.profileJson?"switch":"profiel" };
 }
+// Het volledige actieve profiel als leesbare dagschema's (basaal E/u, ISF, KH-ratio),
+// inclusief eenheids-normalisatie en een eventueel actief percentage. Timeshift is
+// zeldzaam en wordt hier niet in de tijdstippen verwerkt (wel gemeld).
+function profileInfo(timeline, ts){
+  if(!timeline) return null;
+  const { docs, switches } = timeline;
+  let store=null, dia=6, units="mmol", name=null;
+  const sw=[...switches].reverse().find(s=>s.ts<=ts);
+  if(sw && sw.profileJson){ try{ const emb=JSON.parse(sw.profileJson); store=emb; dia=+emb.dia||dia; units=emb.units||units; name=sw.profile||emb.name||null; }catch(_){} }
+  if(!store){ const doc=[...docs].reverse().find(d=>d.ts<=ts)||docs[docs.length-1];
+    if(doc){ name=doc.defaultProfile||Object.keys(doc.store||{})[0]; store=defaultStoreOf(doc); if(store){ dia=+store.dia||dia; units=store.units||units; } } }
+  if(!store) return null;
+  const pct=sw?(sw.percentage??100):100, shift=sw?(sw.timeshift??0):0, f=pct/100;
+  const mg=units.toLowerCase().startsWith("mg");
+  const blocks=series=>{ if(!series||!series.length) return [];
+    const wm=series.map(e=>({min:e.timeAsSeconds!=null?e.timeAsSeconds/60:hhmmToMin(e.time), value:+e.value})).sort((a,b)=>a.min-b.min);
+    return wm.map((e,i)=>({from:e.min, to:i+1<wm.length?wm[i+1].min:1440, raw:e.value})); };
+  const basal=blocks(store.basal).map(b=>({...b, value:b.raw*f}));
+  const isf=blocks(store.sens).map(b=>({...b, value:(mg?mmol(b.raw):b.raw)/f}));
+  const ic=blocks(store.carbratio).map(b=>({...b, value:b.raw/f}));
+  const basalDaily=basal.reduce((s,b)=>s+b.value*(b.to-b.from)/60,0);
+  return { name, dia, pct, shift, basal, isf, ic, basalDaily,
+    source: sw&&sw.profileJson?"switch":"profiel", switchTs: sw?sw.ts:null };
+}
+// Waargenomen ISF uit geïsoleerde correctiebolussen: hoeveel liet 1 E je glucose
+// werkelijk dalen? Streng gefilterd (geen koolhydraten, nauwelijks andere insuline,
+// verhoogde start) en uitdrukkelijk indicatief — basaaldrift en resterend eten storen.
+function observedISF(glucose, treatments, timeline){
+  const WIN=3*3600e3, CLEAN=60*60e3, MIN_EV=5, MIN_BG=8, MIN_U=0.5;
+  const carbTs=treatments.filter(t=>t.carbs>0).map(t=>t.ts).sort((a,b)=>a-b);
+  const bol=treatments.filter(t=>t.insulin>0).sort((a,b)=>a.ts-b.ts);
+  const corr=bol.filter(t=>t.insulin>=MIN_U && !(t.carbs>0) && !t.isSMB);
+  const T=glucose.map(g=>g.ts); const lb=ts=>{let lo=0,hi=T.length;while(lo<hi){const m=(lo+hi)>>1;if(T[m]<ts)lo=m+1;else hi=m;}return lo;};
+  const ratios=[]; const isfProf=[];
+  for(const c of corr){
+    if(carbTs.some(ct=>ct>c.ts-CLEAN && ct<c.ts+WIN)) continue;
+    const others=bol.filter(b=>b!==c && b.ts>c.ts-CLEAN && b.ts<c.ts+WIN);
+    const otherU=others.reduce((s,b)=>s+b.insulin,0);
+    if(otherU>0.3*c.insulin) continue;                       // deze correctie moet dominant zijn
+    const win=[]; for(let i=lb(c.ts);i<T.length&&T[i]<=c.ts+WIN;i++)win.push(glucose[i]);
+    if(win.length<24 || win[0].ts-c.ts>10*60e3) continue;    // ~ dekkend venster, start bij bolus
+    const bg0=win[0].bg; if(bg0<MIN_BG) continue;
+    const tail=win.slice(-3); const bgEnd=tail.reduce((s,x)=>s+x.bg,0)/tail.length;
+    const drop=bg0-bgEnd; if(drop<=0) continue;
+    const p=timeline&&profileAt(timeline,c.ts);
+    // Corrigeer voor de fractie insuline die binnen het venster is opgenomen (venster < DIA),
+    // anders onderschat je de ISF stelselmatig.
+    const dia=Math.max(300,((p&&p.dia)||6)*60), frac=1-insulinModel(PEAK_MIN,dia).iob(WIN/60000);
+    if(frac<0.4) continue;
+    ratios.push(drop/((c.insulin+otherU)*frac));
+    if(p&&p.isf) isfProf.push(p.isf);
+  }
+  if(ratios.length<MIN_EV) return { n:ratios.length };
+  const med=a=>{const s=[...a].sort((x,y)=>x-y);return s[Math.floor(s.length/2)];};
+  return { n:ratios.length, obs:med(ratios), prof:isfProf.length?med(isfProf):null };
+}
+// De "Profiel"-sectie: het actieve basaal/ISF/KH-schema plus een koppeling naar
+// wat de data laat zien (basaalaandeel, waargenomen ISF, koolhydraatschatting).
+function profileHtml(pi, oi, ins, MR){
+  const nl2=v=>v==null?"—":v.toFixed(2).replace(".",","), icf=v=>{const r=Math.round(v*10)/10; return (r%1===0?String(r):r.toFixed(1)).replace(".",",");};
+  const range=(arr,fmt)=>{ if(!arr.length) return "—"; const vs=arr.map(b=>b.value), mn=Math.min(...vs), mx=Math.max(...vs);
+    return Math.abs(mx-mn)<1e-9?fmt(mn):`${fmt(mn)}–${fmt(mx)}`; };
+  const col=(title,rows,unit,fmt)=> `<div class="pcol"><div class="ph">${title}</div>`+
+    (rows.length?rows.map(b=>`<div class="prow"><span>${fmtMin(b.from)}</span><b>${fmt(b.value)}</b></div>`).join(""):`<div class="prow"><span>—</span><b>—</b></div>`)+
+    `<div class="pu">${unit}</div></div>`;
+  const kpis=[
+    ["Basaal / dag", nl2(pi.basalDaily)+" E", `${pi.basal.length} blok${pi.basal.length===1?"":"ken"}`],
+    ["ISF", range(pi.isf,nl1), "mmol/L per E"],
+    ["KH-ratio", range(pi.ic,icf), "g per E"],
+  ].map(([k,v,s])=>`<div class="kpi"><div class="k">${k}</div><div class="v">${v}</div><div class="s">${s}</div></div>`).join("");
+
+  // Koppeling profiel ↔ data
+  const obs=[];
+  if(ins&&ins.basalPct!=null) obs.push(`Je basaal telt op tot <b>${nl2(pi.basalDaily)} E/dag</b> — ${Math.round(ins.basalPct*100)}% van je totale dosis. Voor pomptherapie ligt basaal vaak rond 40–50%.`);
+  if(oi&&oi.n>=5){ const dir = oi.prof==null?"" : oi.obs>oi.prof*1.25?` — sterker dan je ingestelde ISF (${nl1(oi.prof)}), je zou met minder correctie-insuline al kunnen dalen`
+      : oi.obs<oi.prof*0.8?` — zwakker dan je ingestelde ISF (${nl1(oi.prof)})`
+      : ` — dat sluit aan bij je ingestelde ISF (${nl1(oi.prof)})`;
+    obs.push(`Waargenomen daling: mediaan <b>${nl1(oi.obs)} mmol/L per E</b> correctie${dir}. Indicatief (n=${oi.n}, veel verstoring door basaal en resterend eten).`); }
+  else obs.push(`Nog te weinig schone, koolhydraatvrije correcties (${oi?oi.n:0}, minimaal 5) om je ISF aan de praktijk te toetsen.`);
+  if(MR&&MR.results.length>=MEAL_MIN){ const fr=MR.mfrac;
+    const t=fr>=0.8&&fr<=1.2?"sluit je koolhydraatschatting redelijk aan bij wat je glucose laat zien"
+      :fr<0.8?"zie je minder terug dan ingevoerd — mogelijk tel je te hoog of dekt je KH-ratio ruim"
+      :"zie je meer terug dan ingevoerd — mogelijk ondergeteld of een te zwakke KH-ratio";
+    obs.push(`Van je ingevoerde koolhydraten zie ik mediaan <b>${pct0(fr)}</b> terug — ${t}. Indicatief.`); }
+
+  const meta=[]; if(pi.name) meta.push(`profiel <b>${pi.name}</b>`);
+  meta.push(`DIA ${nl1(pi.dia)} u`);
+  if(pi.source==="switch"&&pi.switchTs) meta.push(`profielwissel actief sinds ${new Date(pi.switchTs).toLocaleDateString("nl-NL",{day:"2-digit",month:"short"})}`);
+  if(pi.pct!==100) meta.push(`<b>${pi.pct}%</b> ingesteld`);
+  if(pi.shift) meta.push(`tijdverschuiving ${pi.shift} u (niet in tijden verwerkt)`);
+
+  return `<div class="kpis">${kpis}</div>`+
+    `<div class="prof3">${col("Basaal",pi.basal,"E/u",nl2)}${col("ISF",pi.isf,"mmol/L·E",nl1)}${col("KH-ratio",pi.ic,"g/E",icf)}</div>`+
+    `<div class="obs">${obs.join(" ")}</div>`+
+    `<div class="muted" style="margin-top:.5rem">${meta.join(" · ")}. Dit is je ingestelde profiel uit Nightscout; de vergelijkingen zijn observaties, geen insteladvies.</div>`;
+}
 
 /* ── Dekking ────────────────────────────────────────────────────────────── */
 const EXPECTED_PER_DAY = 288, MIN_COVERAGE = 0.70;
@@ -761,7 +868,7 @@ function render(glucose, treatments, timeline){
   treatments = treatments||[]; timeline = timeline||null;
   const has = glucose.length>0;
   document.getElementById("empty").hidden = has;
-  for (const id of ["secNow","secSummary","secQuestions","secAgp","secSafety","secInsulin","secTrend","secDeep"]) document.getElementById(id).hidden = !has;
+  for (const id of ["secNow","secSummary","secQuestions","secAgp","secSafety","secInsulin","secProfile","secTrend","secDeep"]) document.getElementById(id).hidden = !has;
   if (!has) return;
 
   // Nu
@@ -788,7 +895,7 @@ function render(glucose, treatments, timeline){
   if (!g.length){
     document.getElementById("opp").innerHTML = `<div class="lead">Deze periode</div><div class="msg">Nog te weinig dagen met voldoende sensordekking (≥70%) voor betrouwbare cijfers. Synchroniseer meer historie of wacht op meer sensordagen.</div>`;
     document.getElementById("kpis").innerHTML = "";
-    for (const id of ["secQuestions","secAgp","secSafety","secInsulin","secTrend","secDeep"]) document.getElementById(id).hidden = true;
+    for (const id of ["secQuestions","secAgp","secSafety","secInsulin","secProfile","secTrend","secDeep"]) document.getElementById(id).hidden = true;
     return;
   }
 
@@ -885,6 +992,18 @@ function render(glucose, treatments, timeline){
       : `Bolus en koolhydraten zijn exact. De basaal/bolus-verhouding ontbreekt omdat er geen profiel met basaalschema in Nightscout gevonden is.`;
     _summary += (ins.tdd!=null?`Totale dagdosis: ~${nl1(ins.tdd)} E/dag (basaal/bolus ${Math.round(ins.basalPct*100)}/${Math.round(ins.bolusPct*100)}%, basaal geschat)\n`:``)
       + `Bolus+SMB: ${nl1(ins.bolusDay)} E/dag · Koolhydraten: ${Math.round(ins.carbsDay)} g/dag\n`;
+  }
+
+  // Profiel — ingestelde basaal/ISF/KH-ratio, gekoppeld aan wat de data laat zien
+  const pi = profileInfo(timeline, q.to || Date.now());
+  if (!pi){
+    document.getElementById("secProfile").hidden = true;
+  } else {
+    document.getElementById("secProfile").hidden = false;
+    const oi = observedISF(glucose, treatments, timeline);
+    document.getElementById("profile").innerHTML = profileHtml(pi, oi, ins, MR);
+    _summary += `\nProfiel: basaal ~${pi.basalDaily.toFixed(2).replace(".",",")} E/dag`+
+      (oi.n>=5?`, waargenomen ISF ~${nl1(oi.obs)} mmol/L per E (indicatief)`:``)+`\n`;
   }
 
   // Trend over de weken
