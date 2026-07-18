@@ -82,6 +82,14 @@ button.ghost:hover:not(:disabled){color:var(--ink);opacity:1}
 .scope i{font-style:normal;opacity:.7} .scope b{color:var(--ink);font-weight:600}
 .scope .warn b{color:var(--warn)}
 
+.tabs{display:flex;gap:.25rem;padding:.45rem 0 .55rem;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tab{flex:1 1 0;min-width:max-content;white-space:nowrap;background:transparent;border:1px solid transparent;
+  color:var(--muted);font-size:.78rem;font-weight:600;padding:.4rem .5rem;border-radius:9px;box-shadow:none;letter-spacing:0}
+.tab:hover:not(:disabled){color:var(--ink);opacity:1}
+.tab.on{background:var(--accent-soft);color:var(--accent)}
+.tabhide{display:none!important}
+
 main{padding-top:1.4rem}
 section{margin-bottom:1.6rem}
 h2.sect{font-size:.66rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;
@@ -235,6 +243,7 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:-1px;bor
 /* ── Print / PDF voor het behandelteam ─────────────────────────────────────── */
 @media print{
   header,#shareRow,#secDeep,footer,dialog,#toast{display:none!important}
+  section.tabhide:not([hidden]){display:block!important}   /* alle secties in de PDF, ongeacht het actieve tabblad */
   body{background:#fff;color:#000;font-size:12px}
   .card,.kpis,details.deep{box-shadow:none;border:1px solid #ccc;break-inside:avoid}
   .kpi{background:#fff}
@@ -267,13 +276,19 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
       <button class="ghost" id="btnCfg" title="Instellingen">⚙</button>
     </div>
     <div class="scope" id="scope"><span><i>periode</i> <b>—</b></span></div>
+    <nav class="tabs" id="tabbar" hidden>
+      <button class="tab on" data-tab="overzicht">Overzicht</button>
+      <button class="tab" data-tab="veiligheid">Veiligheid</button>
+      <button class="tab" data-tab="instellen">Instellen</button>
+      <button class="tab" data-tab="voortgang">Voortgang</button>
+    </nav>
   </div>
 </header>
 
 <main class="wrap">
   <div class="empty" id="empty">Nog geen data.<br>Stel je Nightscout in en synchroniseer om te beginnen.</div>
 
-  <section id="secNow" hidden>
+  <section id="secNow" data-group="overzicht" hidden>
     <div class="now">
       <span class="val" id="nowVal">—</span><span class="unit">mmol/L</span>
       <span class="arrow" id="nowArrow"></span>
@@ -283,7 +298,7 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
     <div id="spark"></div>
   </section>
 
-  <section id="secSummary" hidden>
+  <section id="secSummary" data-group="overzicht" hidden>
     <h2 class="sect">Deze periode</h2>
     <div class="card opp" id="opp"></div>
     <div class="card" id="bandCard"><div id="bandBar"></div></div>
@@ -294,12 +309,12 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
     </div>
   </section>
 
-  <section id="secQuestions" hidden>
+  <section id="secQuestions" data-group="overzicht" hidden>
     <h2 class="sect">Jouw vragen beantwoord</h2>
     <div class="card" id="questions"></div>
   </section>
 
-  <section id="secAgp" hidden>
+  <section id="secAgp" data-group="overzicht" hidden>
     <h2 class="sect">Dagprofiel (AGP)</h2>
     <div class="card">
       <div id="agp"></div>
@@ -313,7 +328,7 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
     </div>
   </section>
 
-  <section id="secSafety" hidden>
+  <section id="secSafety" data-group="veiligheid" hidden>
     <h2 class="sect">Veiligheid — hypo's</h2>
     <div class="card">
       <div class="kpis" id="hypoKpis" style="margin-bottom:.8rem"></div>
@@ -324,7 +339,7 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
     </div>
   </section>
 
-  <section id="secAware" hidden>
+  <section id="secAware" data-group="veiligheid" hidden>
     <h2 class="sect">Hypo-gevoel &amp; bewustzijn</h2>
     <div class="card">
       <div class="logform">
@@ -340,7 +355,7 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
     </div>
   </section>
 
-  <section id="secInsulin" hidden>
+  <section id="secInsulin" data-group="instellen" hidden>
     <h2 class="sect">Insuline &amp; koolhydraten</h2>
     <div class="card">
       <div class="kpis" id="insKpis"></div>
@@ -348,17 +363,17 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
     </div>
   </section>
 
-  <section id="secProfile" hidden>
+  <section id="secProfile" data-group="instellen" hidden>
     <h2 class="sect">Profiel — je instellingen</h2>
     <div class="card" id="profile"></div>
   </section>
 
-  <section id="secTune" hidden>
+  <section id="secTune" data-group="instellen" hidden>
     <h2 class="sect">Fine-tunen — waar instelling en data uiteenlopen</h2>
     <div class="card" id="tune"></div>
   </section>
 
-  <section id="secTrend" hidden>
+  <section id="secTrend" data-group="voortgang" hidden>
     <h2 class="sect">Trend — word je beter?</h2>
     <div class="card">
       <div id="trend"></div>
@@ -367,7 +382,7 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
     </div>
   </section>
 
-  <section id="secLog" hidden>
+  <section id="secLog" data-group="voortgang" hidden>
     <h2 class="sect">Logboek — markeer &amp; vergelijk</h2>
     <div class="card">
       <div class="logform">
@@ -382,7 +397,7 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
     </div>
   </section>
 
-  <section id="secDeep" hidden>
+  <section id="secDeep" data-group="instellen" hidden>
     <h2 class="sect">Verdieping — voor wie wil sleutelen</h2>
     <details class="deep" data-an="dagpatroon"><summary>Dagpatroon <span>— vaste uren waarop je wegdrijft (basaal)</span></summary><div class="body"><div class="loading">Openklappen om te berekenen…</div></div></details>
     <details class="deep" data-an="meals"><summary>Maaltijdrespons <span>— hoe snel koolhydraten opnemen</span></summary><div class="body"><div class="loading">Openklappen om te berekenen…</div></div></details>
@@ -395,7 +410,7 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
   Alles blijft op dit apparaat: cache in IndexedDB, token in localStorage. Er gaat niets naar een
   server behalve leesverzoeken aan je eigen Nightscout.<br>
   Observaties, geen instelwaarden. Wat je met een patroon doet is een gesprek met je behandelteam.<br>
-  <span style="opacity:.8">DiaMetric · versie <b>2.9 · 18 jul 2026</b> — wat-als nachtbasaal &amp; maaltijdinsuline · hypo-gevoel &amp; bewustzijn · logboek &amp; voor/na-vergelijken · fine-tunen per hefboom · profiel (basaal/ISF/KH-ratio) · jouw vragen beantwoord · beweging · band-verdeling · hypo-detail · insuline &amp; koolhydraten · AGP · trend · verdieping</span>
+  <span style="opacity:.8">DiaMetric · versie <b>3.0 · 18 jul 2026</b> — tabbladen (overzicht · veiligheid · instellen · voortgang) · wat-als nachtbasaal &amp; maaltijdinsuline · hypo-gevoel &amp; bewustzijn · logboek &amp; voor/na-vergelijken · fine-tunen per hefboom · profiel (basaal/ISF/KH-ratio) · jouw vragen beantwoord · beweging · band-verdeling · hypo-detail · insuline &amp; koolhydraten · AGP · trend · verdieping</span>
 </footer>
 
 <dialog id="cfgDlg">
@@ -1004,6 +1019,7 @@ function render(glucose, treatments, timeline){
   treatments = treatments||[]; timeline = timeline||null;
   const has = glucose.length>0;
   document.getElementById("empty").hidden = has;
+  document.getElementById("tabbar").hidden = !has;
   for (const id of ["secNow","secSummary","secQuestions","secAgp","secSafety","secAware","secInsulin","secProfile","secTune","secTrend","secLog","secDeep"]) document.getElementById(id).hidden = !has;
   if (!has) return;
 
@@ -1677,6 +1693,17 @@ document.getElementById("logAdd").onclick = async ()=>{
   try{ await DB.putMany("annotations",[an]); }catch(e){ toast("Opslaan mislukt: "+e.message); return; }
   document.getElementById("logNote").value=""; toast("Markering toegevoegd.");
   renderLog(); };
+
+// Tabbladen — verdeelt de secties over Overzicht / Veiligheid / Instellen / Voortgang
+let _tab = "overzicht";
+function applyTab(tab){
+  _tab = tab;
+  document.querySelectorAll("#tabbar .tab").forEach(b=>b.classList.toggle("on", b.dataset.tab===tab));
+  document.querySelectorAll("main section[data-group]").forEach(s=>s.classList.toggle("tabhide", s.dataset.group!==tab));
+  window.scrollTo({top:0});
+}
+document.querySelectorAll("#tabbar .tab").forEach(b=>b.onclick=()=>applyTab(b.dataset.tab));
+applyTab(_tab);
 
 // Hypo-gevoel
 buildAwChips();
