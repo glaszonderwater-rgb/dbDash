@@ -387,6 +387,7 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
     <details class="deep" data-an="dagpatroon"><summary>Dagpatroon <span>— vaste uren waarop je wegdrijft (basaal)</span></summary><div class="body"><div class="loading">Openklappen om te berekenen…</div></div></details>
     <details class="deep" data-an="meals"><summary>Maaltijdrespons <span>— hoe snel koolhydraten opnemen</span></summary><div class="body"><div class="loading">Openklappen om te berekenen…</div></div></details>
     <details class="deep" data-an="watif"><summary>Wat-als: nachtbasaal <span>— een andere basaal doorgerekend op je eigen nachten</span></summary><div class="body"><div class="loading">Openklappen om te berekenen…</div></div></details>
+    <details class="deep" data-an="watifmeal"><summary>Wat-als: maaltijdinsuline <span>— een andere KH-ratio doorgerekend op je maaltijdpieken</span></summary><div class="body"><div class="loading">Openklappen om te berekenen…</div></div></details>
   </section>
 </main>
 
@@ -394,7 +395,7 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
   Alles blijft op dit apparaat: cache in IndexedDB, token in localStorage. Er gaat niets naar een
   server behalve leesverzoeken aan je eigen Nightscout.<br>
   Observaties, geen instelwaarden. Wat je met een patroon doet is een gesprek met je behandelteam.<br>
-  <span style="opacity:.8">DiaMetric · versie <b>2.8 · 18 jul 2026</b> — wat-als nachtbasaal · hypo-gevoel &amp; bewustzijn · logboek &amp; voor/na-vergelijken · fine-tunen per hefboom · profiel (basaal/ISF/KH-ratio) · jouw vragen beantwoord · beweging · band-verdeling · hypo-detail · insuline &amp; koolhydraten · AGP · trend · verdieping</span>
+  <span style="opacity:.8">DiaMetric · versie <b>2.9 · 18 jul 2026</b> — wat-als nachtbasaal &amp; maaltijdinsuline · hypo-gevoel &amp; bewustzijn · logboek &amp; voor/na-vergelijken · fine-tunen per hefboom · profiel (basaal/ISF/KH-ratio) · jouw vragen beantwoord · beweging · band-verdeling · hypo-detail · insuline &amp; koolhydraten · AGP · trend · verdieping</span>
 </footer>
 
 <dialog id="cfgDlg">
@@ -1272,7 +1273,8 @@ function mealResults(glucose, treatments, timeline){
       const ms=(win[i].ts-m.ts)/60000; curve.push({min:ms,cum}); if(win[i].bg>peak){peak=win[i].bg;tPeak=ms;} }
     if(cum<5)continue; const half=cum/2; let t50=null;
     for(let i=1;i<curve.length;i++){ if(curve[i].cum>=half){ const p=curve[i-1],qq=curve[i]; t50=qq.cum===p.cum?qq.min:p.min+(half-p.cum)/(qq.cum-p.cum)*(qq.min-p.min); break; } }
-    results.push({carbs:m.carbs,frac:cum/m.carbs,t50,peakRise:peak-bg0,tPeak,curve,peakBg:peak,bolusOffset}); }
+    results.push({carbs:m.carbs,frac:cum/m.carbs,t50,peakRise:peak-bg0,tPeak,curve,peakBg:peak,bolusOffset,
+      win,wB,isf,dia,bg0}); }   // ruwe data voor de maaltijd-simulatie (wat-als)
   const med=arr=>{const s=[...arr].sort((a,b)=>a-b);return s.length?s[Math.floor(s.length/2)]:null;};
   return { results, MIN_CARBS,
     mt50:med(results.filter(r=>r.t50!=null).map(r=>r.t50)), mfrac:med(results.map(r=>r.frac)),
@@ -1353,6 +1355,35 @@ function anWatIf(glucose, treatments, q, timeline){
   return `<div class="watable"><div class="warow head"><span>nachtbasaal</span><span>ontwaak (med.)</span><span>hypo-nachten</span></div>${rows}</div>`+
     `<div class="obs">${lead}</div>`+
     `<div class="muted" style="margin-top:.4rem">Eerste-orde benadering over ${r.nights} schone nachten (extra basaal × ISF, steady-state). Tegenregulatie — je lever die bij een dreigende hypo glucose vrijmaakt — zit er níét in, dus onder ~3,9 is de schatting onbetrouwbaar: lees hypo-nachten als "risico neemt toe", geen exacte telling. Ter lering, geen instelwaarde — bespreek met je team.</div>`;
+}
+// "Wat-als" maaltijdinsuline: schaal je maaltijdbolus (≈ je KH-ratio-hefboom) en
+// reken de contrafeitelijke maaltijdpiek door. Zelfde eerste-orde model: extra
+// insuline × ISF via de activiteitscurve, timing constant gehouden.
+function mealSim(MR){
+  const rs=(MR.results||[]).filter(r=>r.win&&r.wB&&r.wB.length&&r.isf&&r.dia);
+  if(rs.length<MEAL_MIN) return { few:rs.length };
+  const MULT=[0.9,0.95,1.0,1.05,1.1];
+  const med=a=>{const s=[...a].sort((x,y)=>x-y);return s.length?s[Math.floor(s.length/2)]:null;};
+  const res=MULT.map(k=>{ const rises=[]; let lows=0;
+    for(const r of rs){ const mdl=insulinModel(PEAK_MIN,r.dia); let peak=-Infinity, minb=Infinity;
+      for(const p of r.win){ let extra=0;
+        for(const b of r.wB){ const dm=(p.ts-b.ts)/60000; if(dm<=0||dm>=r.dia)continue; extra += b.insulin*(k-1)*(1-mdl.iob(dm)); }
+        const cf=p.bg - r.isf*extra; if(cf>peak)peak=cf; if(cf<minb)minb=cf; }
+      rises.push(peak-r.bg0); if(minb<3.9)lows++; }
+    return { k, riseMed:med(rises), lowFrac:lows/rs.length, n:rs.length }; });
+  return { n:rs.length, res };
+}
+function anWatIfMeal(glucose, treatments, q, timeline){
+  const r=mealSim(mealResults(glucose, treatments, timeline));
+  if(r.few!=null) return `<div class="muted">Te weinig geïsoleerde maaltijden met bolus én profieldata (${r.few}, minimaal ${MEAL_MIN}) om door te rekenen. Met meer historie komt dit beschikbaar.</div>`;
+  const cur=r.res.find(x=>x.k===1), up=r.res.find(x=>x.k===1.1), dn=r.res.find(x=>x.k===0.9);
+  const fmtK=k=>k===1?"huidig":(k>1?"+":"−")+Math.round(Math.abs(k-1)*100)+"%";
+  const rows=r.res.map(x=>`<div class="warow${x.k===1?" cur":""}"><span>${fmtK(x.k)}</span><span>+${nl1(x.riseMed)}</span><span>${pct0(x.lowFrac)}</span></div>`).join("");
+  let lead="";
+  if(cur&&up) lead=`Bij <b>+10% maaltijdinsuline</b> (≈ een sterkere KH-ratio) zou je mediane maaltijdpiek van +${nl1(cur.riseMed)} naar <b>+${nl1(up.riseMed)}</b> mmol/L zakken; dan eindigt ${pct0(up.lowFrac)} van je maaltijden laag (nu ${pct0(cur.lowFrac)}).`;
+  return `<div class="watable"><div class="warow head"><span>maaltijdinsuline</span><span>piek (med.)</span><span>eindigt laag</span></div>${rows}</div>`+
+    `<div class="obs">${lead}</div>`+
+    `<div class="muted" style="margin-top:.4rem">Eerste-orde benadering over ${r.n} maaltijden: extra maaltijdinsuline × ISF via de insuline-activiteitscurve, mét dezelfde bolus-timing. Tegenregulatie zit er níét in, dus "eindigt laag" is een risico-indicatie, geen exacte telling. Meer insuline dempt de piek maar verhoogt het hypo-risico — de afruil zie je hier. Ter lering, geen instelwaarde.</div>`;
 }
 
 // Beweging: geregistreerde exercise-/activiteit-events koppelen aan glucosedalingen.
@@ -1489,6 +1520,7 @@ function initDeep(){
           : an==="meals" ? anMeals(glucose, treatments, q, timeline)
           : an==="stacking" ? anStacking(glucose, treatments, q)
           : an==="watif" ? anWatIf(glucose, treatments, q, timeline)
+          : an==="watifmeal" ? anWatIfMeal(glucose, treatments, q, timeline)
           : "";
       } catch(e){ body.innerHTML = `<div class="muted">Analyse mislukt: ${e.message}</div>`; console.error(an, e); }
     });
