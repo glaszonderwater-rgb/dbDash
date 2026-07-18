@@ -121,7 +121,9 @@ details.deep > summary::before{content:"▸ ";color:var(--dim)}
 details.deep[open] > summary::before{content:"▾ "}
 details.deep > summary span{color:var(--muted);font-weight:400;font-size:.76rem}
 details.deep > .body{padding-top:.7rem;margin-top:.5rem;border-top:1px solid var(--line)}
-details.deep[open] > .body{}
+/* Stapeling-detail zit binnen de veiligheidskaart: geen kaart-in-kaart. */
+#secSafety details.deep{box-shadow:none;border:none;border-top:1px solid var(--line);border-radius:0;padding:.6rem 0 0;margin-bottom:0}
+#secSafety details.deep > summary{font-size:.85rem}
 
 footer{font-family:var(--mono);font-size:.64rem;color:var(--dim);border-top:1px solid var(--line);
   margin-top:2rem;padding-top:.8rem;line-height:1.7}
@@ -198,6 +200,7 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
   <section id="secSummary" hidden>
     <h2 class="sect">Deze periode</h2>
     <div class="card opp" id="opp"></div>
+    <div class="card" id="bandCard"><div id="bandBar"></div></div>
     <div class="kpis" id="kpis"></div>
     <div id="shareRow" style="margin-top:.8rem;display:flex;gap:.5rem;flex-wrap:wrap">
       <button class="ghost" id="btnShare" style="font-size:.78rem">📋 Samenvatting delen</button>
@@ -222,9 +225,19 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
   <section id="secSafety" hidden>
     <h2 class="sect">Veiligheid — hypo's</h2>
     <div class="card">
+      <div class="kpis" id="hypoKpis" style="margin-bottom:.8rem"></div>
       <div id="hypoBars"></div>
       <div class="obs" id="safetyObs"></div>
       <div class="muted" id="safetyEv" style="margin-top:.4rem"></div>
+      <details class="deep" data-an="stacking" style="margin-top:.8rem"><summary>Wat gaat vaak vooraf aan je hypo's? <span>— gestapelde correcties</span></summary><div class="body"><div class="loading">Openklappen om te berekenen…</div></div></details>
+    </div>
+  </section>
+
+  <section id="secInsulin" hidden>
+    <h2 class="sect">Insuline &amp; koolhydraten</h2>
+    <div class="card">
+      <div class="kpis" id="insKpis"></div>
+      <div class="muted" id="insObs" style="margin-top:.5rem"></div>
     </div>
   </section>
 
@@ -241,7 +254,6 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
     <h2 class="sect">Verdieping — voor wie wil sleutelen</h2>
     <details class="deep" data-an="dagpatroon"><summary>Dagpatroon <span>— vaste uren waarop je wegdrijft (basaal)</span></summary><div class="body"><div class="loading">Openklappen om te berekenen…</div></div></details>
     <details class="deep" data-an="meals"><summary>Maaltijdrespons <span>— hoe snel koolhydraten opnemen</span></summary><div class="body"><div class="loading">Openklappen om te berekenen…</div></div></details>
-    <details class="deep" data-an="model"><summary>Modelcontrole <span>— rekent de app goed? (zelftest)</span></summary><div class="body"><div class="loading">Openklappen om te berekenen…</div></div></details>
   </section>
 </main>
 
@@ -249,7 +261,7 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
   Alles blijft op dit apparaat: cache in IndexedDB, token in localStorage. Er gaat niets naar een
   server behalve leesverzoeken aan je eigen Nightscout.<br>
   Observaties, geen instelwaarden. Wat je met een patroon doet is een gesprek met je behandelteam.<br>
-  <span style="opacity:.8">versie <b>2.0 · fase 4 · 18 jul 2026</b> — Nu · KPI's · AGP · veiligheid · trend · verdieping · deel-samenvatting</span>
+  <span style="opacity:.8">versie <b>2.1 · 18 jul 2026</b> — band-verdeling · hypo-detail · insuline &amp; koolhydraten · AGP · trend · verdieping · deel-samenvatting</span>
 </footer>
 
 <dialog id="cfgDlg">
@@ -415,15 +427,6 @@ async function syncAll(onProgress){
     await DB.putMany("profiles", P);
   } catch(_){ /* profielen zijn optioneel */ }
 
-  // loopstatus (AAPS IOB/COB) — alleen recent; NS ruimt dit doorgaans op
-  try {
-    rows = await NS.devicestatus(await startFrom("devicestatus", Math.min(cfg.days,30), 6*36e5), now, (n,at)=>say("loopstatus",n,at));
-    const D = rows.map(d=>({ _id:String(d._id), ts:parseTs(d.created_at)??parseTs(d.mills),
-      iob:d.openaps?.suggested?.IOB ?? d.openaps?.enacted?.IOB ?? null })).filter(d=>d.ts!=null && d.iob!=null);
-    await DB.putMany("devicestatus", D);
-    if (D.length) await DB.meta("sync.devicestatus", Math.max(...D.map(d=>d.ts)));
-  } catch(_){ /* optioneel */ }
-
   await DB.meta("sync.at", now);
 }
 
@@ -532,14 +535,69 @@ function joinBins(bins){ const s=[...bins].sort((a,b)=>a-b), out=[];
 // Hypo's: episodes + verdeling over 6 dagdelen
 function hypoStats(g){
   const below = g.filter(x=>x.bg<3.9);
-  const episodes=[]; for (const p of below){ const l=episodes[episodes.length-1];
-    if (l && p.ts-l.end<=45*60e3) l.end=p.ts; else episodes.push({start:p.ts,end:p.ts}); }
+  const eps=[]; for (const p of below){ const l=eps[eps.length-1];
+    if (l && p.ts-l.end<=45*60e3){ l.end=p.ts; l.min=Math.min(l.min,p.bg); } else eps.push({start:p.ts,end:p.ts,min:p.bg}); }
   const parts = new Array(4).fill(0);   // nacht 0-6, ochtend 6-12, middag 12-18, avond 18-24
   const label = ["nacht (00–06)","ochtend (06–12)","middag (12–18)","avond (18–24)"];
-  for (const e of episodes) parts[Math.floor(todMin(e.start)/360)%4]++;
-  return { episodes:episodes.length, parts, label,
+  let level2=0, prolonged=0, nocturnal=0;
+  for (const e of eps){ e.dur=(e.end-e.start)/60000+5;     // +5 min voor het meetinterval
+    parts[Math.floor(todMin(e.start)/360)%4]++;
+    if (e.min<3.0) level2++;
+    if (e.dur>=15) prolonged++;
+    if (todMin(e.start)<360) nocturnal++; }
+  return { episodes:eps.length, eps, parts, label, level2, prolonged, nocturnal,
     worst: parts.some(x=>x>0) ? label[parts.indexOf(Math.max(...parts))] : null };
 }
+// Correctie-stapeling vóór hypo's (case-control, gematcht op tijd-van-de-dag, begrensd)
+function hypoStacking(glucose, treatments, q){
+  const CASE=3*3600e3, TOL=20*60e3, MIN_EP=6, DAYMS=864e5;
+  const g=glucose.filter(x=>q.usableKeys.has(localDayKey(x.ts)));
+  const below=g.filter(x=>x.bg<3.9);
+  const epsAll=[]; for(const p of below){ const l=epsAll[epsAll.length-1]; if(l&&p.ts-l.end<=45*60e3)l.end=p.ts; else epsAll.push({start:p.ts,end:p.ts}); }
+  const episodes=[]; for(const e of epsAll){ if(episodes.length&&e.start-episodes[episodes.length-1].start<CASE)continue; if(e.start-g[0].ts<CASE)continue; episodes.push(e); }
+  if(episodes.length<MIN_EP) return { few:episodes.length };
+  const corr=treatments.filter(t=>t.insulin>0&&t.carbs===0&&!t.isSMB).map(t=>t.ts).sort((a,b)=>a-b);
+  const inWin=(arr,from,to)=>{ let lo=0,hi=arr.length; while(lo<hi){const m=(lo+hi)>>1; if(arr[m]<from)lo=m+1; else hi=m;} let n=0; for(let i=lo;i<arr.length&&arr[i]<to;i++)n++; return n; };
+  const stackAt=end=>inWin(corr,end-CASE,end)>=2;
+  const cases=episodes.map(e=>stackAt(e.start));
+  const byDay=new Map(); for(const x of g){const k=localDayKey(x.ts); if(!byDay.has(k))byDay.set(k,[]); byDay.get(k).push(x);}
+  const hypoWin=epsAll.map(e=>({from:e.start-CASE,to:e.end+45*60e3}));
+  const controls=[]; const MAX=Math.max(60,episodes.length*15);
+  outer: for(const e of episodes){ const tod=todMin(e.start)*60e3;
+    for(const pts of byDay.values()){ if(controls.length>=MAX)break outer;
+      let best=null,bd=Infinity; for(const p of pts){ const d=Math.abs(todMin(p.ts)*60e3-tod); const dd=Math.min(d,DAYMS-d); if(dd<bd){bd=dd;best=p;} }
+      if(!best||bd>TOL)continue; const end=best.ts;
+      if(hypoWin.some(w=>end>=w.from&&end<=w.to))continue; if(end-g[0].ts<CASE)continue;
+      controls.push(stackAt(end)); } }
+  if(controls.length<episodes.length*3) return { few:episodes.length, thin:true };
+  const cR=cases.filter(Boolean).length/cases.length, kR=controls.filter(Boolean).length/controls.length;
+  return { cases:episodes.length, controls:controls.length, caseRate:cR, ctrlRate:kR,
+    elevated: cR-kR>=0.15 && (kR===0?cR>0:cR/kR>=1.4) };
+}
+// Volledige 5-banden-balk (de standaard AGP-doelbalk)
+function bandBarHtml(m){
+  const top=[...BANDS].reverse();
+  return `<div class="tirbar">${top.map(b=>`<span style="flex:${(m.share(b.id)*1000).toFixed(0)} 0 auto;background:var(${b.css})"></span>`).join("")}</div>`+
+    `<div class="tirrows">${top.map(b=>`<div class="trow"><i class="sw" style="background:var(${b.css})"></i>${b.label}<b>${pct0(m.share(b.id))}</b></div>`).join("")}</div>`;
+}
+// Insuline & koolhydraten over de periode
+function insulinCarbs(treatments, timeline, q){
+  const from=q.from||0, to=q.to||Date.now();
+  const nDays=Math.max(1, q.days.length || Math.round((to-from)/DAY) || 1);
+  let bolus=0, smb=0, carbs=0, nB=0, nS=0;
+  for(const t of treatments){ if(t.ts<from)continue;
+    if(t.insulin>0){ if(t.isSMB){smb+=t.insulin;nS++;} else {bolus+=t.insulin;nB++;} }
+    if(t.carbs>0) carbs+=t.carbs; }
+  const bolusDay=(bolus+smb)/nDays;
+  let basalDay=null;
+  const prof0=timeline&&profileAt(timeline,to);
+  if(prof0&&prof0.source!=="geen"&&prof0.basal!=null){ basalDay=0;
+    for(let h=0;h<24;h++){ const p=profileAt(timeline,to-((23-h)*3600e3)); basalDay+=(p.basal||0); } }
+  const tdd=basalDay!=null?basalDay+bolusDay:null;
+  return { bolusDay, carbsDay:carbs/nDays, nBolusDay:nB/nDays, nSmbDay:nS/nDays,
+    basalDay, tdd, basalPct:tdd?basalDay/tdd:null, bolusPct:tdd?bolusDay/tdd:null, nDays };
+}
+
 // Weektrend: kernmaten per 7-daagse blok, oud → nieuw (alleen weken met genoeg data)
 function weeklyTrend(glucose, q){
   const to = q.to || Date.now();
@@ -643,10 +701,11 @@ function hypoBarsSvg(hy){
 const ARROWS = { DoubleUp:"⇈",SingleUp:"↑",FortyFiveUp:"↗",Flat:"→",FortyFiveDown:"↘",SingleDown:"↓",DoubleDown:"⇊" };
 function tick(ok){ return ok ? `<span class="badge ok">✓</span>` : `<span class="badge no">✗</span>`; }
 
-function render(glucose){
+function render(glucose, treatments, timeline){
+  treatments = treatments||[]; timeline = timeline||null;
   const has = glucose.length>0;
   document.getElementById("empty").hidden = has;
-  for (const id of ["secNow","secSummary","secAgp","secSafety","secTrend","secDeep"]) document.getElementById(id).hidden = !has;
+  for (const id of ["secNow","secSummary","secAgp","secSafety","secInsulin","secTrend","secDeep"]) document.getElementById(id).hidden = !has;
   if (!has) return;
 
   // Nu
@@ -670,13 +729,12 @@ function render(glucose){
   if (!g.length){
     document.getElementById("opp").innerHTML = `<div class="lead">Deze periode</div><div class="msg">Nog te weinig dagen met voldoende sensordekking (≥70%) voor betrouwbare cijfers. Synchroniseer meer historie of wacht op meer sensordagen.</div>`;
     document.getElementById("kpis").innerHTML = "";
-    document.getElementById("secAgp").hidden = true; document.getElementById("secSafety").hidden = true;
-    document.getElementById("secTrend").hidden = true; document.getElementById("secDeep").hidden = true;
+    for (const id of ["secAgp","secSafety","secInsulin","secTrend","secDeep"]) document.getElementById(id).hidden = true;
     return;
   }
 
   // Data voor de (lui geladen) verdieping bewaren; open details resetten bij verse data.
-  _ctx = { glucose, q }; _deepData = null;
+  _ctx = { glucose, q, treatments, timeline };
   document.querySelectorAll("details.deep").forEach(d=>{ d.open=false; delete d.dataset.done;
     d.querySelector(".body").innerHTML = '<div class="loading">Openklappen om te berekenen…</div>'; });
 
@@ -688,15 +746,18 @@ function render(glucose){
   oc.className = "card opp" + (opp.risk?" risk":"");
   oc.innerHTML = `<div class="lead">${opp.risk?"⚠ Grootste aandachtspunt":"Grootste kans"}</div><div class="msg">${opp.msg}</div>`;
 
-  // KPI-tegels
+  // Volledige 5-banden-balk (de standaard doelbalk)
+  document.getElementById("bandBar").innerHTML = bandBarHtml(m);
+
+  // KPI-tegels — mét tijd > 13,9 (ernstige hyper)
   const enough = q.usable.length>=14;
   document.getElementById("kpis").innerHTML = [
     ["Tijd in bereik", pct0(m.tir), "streef >70%", tick(m.tir>=0.70), false],
     ["Tijd < 3,9 (hypo)", pct0(m.tbr), "streef <4%", tick(m.tbr<0.04), true],
     ["Tijd < 3,0", pct0(m.veryLow), "streef <1%", tick(m.veryLow<0.01), true],
+    ["Tijd > 13,9", pct0(m.veryHigh), "streef <5%", tick(m.veryHigh<0.05), false],
     ["Variatie (CV)", pct0(m.cv), "streef ≤36%", tick(m.cv<=0.36), false],
     ["GMI", nl1(m.gmi)+"%", "geschat HbA1c", "", false],
-    ["Gemiddeld", nl1(m.mean), "mmol/L", "", false],
   ].map(([k,v,s,b,safety])=>`<div class="kpi${safety?" safety":""}"><div class="k">${k} ${b}</div><div class="v">${v}</div><div class="s">${s}</div></div>`).join("");
 
   // AGP
@@ -720,18 +781,49 @@ function render(glucose){
     `Tijd < 3,9 (hypo)       : ${pct0(m.tbr)}  (streef <4%)  ${yn(m.tbr<0.04)}\n`+
     `Tijd < 3,0              : ${pct0(m.veryLow)}  (streef <1%)  ${yn(m.veryLow<0.01)}\n`+
     `Tijd > 10,0             : ${pct0(m.tar)}\n`+
+    `Tijd > 13,9             : ${pct0(m.veryHigh)}  (streef <5%)  ${yn(m.veryHigh<0.05)}\n`+
     `Variatie (CV)           : ${pct0(m.cv)}  (streef ≤36%) ${yn(m.cv<=0.36)}\n`+
     `GMI (gesch. HbA1c)      : ${nl1(m.gmi)}%\n`+
-    `Gemiddelde glucose      : ${nl1(m.mean)} mmol/L\n\n`+
+    `Gemiddelde glucose      : ${nl1(m.mean)} mmol/L\n`+
+    `Hypo's: ${hy.episodes} (waarvan ${hy.level2} ernstig <3,0, ${hy.nocturnal} 's nachts)\n\n`+
     `Aandachtspunt: ${opp.msg.replace(/<[^>]+>/g,"")}\n`;
 
-  // Veiligheid
+  // Veiligheid — telling, ernst en duur
+  document.getElementById("hypoKpis").innerHTML = [
+    ["Hypo-episodes", String(hy.episodes), "onder 3,9", false],
+    ["Ernstig (<3,0)", String(hy.level2), "niveau-2", true],
+    ["Langdurig", String(hy.prolonged), "≥15 min", hy.prolonged>0],
+    ["'s Nachts", String(hy.nocturnal), "00–06 u", hy.nocturnal>0],
+  ].map(([k,v,s,warn])=>`<div class="kpi${warn?" safety":""}"><div class="k">${k}</div><div class="v">${v}</div><div class="s">${s}</div></div>`).join("");
   document.getElementById("hypoBars").innerHTML = hypoBarsSvg(hy);
   document.getElementById("safetyObs").innerHTML = hy.episodes===0
     ? "Geen hypo's onder 3,9 in deze periode — mooi."
-    : `<b>${hy.episodes}</b> hypo-episode${hy.episodes===1?"":"s"} onder 3,9${hy.worst?`, het vaakst in de <b>${hy.worst}</b>`:""}. Dat is ${pct0(m.tbr)} van je tijd (streef &lt;4%).`;
+    : `<b>${hy.episodes}</b> hypo-episode${hy.episodes===1?"":"s"} onder 3,9 (${pct0(m.tbr)} van je tijd, streef &lt;4%)`+
+      `${hy.level2?`, waarvan <b>${hy.level2}</b> ernstig (<3,0)`:""}`+
+      `${hy.nocturnal?`; <b>${hy.nocturnal}</b> 's nachts (00–06 u) — het gevaarlijkst omdat je slaapt`:hy.worst?`, het vaakst in de ${hy.worst}`:""}.`;
   document.getElementById("safetyEv").textContent =
     `n = ${m.n.toLocaleString("nl")} metingen over ${q.usable.length} dagen` + (enough?"":" · ≥14 dagen aanbevolen voor een stabiel beeld");
+
+  // Insuline & koolhydraten
+  const ins = insulinCarbs(treatments, timeline, q);
+  if (!treatments.length){
+    document.getElementById("secInsulin").hidden = true;
+  } else {
+    document.getElementById("secInsulin").hidden = false;
+    document.getElementById("insKpis").innerHTML = [
+      ins.tdd!=null ? ["Totale dagdosis", nl1(ins.tdd), "E/dag (schatting)"] : null,
+      ins.basalPct!=null ? ["Basaal / bolus", `${Math.round(ins.basalPct*100)}/${Math.round(ins.bolusPct*100)}`, "% verhouding"] : null,
+      ["Bolus + SMB", nl1(ins.bolusDay), "E/dag"],
+      ["Koolhydraten", Math.round(ins.carbsDay)+" g", "per dag"],
+      ["Bolussen", nl1(ins.nBolusDay), "handmatig/dag"],
+      ins.nSmbDay>0 ? ["SMB's", Math.round(ins.nSmbDay), "auto/dag"] : null,
+    ].filter(Boolean).map(([k,v,s])=>`<div class="kpi"><div class="k">${k}</div><div class="v">${v}</div><div class="s">${s}</div></div>`).join("");
+    document.getElementById("insObs").innerHTML = ins.tdd!=null
+      ? `Basaal is een schatting uit je profielschema (loop-aanpassingen met temp-basaal zijn niet meegerekend). Bolus en koolhydraten zijn exact uit je behandelingen.`
+      : `Bolus en koolhydraten zijn exact. De basaal/bolus-verhouding ontbreekt omdat er geen profiel met basaalschema in Nightscout gevonden is.`;
+    _summary += (ins.tdd!=null?`Totale dagdosis: ~${nl1(ins.tdd)} E/dag (basaal/bolus ${Math.round(ins.basalPct*100)}/${Math.round(ins.bolusPct*100)}%, basaal geschat)\n`:``)
+      + `Bolus+SMB: ${nl1(ins.bolusDay)} E/dag · Koolhydraten: ${Math.round(ins.carbsDay)} g/dag\n`;
+  }
 
   // Trend over de weken
   if (tr.length<2){
@@ -843,45 +935,37 @@ function anMeals(glucose, treatments, q, timeline){
   const per=results.map(r=>GRID.map(x=>pctAt(r.curve,x))), medc=GRID.map((_,gi)=>med(per.map(y=>y[gi])));
   const speed=mt50==null?"":mt50>60?" Aan de trage kant — passend bij grote of vette maaltijden.":mt50<35?" Snel — dan telt prebolus-timing zwaar mee.":" Vrij gemiddeld.";
   const acc=mfrac>=0.8&&mfrac<=1.2?"je koolhydraatschatting sluit redelijk aan bij wat je glucose laat zien":mfrac<0.8?"je ziet minder terug dan ingevoerd — mogelijk tel je te hoog, of dekt insuline ruim":"je ziet meer terug dan ingevoerd — mogelijk ondergeteld, of te weinig bolus";
-  const stats=`<div class="kpis" style="margin-top:.6rem"><div class="kpi"><div class="k">t50</div><div class="v">${mt50==null?"—":Math.round(mt50)}</div><div class="s">min tot 50%</div></div><div class="kpi"><div class="k">Piek</div><div class="v">${Math.round(mtpk)}</div><div class="s">min na maaltijd</div></div><div class="kpi"><div class="k">Teruggezien</div><div class="v">${pct0(mfrac)}</div><div class="s">van ingevoerd</div></div></div>`;
-  return absorpSvg(GRID,medc,mt50)+stats+`<div class="obs">Je maaltijden vanaf ${MIN_CARBS} g zijn mediaan na ${mt50==null?"—":Math.round(mt50)} min voor de helft opgenomen, met de piek rond ${Math.round(mtpk)} min.${speed} Van de ingevoerde koolhydraten zie ik ${pct0(mfrac)} terug: ${acc}.</div><div class="muted" style="margin-top:.4rem">n = ${results.length} geïsoleerde maaltijden · alleen positieve deviaties, temp-basaal niet meegerekend — het percentage is indicatief</div>`;
+  const stats=`<div class="kpis" style="margin-top:.6rem"><div class="kpi"><div class="k">t50</div><div class="v">${mt50==null?"—":Math.round(mt50)}</div><div class="s">min tot 50%</div></div><div class="kpi"><div class="k">Piek</div><div class="v">${Math.round(mtpk)}</div><div class="s">min na maaltijd</div></div></div>`;
+  return absorpSvg(GRID,medc,mt50)+stats+`<div class="obs">Je maaltijden vanaf ${MIN_CARBS} g zijn mediaan na ${mt50==null?"—":Math.round(mt50)} min voor de helft opgenomen, met de piek rond ${Math.round(mtpk)} min.${speed} Dit is het bruikbaarste voor je bolus-timing.</div><div class="muted" style="margin-top:.4rem">Terzijde (indicatief): van de ingevoerde koolhydraten zie ik mediaan ${pct0(mfrac)} terug — ${acc}. Alleen positieve deviaties, temp-basaal niet meegerekend, dus neem dit percentage met een korrel zout. n = ${results.length} maaltijden.</div>`;
 }
 
-async function anModelcheck(treatments, timeline){
-  const ds=await DB.range("devicestatus", Date.now()-14*DAY, Date.now()+6e4);
-  if(!ds.length) return `<div class="muted">Geen loopstatus in de cache — Nightscout bewaart die meestal maar enkele weken. Zonder dit ijkpunt kan de reconstructie niet bevestigd worden, maar de formule zelf is nagekeken tegen de oref-referentie.</div>`;
-  const sample=ds.filter((_,i)=>i%3===0), diffs=[];
-  for(const d of sample){ if(d.iob==null)continue; diffs.push(Math.abs(reconstructIOB(treatments,d.ts,PEAK_MIN,timeline)-d.iob)); }
-  if(diffs.length<20) return `<div class="muted">Te weinig overlappende loopstatus-momenten (${diffs.length}) voor een betrouwbare vergelijking.</div>`;
-  diffs.sort((a,b)=>a-b); const md=diffs[Math.floor(diffs.length/2)], p90=diffs[Math.floor(diffs.length*.9)];
-  const verdict=md<0.15?"Goede overeenkomst":md<0.4?"Merkbaar verschil":"Grote afwijking";
-  return `<div class="kpis"><div class="kpi"><div class="k">Mediane afwijking</div><div class="v">${nl1(md)}</div><div class="s">E</div></div><div class="kpi"><div class="k">90e percentiel</div><div class="v">${nl1(p90)}</div><div class="s">E</div></div><div class="kpi"><div class="k">Vergeleken</div><div class="v">${diffs.length}</div><div class="s">momenten</div></div></div>`+
-    `<div class="obs"><b>${verdict}:</b> mediane afwijking ${nl1(md)} E tussen zelf berekende en AAPS-gerapporteerde IOB. ${md>=0.4?"Grote afwijking wijst meestal op een verkeerd insulinetype of onvolledige profielhistorie.":"De reconstructie is bruikbaar als basis voor de maaltijdanalyse."}</div>`+
-    `<div class="muted" style="margin-top:.4rem">Dit is een zelftest van de rekenkern, geen bevinding over je diabetes.</div>`;
+// Stapeling-detail: HTML voor het correctie-stapelen vóór hypo's
+function anStacking(glucose, treatments, q){
+  const r=hypoStacking(glucose, treatments, q);
+  if(r.few!=null) return `<div class="muted">Te weinig hypo-episodes (${r.few}, minimaal 6)${r.thin?" of te weinig vergelijkbare controlemomenten":""} voor een betrouwbare vergelijking. Dat is op zich goed nieuws voor je tijd-in-bereik.</div>`;
+  const obs=r.elevated
+    ? `Gestapelde correcties (≥2 handmatige bijspuiten in de 3 uur ervoor) gingen <b>${pct0(r.caseRate)}</b> van je hypo's vooraf, tegen <b>${pct0(r.ctrlRate)}</b> op vergelijkbare momenten zónder hypo. Even wachten tot een eerdere correctie is uitgewerkt vóór je opnieuw bijspuit kan dit type hypo schelen.`
+    : `Gestapelde correcties gingen ${pct0(r.caseRate)} van je hypo's vooraf, vergelijkbaar met ${pct0(r.ctrlRate)} op momenten zónder hypo — dit patroon springt er bij jou niet uit.`;
+  return `<div class="obs">${obs}</div><div class="muted" style="margin-top:.4rem">n = ${r.cases} hypo's vs ${r.controls} controlemomenten (zelfde tijdstip, andere dagen). Observatie, geen instelwaarde.</div>`;
 }
 
 /* ══ UI ════════════════════════════════════════════════════════════════════ */
-let _ctx=null, _deepData=null, _summary=null;
+let _ctx=null, _summary=null;
 function toast(msg){ let t=document.getElementById("toast");
   if(!t){ t=document.createElement("div"); t.id="toast"; document.body.appendChild(t); }
   t.textContent=msg; t.classList.add("show"); clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove("show"),3200); }
-async function ensureDeepData(){
-  if (_deepData) return _deepData;
-  const treatments = await loadTreatments(cfg.days);
-  const timeline = await loadProfiles(cfg.days);
-  return _deepData = { treatments, timeline };
-}
 function initDeep(){
   document.querySelectorAll("details.deep").forEach(d=>{
-    d.addEventListener("toggle", async ()=>{
+    d.addEventListener("toggle", ()=>{
       if (!d.open || d.dataset.done || !_ctx) return;
       d.dataset.done = "1";
       const body = d.querySelector(".body"), an = d.dataset.an;
       try {
-        const { treatments, timeline } = await ensureDeepData();
-        body.innerHTML = an==="dagpatroon" ? anDagpatroon(_ctx.glucose, treatments, _ctx.q)
-          : an==="meals" ? anMeals(_ctx.glucose, treatments, _ctx.q, timeline)
-          : await anModelcheck(treatments, timeline);
+        const { glucose, q, treatments, timeline } = _ctx;
+        body.innerHTML = an==="dagpatroon" ? anDagpatroon(glucose, treatments, q)
+          : an==="meals" ? anMeals(glucose, treatments, q, timeline)
+          : an==="stacking" ? anStacking(glucose, treatments, q)
+          : "";
       } catch(e){ body.innerHTML = `<div class="muted">Analyse mislukt: ${e.message}</div>`; console.error(an, e); }
     });
   });
@@ -894,10 +978,11 @@ function openDlg(){ try{ if(typeof dlg.showModal==="function"){ if(!dlg.open) dl
   dlg.classList.add("fb"); dlg.setAttribute("open",""); }
 function closeDlg(){ try{ dlg.close?.(); }catch(_){} dlg.removeAttribute("open"); }
 
-let _busy=null, _queued=false;
 async function refresh(){
-  const g = await loadGlucose(cfg.days);
-  render(g);
+  const glucose = await loadGlucose(cfg.days);
+  const treatments = glucose.length ? await loadTreatments(cfg.days) : [];
+  const timeline = glucose.length ? await loadProfiles(cfg.days) : null;
+  render(glucose, treatments, timeline);
 }
 async function doSync(){
   const btn=document.getElementById("btnSync"); btn.disabled=true; setConn("busy","synchroniseren…");
