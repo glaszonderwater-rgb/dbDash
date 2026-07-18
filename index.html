@@ -184,6 +184,11 @@ h2.sect::after{content:"";flex:1;height:1px;background:var(--line)}
 .ba .bar{display:flex;justify-content:space-between;gap:.5rem} .ba b{color:var(--ink);font-variant-numeric:tabular-nums}
 .ba .up{color:var(--inRange)} .ba .dn{color:var(--low)}
 .ba .verdict{margin-top:.3rem;font-weight:600;color:var(--ink)}
+.watable{margin-top:.3rem;font-variant-numeric:tabular-nums}
+.warow{display:grid;grid-template-columns:1fr 1fr 1fr;gap:.3rem .6rem;padding:.32rem 0;font-size:.86rem;border-top:1px solid var(--line)}
+.warow.head{border-top:0;color:var(--muted);font-size:.68rem;text-transform:uppercase;letter-spacing:.05em}
+.warow span:first-child{color:var(--muted)}
+.warow.cur{font-weight:700} .warow.cur span{color:var(--ink)}
 .empty{font-family:var(--mono);font-size:.8rem;color:var(--muted);text-align:center;padding:3.5rem 1rem;line-height:1.9}
 
 /* ── Verdieping ────────────────────────────────────────────────────────────── */
@@ -381,6 +386,7 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
     <h2 class="sect">Verdieping — voor wie wil sleutelen</h2>
     <details class="deep" data-an="dagpatroon"><summary>Dagpatroon <span>— vaste uren waarop je wegdrijft (basaal)</span></summary><div class="body"><div class="loading">Openklappen om te berekenen…</div></div></details>
     <details class="deep" data-an="meals"><summary>Maaltijdrespons <span>— hoe snel koolhydraten opnemen</span></summary><div class="body"><div class="loading">Openklappen om te berekenen…</div></div></details>
+    <details class="deep" data-an="watif"><summary>Wat-als: nachtbasaal <span>— een andere basaal doorgerekend op je eigen nachten</span></summary><div class="body"><div class="loading">Openklappen om te berekenen…</div></div></details>
   </section>
 </main>
 
@@ -388,7 +394,7 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
   Alles blijft op dit apparaat: cache in IndexedDB, token in localStorage. Er gaat niets naar een
   server behalve leesverzoeken aan je eigen Nightscout.<br>
   Observaties, geen instelwaarden. Wat je met een patroon doet is een gesprek met je behandelteam.<br>
-  <span style="opacity:.8">DiaMetric · versie <b>2.7 · 18 jul 2026</b> — hypo-gevoel &amp; bewustzijn · logboek &amp; voor/na-vergelijken · fine-tunen per hefboom · profiel (basaal/ISF/KH-ratio) · jouw vragen beantwoord · beweging · band-verdeling · hypo-detail · insuline &amp; koolhydraten · AGP · trend · verdieping</span>
+  <span style="opacity:.8">DiaMetric · versie <b>2.8 · 18 jul 2026</b> — wat-als nachtbasaal · hypo-gevoel &amp; bewustzijn · logboek &amp; voor/na-vergelijken · fine-tunen per hefboom · profiel (basaal/ISF/KH-ratio) · jouw vragen beantwoord · beweging · band-verdeling · hypo-detail · insuline &amp; koolhydraten · AGP · trend · verdieping</span>
 </footer>
 
 <dialog id="cfgDlg">
@@ -437,11 +443,17 @@ const colorOf = bg => cssVar(bandOf(bg).css);
 const nl1 = v => (v==null||!isFinite(v)) ? "—" : v.toFixed(1).replace(".", ",");
 const pct0 = v => Math.round(v*100) + "%";
 const TZ = "Europe/Amsterdam";
+// Tijdzone-afhankelijke afleidingen (dag-sleutel, minuut-van-de-dag) zijn duur
+// (Intl), en dezelfde meting wordt per render meermaals opgevraagd. Daarom via een
+// vaste formatter + memoisatie op timestamp — scheelt seconden op lange historie.
 const todFmt = new Intl.DateTimeFormat("en-GB", { timeZone:TZ, hour:"2-digit", minute:"2-digit", hour12:false });
-const todMin = ts => { const [h,m] = todFmt.format(new Date(ts)).split(":").map(Number); return (h%24)*60 + m; };
+const dayFmt = new Intl.DateTimeFormat("en-CA", { timeZone:TZ, year:"numeric", month:"2-digit", day:"2-digit" });
+const _todCache = new Map(), _dayCache = new Map();
+const todMin = ts => { let v=_todCache.get(ts); if(v!==undefined) return v;
+  const [h,m]=todFmt.format(ts).split(":"); v=(+h%24)*60 + +m; _todCache.set(ts,v); return v; };
 const fmtMin = m => `${String(Math.floor(m/60)%24).padStart(2,"0")}:${String(Math.round(m)%60).padStart(2,"0")}`;
-function localDayKey(ts){ const d=new Date(new Date(ts).toLocaleString("en-US",{timeZone:TZ}));
-  return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
+function localDayKey(ts){ let v=_dayCache.get(ts); if(v!==undefined) return v;
+  v=dayFmt.format(ts); _dayCache.set(ts,v); return v; }   // en-CA → "JJJJ-MM-DD"
 
 /* ── Nightscout (read-only, met time-out) ──────────────────────────────────── */
 const NS = {
@@ -1292,6 +1304,57 @@ function anStacking(glucose, treatments, q){
   return `<div class="obs">${obs}</div><div class="muted" style="margin-top:.4rem">n = ${r.cases} hypo's vs ${r.controls} controlemomenten (zelfde tijdstip, andere dagen). Observatie, geen instelwaarde.</div>`;
 }
 
+// "Wat-als" nachtbasaal: eerste-orde contrafeitelijke simulatie. Neem je schone
+// (maaltijd-/bolusvrije) nachten 00:00–06:00 en reken door wat een structureel
+// andere basaal met je glucose gedaan zou hebben — extra basaal × ISF, steady-state.
+// Tegenregulatie is níét gemodelleerd; onder ~3,9 dus alleen "risico neemt toe".
+function nightSim(glucose, treatments, q, timeline){
+  if(!timeline) return { noprof:true };
+  const CLEAN=3*3600e3;
+  const events=treatments.filter(t=>t.carbs>0||t.insulin>0).map(t=>t.ts).sort((a,b)=>a-b);
+  const g=glucose.filter(x=>q.usableKeys.has(localDayKey(x.ts)));
+  const byNight=new Map(); let ei=0;
+  for(let i=0;i<g.length;i++){ const t=g[i].ts;
+    while(ei<events.length&&events[ei]<=t)ei++;
+    if(todMin(t)>=360) continue;                          // alleen 00:00–06:00
+    if(t-(ei>0?events[ei-1]:-Infinity)<CLEAN) continue;   // maaltijd-/bolusvrij
+    const k=localDayKey(t); if(!byNight.has(k))byNight.set(k,[]); byNight.get(k).push(g[i]); }
+  const segs=[...byNight.values()].filter(seg=>seg.length>=12);   // ≥ ~1 uur data
+  // Basaal/ISF zijn 's nachts vrijwel constant — bemonster het profiel 3× per nacht
+  // (start/mid/eind) en middel, i.p.v. profileAt per stap (dat is traag door Intl).
+  const nights=[]; for(const seg of segs){
+    const pk=[seg[0],seg[seg.length>>1],seg[seg.length-1]].map(x=>profileAt(timeline,x.ts)).filter(p=>p&&p.basal!=null&&p.isf);
+    if(!pk.length) continue;
+    nights.push({ seg, isf:pk.reduce((s,p)=>s+p.isf,0)/pk.length, basal:pk.reduce((s,p)=>s+p.basal,0)/pk.length }); }
+  if(nights.length<5) return { few:nights.length };
+  const MULT=[0.9,0.95,1.0,1.05,1.1];
+  const med=a=>{const s=[...a].sort((x,y)=>x-y);return s.length?s[Math.floor(s.length/2)]:null;};
+  const res=MULT.map(m=>{ let lows=0; const ends=[];
+    for(const {seg,isf,basal} of nights){ let adj=0, minbg=Infinity, endbg=null;
+      for(let i=0;i<seg.length;i++){
+        if(i>0){ const dtMin=(seg[i].ts-seg[i-1].ts)/60000; if(dtMin>0&&dtMin<=20) adj += -isf*(m-1)*basal*(dtMin/60); }
+        const cf=seg[i].bg+adj; if(cf<minbg)minbg=cf; endbg=cf; }
+      ends.push(endbg); if(minbg<3.9)lows++; }
+    return { m, endMed:med(ends), lowNights:lows, nights:ends.length }; });
+  return { nights:nights.length, res };
+}
+function anWatIf(glucose, treatments, q, timeline){
+  const r=nightSim(glucose, treatments, q, timeline);
+  if(r.noprof) return `<div class="muted">Geen profiel met basaal/ISF in Nightscout gevonden — nodig om nachtbasaal door te rekenen.</div>`;
+  if(r.few!=null) return `<div class="muted">Te weinig schone nachten (${r.few}, minimaal 5) met maaltijd- en bolusvrije data tussen 00:00–06:00 om door te rekenen. Met meer historie komt dit beschikbaar.</div>`;
+  const cur=r.res.find(x=>x.m===1.0), up=r.res.find(x=>x.m===1.05), dn=r.res.find(x=>x.m===0.95);
+  const fmtM=m=>m===1?"huidig":(m>1?"+":"−")+Math.round(Math.abs(m-1)*100)+"%";
+  const rows=r.res.map(x=>`<div class="warow${x.m===1?" cur":""}"><span>${fmtM(x.m)}</span><span>${nl1(x.endMed)}</span><span>${x.lowNights}/${x.nights}</span></div>`).join("");
+  let lead="";
+  if(cur){ const parts=[];
+    if(up) parts.push(`bij <b>+5%</b> zou je mediane ontwaakwaarde van ${nl1(cur.endMed)} naar <b>${nl1(up.endMed)}</b> gaan (hypo-nachten ${cur.lowNights}→${up.lowNights})`);
+    if(dn) parts.push(`bij <b>−5%</b> naar <b>${nl1(dn.endMed)}</b> (hypo-nachten ${cur.lowNights}→${dn.lowNights})`);
+    lead=`Als je nachtbasaal structureel anders stond: ${parts.join("; en ")}.`; }
+  return `<div class="watable"><div class="warow head"><span>nachtbasaal</span><span>ontwaak (med.)</span><span>hypo-nachten</span></div>${rows}</div>`+
+    `<div class="obs">${lead}</div>`+
+    `<div class="muted" style="margin-top:.4rem">Eerste-orde benadering over ${r.nights} schone nachten (extra basaal × ISF, steady-state). Tegenregulatie — je lever die bij een dreigende hypo glucose vrijmaakt — zit er níét in, dus onder ~3,9 is de schatting onbetrouwbaar: lees hypo-nachten als "risico neemt toe", geen exacte telling. Ter lering, geen instelwaarde — bespreek met je team.</div>`;
+}
+
 // Beweging: geregistreerde exercise-/activiteit-events koppelen aan glucosedalingen.
 function exerciseEffect(glucose, treatments){
   const ev=treatments.filter(t=>
@@ -1425,6 +1488,7 @@ function initDeep(){
         body.innerHTML = an==="dagpatroon" ? anDagpatroon(glucose, treatments, q)
           : an==="meals" ? anMeals(glucose, treatments, q, timeline)
           : an==="stacking" ? anStacking(glucose, treatments, q)
+          : an==="watif" ? anWatIf(glucose, treatments, q, timeline)
           : "";
       } catch(e){ body.innerHTML = `<div class="muted">Analyse mislukt: ${e.message}</div>`; console.error(an, e); }
     });
