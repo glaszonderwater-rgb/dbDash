@@ -167,6 +167,23 @@ h2.sect::after{content:"";flex:1;height:1px;background:var(--line)}
 .ta{font-size:.86rem;color:var(--muted);line-height:1.5;margin-top:.4rem} .ta b{color:var(--ink);font-weight:600}
 .td{font-size:.85rem;color:var(--ink);margin-top:.4rem;font-weight:550;padding-left:.6rem;border-left:2px solid var(--accent)}
 .te{font-size:.7rem;color:var(--dim);margin-top:.35rem;font-family:var(--mono)}
+.logform{padding-bottom:.7rem;border-bottom:1px solid var(--line);margin-bottom:.5rem}
+.chips{display:flex;flex-wrap:wrap;gap:.35rem;margin-bottom:.55rem}
+.chip{font-size:.76rem;padding:.3rem .55rem;border-radius:.5rem;border:1px solid var(--line-2);background:var(--bg);color:var(--muted);cursor:pointer;white-space:nowrap}
+.chip.sel{border-color:transparent;background:var(--accent);color:var(--on-accent);font-weight:600}
+.logrow{display:flex;gap:.4rem;flex-wrap:wrap}
+.logrow input[type=date]{flex:0 0 auto} .logrow input[type=text]{flex:1 1 8rem;min-width:0}
+.logrow button{flex:0 0 auto}
+.logentry{padding:.6rem 0;border-top:1px solid var(--line)} .logentry:first-child{border-top:0}
+.leh{display:flex;align-items:baseline;gap:.5rem}
+.leh .ic{font-size:1rem} .leh .lt{font-weight:600;font-size:.9rem;color:var(--ink)}
+.leh .ld{font-family:var(--mono);font-size:.72rem;color:var(--muted)}
+.leh .del{margin-left:auto;background:none;border:0;color:var(--dim);font-size:1rem;cursor:pointer;padding:.1rem .3rem;line-height:1}
+.lenote{font-size:.82rem;color:var(--muted);margin-top:.2rem}
+.ba{margin-top:.45rem;padding:.5rem .6rem;border-radius:.55rem;background:var(--surface-2);font-size:.8rem;line-height:1.6}
+.ba .bar{display:flex;justify-content:space-between;gap:.5rem} .ba b{color:var(--ink);font-variant-numeric:tabular-nums}
+.ba .up{color:var(--inRange)} .ba .dn{color:var(--low)}
+.ba .verdict{margin-top:.3rem;font-weight:600;color:var(--ink)}
 .empty{font-family:var(--mono);font-size:.8rem;color:var(--muted);text-align:center;padding:3.5rem 1rem;line-height:1.9}
 
 /* ── Verdieping ────────────────────────────────────────────────────────────── */
@@ -329,6 +346,21 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
     </div>
   </section>
 
+  <section id="secLog" hidden>
+    <h2 class="sect">Logboek — markeer &amp; vergelijk</h2>
+    <div class="card">
+      <div class="logform">
+        <div class="chips" id="logChips"></div>
+        <div class="logrow">
+          <input type="date" id="logDate" aria-label="datum">
+          <input type="text" id="logNote" maxlength="80" placeholder="wat veranderde er? (optioneel)">
+          <button class="ghost" id="logAdd">Toevoegen</button>
+        </div>
+      </div>
+      <div id="logList"></div>
+    </div>
+  </section>
+
   <section id="secDeep" hidden>
     <h2 class="sect">Verdieping — voor wie wil sleutelen</h2>
     <details class="deep" data-an="dagpatroon"><summary>Dagpatroon <span>— vaste uren waarop je wegdrijft (basaal)</span></summary><div class="body"><div class="loading">Openklappen om te berekenen…</div></div></details>
@@ -340,7 +372,7 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
   Alles blijft op dit apparaat: cache in IndexedDB, token in localStorage. Er gaat niets naar een
   server behalve leesverzoeken aan je eigen Nightscout.<br>
   Observaties, geen instelwaarden. Wat je met een patroon doet is een gesprek met je behandelteam.<br>
-  <span style="opacity:.8">DiaMetric · versie <b>2.5 · 18 jul 2026</b> — fine-tunen per hefboom · profiel (basaal/ISF/KH-ratio) · jouw vragen beantwoord · beweging · band-verdeling · hypo-detail · insuline &amp; koolhydraten · AGP · trend · verdieping</span>
+  <span style="opacity:.8">DiaMetric · versie <b>2.6 · 18 jul 2026</b> — logboek &amp; voor/na-vergelijken · fine-tunen per hefboom · profiel (basaal/ISF/KH-ratio) · jouw vragen beantwoord · beweging · band-verdeling · hypo-detail · insuline &amp; koolhydraten · AGP · trend · verdieping</span>
 </footer>
 
 <dialog id="cfgDlg">
@@ -449,12 +481,14 @@ const NS = {
 const DB = {
   h:null,
   open(){ if (this.h) return Promise.resolve(this.h);
-    return new Promise((res,rej)=>{ const rq=indexedDB.open("dbdash2",2);
+    return new Promise((res,rej)=>{ const rq=indexedDB.open("dbdash2",3);
       rq.onupgradeneeded=()=>{ const db=rq.result;
         for (const s of ["entries","treatments","devicestatus"])
           if(!db.objectStoreNames.contains(s)) db.createObjectStore(s,{keyPath:"_id"}).createIndex("ts","ts");
         if(!db.objectStoreNames.contains("profiles")) db.createObjectStore("profiles",{keyPath:"_id"});
-        if(!db.objectStoreNames.contains("meta")) db.createObjectStore("meta",{keyPath:"k"}); };
+        if(!db.objectStoreNames.contains("meta")) db.createObjectStore("meta",{keyPath:"k"});
+        // Persoonlijke annotaties (wijzigingen, ziekte, cyclus, notities) — jouw geheugenlaag.
+        if(!db.objectStoreNames.contains("annotations")) db.createObjectStore("annotations",{keyPath:"id"}).createIndex("ts","ts"); };
       rq.onsuccess=()=>res(this.h=rq.result);
       rq.onerror=()=>rej(new Error("IndexedDB niet beschikbaar. In privémodus of een preview-iframe werkt de cache niet — open het bestand normaal.")); }); },
   async putMany(store, rows){ if(!rows.length) return 0; const db=await this.open();
@@ -471,6 +505,8 @@ const DB = {
     if (v===undefined) return new Promise(res=>{ const rq=db.transaction("meta","readonly").objectStore("meta").get(k);
       rq.onsuccess=()=>res(rq.result?.v ?? null); rq.onerror=()=>res(null); });
     return this.putMany("meta",[{k,v}]); },
+  async delRow(store, key){ const db=await this.open();
+    return new Promise((res,rej)=>{ const t=db.transaction(store,"readwrite"); t.objectStore(store).delete(key); t.oncomplete=res; t.onerror=()=>rej(t.error); }); },
   async wipe(){ if(this.h){this.h.close();this.h=null;}
     await new Promise(res=>{ const rq=indexedDB.deleteDatabase("dbdash2"); rq.onsuccess=rq.onerror=res; }); },
 };
@@ -939,7 +975,7 @@ function render(glucose, treatments, timeline){
   treatments = treatments||[]; timeline = timeline||null;
   const has = glucose.length>0;
   document.getElementById("empty").hidden = has;
-  for (const id of ["secNow","secSummary","secQuestions","secAgp","secSafety","secInsulin","secProfile","secTune","secTrend","secDeep"]) document.getElementById(id).hidden = !has;
+  for (const id of ["secNow","secSummary","secQuestions","secAgp","secSafety","secInsulin","secProfile","secTune","secTrend","secLog","secDeep"]) document.getElementById(id).hidden = !has;
   if (!has) return;
 
   // Nu
@@ -966,7 +1002,7 @@ function render(glucose, treatments, timeline){
   if (!g.length){
     document.getElementById("opp").innerHTML = `<div class="lead">Deze periode</div><div class="msg">Nog te weinig dagen met voldoende sensordekking (≥70%) voor betrouwbare cijfers. Synchroniseer meer historie of wacht op meer sensordagen.</div>`;
     document.getElementById("kpis").innerHTML = "";
-    for (const id of ["secQuestions","secAgp","secSafety","secInsulin","secProfile","secTune","secTrend","secDeep"]) document.getElementById(id).hidden = true;
+    for (const id of ["secQuestions","secAgp","secSafety","secInsulin","secProfile","secTune","secTrend","secLog","secDeep"]) document.getElementById(id).hidden = true;
     return;
   }
 
@@ -1106,6 +1142,9 @@ function render(glucose, treatments, timeline){
       tr.map(w=>`<span>${new Date(w.end).toLocaleDateString("nl-NL",{day:"2-digit",month:"2-digit"})}</span><span>${pct0(w.tir)}</span><span>${pct0(w.tbr)}</span><span>${pct0(w.cv)}</span>`).join("")+
       `</div>`;
   }
+
+  // Logboek + voor/na-vergelijking (leest annotaties uit IndexedDB; async, buiten de renderflow)
+  renderLog();
 }
 
 /* ══ VERDIEPING — geavanceerde analyses (lui: pas bij openklappen) ═════════ */
@@ -1306,7 +1345,30 @@ function answerQuestions(m, ag, hy, stack, MR, tr, ex){
   return qa.map(([q,a])=>`<div class="qa"><div class="q">${q}</div><div class="a">${a}</div></div>`).join("");
 }
 
-/* ══ UI ════════════════════════════════════════════════════════════════════ */
+// ── Logboek & voor/na-vergelijker ──────────────────────────────────────────
+// Jouw eigen gebeurtenissen als geheugenlaag. Een "wijziging" dient tegelijk als
+// ankerpunt: de app vergelijkt de periode ervoor met die erna.
+const ANNOT_TYPES = [
+  { id:"wijziging", label:"Instelling aangepast", icon:"⚙", anchor:true },
+  { id:"ziek",      label:"Ziek",                icon:"🤒" },
+  { id:"cyclus",    label:"Cyclus",              icon:"🩸" },
+  { id:"sport",     label:"Sport / activiteit",  icon:"🏃" },
+  { id:"reis",      label:"Reis / tijdzone",     icon:"✈" },
+  { id:"stress",    label:"Stress",              icon:"⚡" },
+  { id:"notitie",   label:"Notitie",             icon:"📝" },
+];
+const annotType = id => ANNOT_TYPES.find(t=>t.id===id) || ANNOT_TYPES[ANNOT_TYPES.length-1];
+// Vergelijk de `win` dagen vóór een ankerpunt met de `win` dagen erna (alleen
+// bruikbare dagen), en geef de kernmaten + delta's terug.
+function beforeAfter(glucose, q, annTs, win){
+  win = win || 14;
+  const usable = ts => q.usableKeys.has(localDayKey(ts));
+  const before = glucose.filter(x=>x.ts>=annTs-win*DAY && x.ts<annTs && usable(x.ts));
+  const after  = glucose.filter(x=>x.ts>=annTs && x.ts<annTs+win*DAY && usable(x.ts));
+  const side = arr => { const days=new Set(arr.map(x=>localDayKey(x.ts))).size;
+    return (arr.length>=200 && days>=3) ? { ok:true, days, m:metrics(arr) } : { ok:false, days }; };
+  return { win, before:side(before), after:side(after) };
+}
 let _ctx=null, _summary=null;
 function toast(msg){ let t=document.getElementById("toast");
   if(!t){ t=document.createElement("div"); t.id="toast"; document.body.appendChild(t); }
@@ -1326,6 +1388,55 @@ function initDeep(){
       } catch(e){ body.innerHTML = `<div class="muted">Analyse mislukt: ${e.message}</div>`; console.error(an, e); }
     });
   });
+}
+
+// ── Logboek-UI ──────────────────────────────────────────────────────────────
+const esc = s => String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+let _logSel = "wijziging";
+function buildChips(){
+  const c=document.getElementById("logChips");
+  c.innerHTML=ANNOT_TYPES.map(t=>`<button type="button" class="chip${t.id===_logSel?" sel":""}" data-type="${t.id}">${t.icon} ${t.label}</button>`).join("");
+  c.querySelectorAll(".chip").forEach(ch=>ch.onclick=()=>{ _logSel=ch.dataset.type; buildChips(); });
+}
+// Voor/na-strip onder een ankerpunt (type "wijziging").
+function baHtml(annTs){
+  if(!_ctx) return "";
+  const r=beforeAfter(_ctx.glucose, _ctx.q, annTs, 14);
+  if(!r.before.ok && !r.after.ok) return `<div class="ba"><span class="muted">Nog te weinig bruikbare dagen rond deze datum om te vergelijken.</span></div>`;
+  if(!r.before.ok || !r.after.ok){ const which=r.before.ok?"ná":"vóór";
+    return `<div class="ba"><span class="muted">Wacht op meer dagen ${which} deze datum (min. 3 met ≥70% dekking) voor een vergelijking.</span></div>`; }
+  const b=r.before.m, a=r.after.m;
+  const row=(label,bv,av,fmt,better)=>{ const d=av-bv, flat=Math.abs(d)<1e-9;
+    const cls=(!better||flat)?"":better(d)?"up":"dn", arrow=flat?"":d>0?"▲":"▼";
+    return `<div class="bar"><span>${label}</span><span><b>${fmt(bv)}</b> → <b class="${cls}">${fmt(av)} ${arrow}</b></span></div>`; };
+  const dTir=a.tir-b.tir, dTbr=a.tbr-b.tbr;
+  const verdict = (dTir>=0.05 && dTbr<=0.01) ? "Verbeterd — meer tijd in bereik zonder meer hypo's"
+    : (dTir<=-0.05 || dTbr>=0.02) ? "Verslechterd — let op"
+    : "Ongeveer gelijk gebleven";
+  return `<div class="ba">`+
+    row("Tijd in bereik", b.tir, a.tir, pct0, d=>d>0)+
+    row("Hypo (&lt;3,9)", b.tbr, a.tbr, pct0, d=>d<0)+
+    row("Gemiddeld", b.mean, a.mean, nl1, null)+
+    row("Variatie (CV)", b.cv, a.cv, pct0, d=>d<0)+
+    `<div class="verdict">${verdict}</div>`+
+    `<div class="muted" style="margin-top:.25rem;font-size:.7rem">${r.win} dagen vóór vs ${r.win} dagen ná de markering · alleen dagen met ≥70% dekking</div>`+
+    `</div>`;
+}
+async function renderLog(){
+  const list=document.getElementById("logList"); if(!list) return;
+  let anns=[]; try{ anns=await DB.all("annotations"); }catch(_){}
+  anns.sort((a,b)=>b.ts-a.ts);
+  if(!anns.length){ list.innerHTML=`<div class="muted" style="padding-top:.3rem">Nog geen markeringen. Leg vast wanneer je een instelling aanpaste of er iets bijzonders speelde — bij een aangepaste instelling vergelijkt de app vanzelf de periode ervóór en erná.</div>`; return; }
+  list.innerHTML=anns.map(an=>{ const t=annotType(an.type);
+    const d=new Date(an.ts).toLocaleDateString("nl-NL",{day:"2-digit",month:"short",year:"numeric"});
+    return `<div class="logentry"><div class="leh"><span class="ic">${t.icon}</span><span class="lt">${esc(t.label)}</span><span class="ld">${d}</span><button class="del" data-id="${esc(an.id)}" title="verwijderen" aria-label="verwijderen">✕</button></div>`+
+      (an.note?`<div class="lenote">${esc(an.note)}</div>`:``)+
+      (t.anchor?baHtml(an.ts):``)+`</div>`;
+  }).join("");
+  list.querySelectorAll(".del").forEach(btn=>btn.onclick=async()=>{
+    if(!confirm("Deze markering verwijderen?")) return;
+    try{ await DB.delRow("annotations",btn.dataset.id); }catch(e){ toast("Verwijderen mislukt."); return; }
+    renderLog(); });
 }
 
 const dot=document.getElementById("dot"), connTxt=document.getElementById("connTxt");
@@ -1373,6 +1484,19 @@ document.getElementById("btnPrint").onclick = ()=>window.print();
 document.getElementById("btnWipe").onclick = async ()=>{
   if (!confirm("Cache wissen? De data wordt bij de volgende sync opnieuw opgehaald.")) return;
   await DB.wipe(); closeDlg(); await refresh(); };
+
+// Logboek
+buildChips();
+document.getElementById("logDate").value = (()=>{ const d=new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; })();
+document.getElementById("logAdd").onclick = async ()=>{
+  const dv=document.getElementById("logDate").value; if(!dv){ toast("Kies een datum."); return; }
+  const ts=new Date(dv+"T12:00:00").getTime();
+  const note=document.getElementById("logNote").value.trim();
+  const an={ id:"a"+Date.now()+"-"+Math.random().toString(36).slice(2,7), ts, type:_logSel, note, created:Date.now() };
+  try{ await DB.putMany("annotations",[an]); }catch(e){ toast("Opslaan mislukt: "+e.message); return; }
+  document.getElementById("logNote").value=""; toast("Markering toegevoegd.");
+  renderLog(); };
 
 initDeep();
 (async function init(){
