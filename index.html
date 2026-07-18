@@ -197,13 +197,22 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
       <div class="muted" id="safetyEv" style="margin-top:.4rem"></div>
     </div>
   </section>
+
+  <section id="secTrend" hidden>
+    <h2 class="sect">Trend — word je beter?</h2>
+    <div class="card">
+      <div id="trend"></div>
+      <div class="obs" id="trendObs"></div>
+      <div class="muted" id="trendTable" style="margin-top:.5rem"></div>
+    </div>
+  </section>
 </main>
 
 <footer class="wrap">
   Alles blijft op dit apparaat: cache in IndexedDB, token in localStorage. Er gaat niets naar een
   server behalve leesverzoeken aan je eigen Nightscout.<br>
   Observaties, geen instelwaarden. Wat je met een patroon doet is een gesprek met je behandelteam.<br>
-  <span style="opacity:.8">versie <b>2.0 · fase 1 · 18 jul 2026</b> — lichte herbouw (Nu · kern-KPI's · AGP · veiligheid)</span>
+  <span style="opacity:.8">versie <b>2.0 · fase 2 · 18 jul 2026</b> — Nu · kern-KPI's · AGP · veiligheid · trend</span>
 </footer>
 
 <dialog id="cfgDlg">
@@ -389,8 +398,46 @@ function hypoStats(g){
   return { episodes:episodes.length, parts, label,
     worst: parts.some(x=>x>0) ? label[parts.indexOf(Math.max(...parts))] : null };
 }
+// Weektrend: kernmaten per 7-daagse blok, oud → nieuw (alleen weken met genoeg data)
+function weeklyTrend(glucose, q){
+  const to = q.to || Date.now();
+  const nWeeks = Math.min(8, Math.ceil(cfg.days/7));
+  const weeks = [];
+  for (let w=0; w<nWeeks; w++){
+    const hi = to - w*7*DAY, lo = hi - 7*DAY;
+    const gw = glucose.filter(x => x.ts>lo && x.ts<=hi && q.usableKeys.has(localDayKey(x.ts)));
+    const days = new Set(gw.map(x=>localDayKey(x.ts))).size;
+    if (gw.length<500 || days<3) continue;      // te dun voor een betrouwbare week
+    const m = metrics(gw);
+    weeks.push({ end:hi, days, tir:m.tir, tbr:m.tbr, cv:m.cv });
+  }
+  return weeks.reverse();
+}
+function trendSvg(weeks){
+  const W=320, H=140, PB=30, PL=24, PT=10, n=weeks.length, gap=8;
+  const bw=(W-PL-6-(n-1)*gap)/n, base=H-PB, Y=p=>PT+(1-p)*(base-PT);
+  let s=`<svg class="chart" viewBox="0 0 ${W} ${H}">`;
+  for (const p of [0,0.5,0.7,1]){ const y=Y(p), tgt=p===0.7;
+    s+=`<line x1="${PL}" y1="${y.toFixed(1)}" x2="${W}" y2="${y.toFixed(1)}" stroke="${tgt?"var(--accent)":"var(--line)"}" stroke-width="1"${tgt?' stroke-dasharray="3 3"':''}/>`+
+      `<text x="${PL-3}" y="${(y+3).toFixed(1)}" font-size="8" fill="var(--muted)" text-anchor="end">${Math.round(p*100)}</text>`; }
+  weeks.forEach((w,i)=>{ const x=PL+3+i*(bw+gap), y=Y(w.tir), h=base-y;
+    const col = w.tir>=0.70?"var(--inRange)":w.tir>=0.5?"var(--high)":"var(--low)";
+    s+=`<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(0,h).toFixed(1)}" rx="3" fill="${col}"/>`+
+      `<text x="${(x+bw/2).toFixed(1)}" y="${(y-3).toFixed(1)}" font-size="9" fill="var(--ink)" text-anchor="middle" font-weight="600">${pct0(w.tir)}</text>`+
+      `<text x="${(x+bw/2).toFixed(1)}" y="${H-16}" font-size="7.5" fill="var(--muted)" text-anchor="middle">${new Date(w.end).toLocaleDateString("nl-NL",{day:"2-digit",month:"2-digit"})}</text>`; }
+  );
+  s+=`<text x="${PL}" y="${H-4}" font-size="7.5" fill="var(--dim)">balken = tijd in bereik per week · stippellijn = streef 70%</text>`;
+  return s+"</svg>";
+}
+
 // Grootste kans — veiligheid eerst
-function opportunity(m, ag, hy){
+function opportunity(m, ag, hy, trend){
+  // Trend-signaal: verslechtert de veiligheid of het bereik zichtbaar?
+  if (trend && trend.length>=2){
+    const f=trend[0], l=trend[trend.length-1];
+    if (l.tbr-f.tbr>=0.02 && l.tbr>=0.03)
+      return { risk:true, msg:`<b>Let op — hypo's nemen toe.</b> Je tijd onder 3,9 liep op van ${pct0(f.tbr)} naar ${pct0(l.tbr)} over de weken. Dit is nu je belangrijkste aandachtspunt.` };
+  }
   const highWin = joinBins(ag.filter(x=>x.p50>=10).map(x=>x.b));
   const lowWin  = joinBins(ag.filter(x=>x.p10<3.9).map(x=>x.b));
   if (m.veryLow>=0.01 || m.tbr>=0.04)
@@ -457,7 +504,7 @@ function tick(ok){ return ok ? `<span class="badge ok">✓</span>` : `<span clas
 function render(glucose){
   const has = glucose.length>0;
   document.getElementById("empty").hidden = has;
-  for (const id of ["secNow","secSummary","secAgp","secSafety"]) document.getElementById(id).hidden = !has;
+  for (const id of ["secNow","secSummary","secAgp","secSafety","secTrend"]) document.getElementById(id).hidden = !has;
   if (!has) return;
 
   // Nu
@@ -482,13 +529,14 @@ function render(glucose){
     document.getElementById("opp").innerHTML = `<div class="lead">Deze periode</div><div class="msg">Nog te weinig dagen met voldoende sensordekking (≥70%) voor betrouwbare cijfers. Synchroniseer meer historie of wacht op meer sensordagen.</div>`;
     document.getElementById("kpis").innerHTML = "";
     document.getElementById("secAgp").hidden = true; document.getElementById("secSafety").hidden = true;
+    document.getElementById("secTrend").hidden = true;
     return;
   }
 
-  const m = metrics(g), ag = agp(g), hy = hypoStats(g);
+  const m = metrics(g), ag = agp(g), hy = hypoStats(g), tr = weeklyTrend(glucose, q);
 
   // Grootste kans
-  const opp = opportunity(m, ag, hy);
+  const opp = opportunity(m, ag, hy, tr);
   const oc = document.getElementById("opp");
   oc.className = "card opp" + (opp.risk?" risk":"");
   oc.innerHTML = `<div class="lead">${opp.risk?"⚠ Grootste aandachtspunt":"Grootste kans"}</div><div class="msg">${opp.msg}</div>`;
@@ -522,6 +570,27 @@ function render(glucose){
     : `<b>${hy.episodes}</b> hypo-episode${hy.episodes===1?"":"s"} onder 3,9${hy.worst?`, het vaakst in de <b>${hy.worst}</b>`:""}. Dat is ${pct0(m.tbr)} van je tijd (streef &lt;4%).`;
   document.getElementById("safetyEv").textContent =
     `n = ${m.n.toLocaleString("nl")} metingen over ${q.usable.length} dagen` + (enough?"":" · ≥14 dagen aanbevolen voor een stabiel beeld");
+
+  // Trend over de weken
+  if (tr.length<2){
+    document.getElementById("secTrend").hidden = true;
+  } else {
+    document.getElementById("secTrend").hidden = false;
+    document.getElementById("trend").innerHTML = trendSvg(tr);
+    const f=tr[0], l=tr[tr.length-1], dTir=l.tir-f.tir, dTbr=l.tbr-f.tbr;
+    const dir = dTir>0.05 ? "<b>omhoog</b> — je tijd in bereik verbetert"
+      : dTir<-0.05 ? "<b>omlaag</b> — je tijd in bereik zakt" : "<b>stabiel</b>";
+    const hypoNote = Math.abs(dTbr)>=0.01
+      ? ` Je hypo-tijd ging van ${pct0(f.tbr)} naar ${pct0(l.tbr)}${dTbr>0?" — houd dat in de gaten":""}.`
+      : "";
+    document.getElementById("trendObs").innerHTML =
+      `Over ${tr.length} weken beweegt je tijd in bereik ${dir} (van ${pct0(f.tir)} naar ${pct0(l.tir)}).${hypoNote}`;
+    document.getElementById("trendTable").innerHTML =
+      `<div style="display:grid;grid-template-columns:auto 1fr 1fr 1fr;gap:.15rem .8rem;font-variant-numeric:tabular-nums">`+
+      `<b style="color:var(--muted)">week</b><b style="color:var(--muted)">TIR</b><b style="color:var(--muted)">hypo</b><b style="color:var(--muted)">CV</b>`+
+      tr.map(w=>`<span>${new Date(w.end).toLocaleDateString("nl-NL",{day:"2-digit",month:"2-digit"})}</span><span>${pct0(w.tir)}</span><span>${pct0(w.tbr)}</span><span>${pct0(w.cv)}</span>`).join("")+
+      `</div>`;
+  }
 }
 
 /* ══ UI ════════════════════════════════════════════════════════════════════ */
