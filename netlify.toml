@@ -1,0 +1,5 @@
+# DiaMetric is één statisch bestand (index.html) in de hoofdmap — geen build.
+# Dit vertelt Netlify precies dat, zodat de import zonder instellingen werkt.
+[build]
+  publish = "."
+  command = ""
