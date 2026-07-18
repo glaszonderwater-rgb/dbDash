@@ -319,6 +319,22 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
     </div>
   </section>
 
+  <section id="secAware" hidden>
+    <h2 class="sect">Hypo-gevoel &amp; bewustzijn</h2>
+    <div class="card">
+      <div class="logform">
+        <div class="chips" id="awChips"></div>
+        <div class="logrow">
+          <input type="datetime-local" id="awTime" aria-label="moment">
+          <input type="text" id="awBg" inputmode="decimal" maxlength="4" placeholder="meting (mmol, optioneel)">
+          <button class="ghost" id="awAdd">Vastleggen</button>
+        </div>
+      </div>
+      <div id="awareOut"></div>
+      <div id="awareList"></div>
+    </div>
+  </section>
+
   <section id="secInsulin" hidden>
     <h2 class="sect">Insuline &amp; koolhydraten</h2>
     <div class="card">
@@ -372,7 +388,7 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
   Alles blijft op dit apparaat: cache in IndexedDB, token in localStorage. Er gaat niets naar een
   server behalve leesverzoeken aan je eigen Nightscout.<br>
   Observaties, geen instelwaarden. Wat je met een patroon doet is een gesprek met je behandelteam.<br>
-  <span style="opacity:.8">DiaMetric · versie <b>2.6 · 18 jul 2026</b> — logboek &amp; voor/na-vergelijken · fine-tunen per hefboom · profiel (basaal/ISF/KH-ratio) · jouw vragen beantwoord · beweging · band-verdeling · hypo-detail · insuline &amp; koolhydraten · AGP · trend · verdieping</span>
+  <span style="opacity:.8">DiaMetric · versie <b>2.7 · 18 jul 2026</b> — hypo-gevoel &amp; bewustzijn · logboek &amp; voor/na-vergelijken · fine-tunen per hefboom · profiel (basaal/ISF/KH-ratio) · jouw vragen beantwoord · beweging · band-verdeling · hypo-detail · insuline &amp; koolhydraten · AGP · trend · verdieping</span>
 </footer>
 
 <dialog id="cfgDlg">
@@ -975,7 +991,7 @@ function render(glucose, treatments, timeline){
   treatments = treatments||[]; timeline = timeline||null;
   const has = glucose.length>0;
   document.getElementById("empty").hidden = has;
-  for (const id of ["secNow","secSummary","secQuestions","secAgp","secSafety","secInsulin","secProfile","secTune","secTrend","secLog","secDeep"]) document.getElementById(id).hidden = !has;
+  for (const id of ["secNow","secSummary","secQuestions","secAgp","secSafety","secAware","secInsulin","secProfile","secTune","secTrend","secLog","secDeep"]) document.getElementById(id).hidden = !has;
   if (!has) return;
 
   // Nu
@@ -1002,7 +1018,7 @@ function render(glucose, treatments, timeline){
   if (!g.length){
     document.getElementById("opp").innerHTML = `<div class="lead">Deze periode</div><div class="msg">Nog te weinig dagen met voldoende sensordekking (≥70%) voor betrouwbare cijfers. Synchroniseer meer historie of wacht op meer sensordagen.</div>`;
     document.getElementById("kpis").innerHTML = "";
-    for (const id of ["secQuestions","secAgp","secSafety","secInsulin","secProfile","secTune","secTrend","secLog","secDeep"]) document.getElementById(id).hidden = true;
+    for (const id of ["secQuestions","secAgp","secSafety","secAware","secInsulin","secProfile","secTune","secTrend","secLog","secDeep"]) document.getElementById(id).hidden = true;
     return;
   }
 
@@ -1012,6 +1028,7 @@ function render(glucose, treatments, timeline){
     d.querySelector(".body").innerHTML = '<div class="loading">Openklappen om te berekenen…</div>'; });
 
   const m = metrics(g), ag = agp(g), hy = hypoStats(g), tr = weeklyTrend(glucose, q);
+  _ctx.hy = hy;   // hypo-episodes voor de bewustzijnssectie
 
   // Grootste kans
   const opp = opportunity(m, ag, hy, tr);
@@ -1079,6 +1096,9 @@ function render(glucose, treatments, timeline){
       `${hy.nocturnal?`; <b>${hy.nocturnal}</b> 's nachts (00–06 u) — het gevaarlijkst omdat je slaapt`:hy.worst?`, het vaakst in de ${hy.worst}`:""}.`;
   document.getElementById("safetyEv").textContent =
     `n = ${m.n.toLocaleString("nl")} metingen over ${q.usable.length} dagen` + (enough?"":" · ≥14 dagen aanbevolen voor een stabiel beeld");
+
+  // Hypo-gevoel & bewustzijn (leest gelogde gevoelens; async, buiten de renderflow)
+  renderAware();
 
   // Insuline & koolhydraten
   const ins = insulinCarbs(treatments, timeline, q);
@@ -1358,6 +1378,8 @@ const ANNOT_TYPES = [
   { id:"notitie",   label:"Notitie",             icon:"📝" },
 ];
 const annotType = id => ANNOT_TYPES.find(t=>t.id===id) || ANNOT_TYPES[ANNOT_TYPES.length-1];
+const INTENSITY = [ { id:"licht", label:"licht" }, { id:"duidelijk", label:"duidelijk" }, { id:"ernstig", label:"ernstig" } ];
+const parseNum = s => { const v=parseFloat(String(s).replace(",",".").trim()); return isFinite(v)?v:null; };
 // Vergelijk de `win` dagen vóór een ankerpunt met de `win` dagen erna (alleen
 // bruikbare dagen), en geef de kernmaten + delta's terug.
 function beforeAfter(glucose, q, annTs, win){
@@ -1368,6 +1390,25 @@ function beforeAfter(glucose, q, annTs, win){
   const side = arr => { const days=new Set(arr.map(x=>localDayKey(x.ts))).size;
     return (arr.length>=200 && days>=3) ? { ok:true, days, m:metrics(arr) } : { ok:false, days }; };
   return { win, before:side(before), after:side(after) };
+}
+// Hypo-bewustzijn: bij welke glucose voél je een hypo, en zakt die "voelgrens"
+// over de tijd (een teken van verminderd hypogevoel)? Combineert je gelogde
+// gevoelens met de sensorwaarde op dat moment.
+function hypoAwareness(glucose, felt){
+  const T=glucose.map(g=>g.ts);
+  const near=ts=>{ let lo=0,hi=T.length; while(lo<hi){const m=(lo+hi)>>1; if(T[m]<ts)lo=m+1; else hi=m;}
+    let best=null,bd=15*60e3; for(const i of [lo-1,lo]){ if(i<0||i>=T.length)continue; const d=Math.abs(T[i]-ts); if(d<=bd){bd=d;best=glucose[i];} } return best; };
+  const ev=felt.map(f=>{ const g=near(f.ts);
+      return { ts:f.ts, intensity:f.intensity, cgm:g?g.bg:null, measured:f.measured, thr:(f.measured!=null?f.measured:(g?g.bg:null)) }; })
+    .filter(e=>e.thr!=null).sort((a,b)=>a.ts-b.ts);
+  if(!ev.length) return { n:0, ev:[] };
+  const med=a=>{const s=[...a].sort((x,y)=>x-y);return s[Math.floor(s.length/2)];};
+  const thr=med(ev.map(e=>e.thr));
+  const confirmed=ev.filter(e=>e.cgm!=null && e.cgm<3.9).length;
+  let trend=null;
+  if(ev.length>=6){ const h=Math.floor(ev.length/2);
+    trend={ early:med(ev.slice(0,h).map(e=>e.thr)), late:med(ev.slice(h).map(e=>e.thr)) }; trend.delta=trend.late-trend.early; }
+  return { n:ev.length, thr, confirmed, confirmedFrac:confirmed/ev.length, trend, ev };
 }
 let _ctx=null, _summary=null;
 function toast(msg){ let t=document.getElementById("toast");
@@ -1425,7 +1466,7 @@ function baHtml(annTs){
 async function renderLog(){
   const list=document.getElementById("logList"); if(!list) return;
   let anns=[]; try{ anns=await DB.all("annotations"); }catch(_){}
-  anns.sort((a,b)=>b.ts-a.ts);
+  anns=anns.filter(a=>a.type!=="hypogevoel").sort((a,b)=>b.ts-a.ts);   // hypo-gevoel heeft z'n eigen sectie
   if(!anns.length){ list.innerHTML=`<div class="muted" style="padding-top:.3rem">Nog geen markeringen. Leg vast wanneer je een instelling aanpaste of er iets bijzonders speelde — bij een aangepaste instelling vergelijkt de app vanzelf de periode ervóór en erná.</div>`; return; }
   list.innerHTML=anns.map(an=>{ const t=annotType(an.type);
     const d=new Date(an.ts).toLocaleDateString("nl-NL",{day:"2-digit",month:"short",year:"numeric"});
@@ -1437,6 +1478,49 @@ async function renderLog(){
     if(!confirm("Deze markering verwijderen?")) return;
     try{ await DB.delRow("annotations",btn.dataset.id); }catch(e){ toast("Verwijderen mislukt."); return; }
     renderLog(); });
+}
+
+// ── Hypo-gevoel-UI ────────────────────────────────────────────────────────────
+let _awSel = "duidelijk";
+function buildAwChips(){
+  const c=document.getElementById("awChips");
+  c.innerHTML=INTENSITY.map(t=>`<button type="button" class="chip${t.id===_awSel?" sel":""}" data-int="${t.id}">${t.label}</button>`).join("");
+  c.querySelectorAll(".chip").forEach(ch=>ch.onclick=()=>{ _awSel=ch.dataset.int; buildAwChips(); });
+}
+function awareHtml(aw, hy){
+  if(!aw.n) return `<div class="muted" style="padding-top:.3rem">Nog geen hypo-gevoel gelogd. Leg vast wannéér je een hypo vóélt (en zo mogelijk je meterwaarde) — dan volgt de app op welke glucose je het merkt, en of die grens over de tijd zakt: een vroeg teken van verminderd hypogevoel.</div>`;
+  const thrTxt = aw.thr<3.3 ? `Je merkt hypo's mediaan pas bij <b>${nl1(aw.thr)} mmol/L</b> — vrij laag. Dat kán wijzen op verminderd hypogevoel.`
+    : aw.thr<3.9 ? `Je voelt hypo's mediaan rond <b>${nl1(aw.thr)} mmol/L</b>.`
+    : `Je voelt hypo's mediaan al rond <b>${nl1(aw.thr)} mmol/L</b> — ruim op tijd.`;
+  const trendTxt = aw.trend && Math.abs(aw.trend.delta)>=0.5
+    ? (aw.trend.delta<0 ? ` Je voelgrens zakte van ${nl1(aw.trend.early)} naar ${nl1(aw.trend.late)} — houd dit in de gaten.`
+                        : ` Je voelgrens ging van ${nl1(aw.trend.early)} naar ${nl1(aw.trend.late)} omhoog — je merkt ze eerder.`)
+    : "";
+  const kpis=[
+    ["Voelgrens", nl1(aw.thr), "mediaan mmol/L"],
+    ["Gelogd", String(aw.n), "hypo-gevoelens"],
+    ["Sensor bevestigd", pct0(aw.confirmedFrac), "&lt;3,9 in ±15 min"],
+  ].map(([k,v,s])=>`<div class="kpi"><div class="k">${k}</div><div class="v">${v}</div><div class="s">${s}</div></div>`).join("");
+  let cov="";
+  if(hy && hy.episodes){ const felt=aw.ev.map(e=>e.ts);
+    const covered=hy.eps.filter(ep=>felt.some(ft=>Math.abs(ft-ep.start)<=30*60e3)).length;
+    cov=`<div class="muted" style="margin-top:.45rem">Van je ${hy.episodes} sensor-hypo's had ${covered} een gelogd gevoel eromheen. Weinig overlap kán betekenen dat je ze niet voelt — óf simpelweg niet logt. Een hint, geen diagnose; hypogevoel toets je met je team.</div>`; }
+  return `<div class="kpis">${kpis}</div><div class="obs">${thrTxt}${trendTxt}</div>`+cov;
+}
+async function renderAware(){
+  const out=document.getElementById("awareOut"), list=document.getElementById("awareList");
+  if(!out||!_ctx) return;
+  let felt=[]; try{ felt=(await DB.all("annotations")).filter(a=>a.type==="hypogevoel"); }catch(_){}
+  const aw=hypoAwareness(_ctx.glucose, felt.map(f=>({ts:f.ts,measured:f.measured,intensity:f.intensity})));
+  out.innerHTML=awareHtml(aw, _ctx.hy);
+  const recent=[...felt].sort((a,b)=>b.ts-a.ts).slice(0,6);
+  list.innerHTML = recent.length ? `<div style="margin-top:.6rem">`+recent.map(f=>{
+    const d=new Date(f.ts).toLocaleString("nl-NL",{day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"});
+    return `<div class="logentry"><div class="leh"><span class="ic">📉</span><span class="lt">${f.measured!=null?nl1(f.measured)+" mmol/L":"gevoeld"}</span><span class="ld">${esc(f.intensity||"")} · ${d}</span><button class="del" data-id="${esc(f.id)}" title="verwijderen" aria-label="verwijderen">✕</button></div></div>`;
+  }).join("")+`</div>` : "";
+  list.querySelectorAll(".del").forEach(btn=>btn.onclick=async()=>{
+    try{ await DB.delRow("annotations",btn.dataset.id); }catch(e){ toast("Verwijderen mislukt."); return; }
+    renderAware(); });
 }
 
 const dot=document.getElementById("dot"), connTxt=document.getElementById("connTxt");
@@ -1497,6 +1581,20 @@ document.getElementById("logAdd").onclick = async ()=>{
   try{ await DB.putMany("annotations",[an]); }catch(e){ toast("Opslaan mislukt: "+e.message); return; }
   document.getElementById("logNote").value=""; toast("Markering toegevoegd.");
   renderLog(); };
+
+// Hypo-gevoel
+buildAwChips();
+const localNow=()=>{ const d=new Date(), p=n=>String(n).padStart(2,"0");
+  return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`; };
+document.getElementById("awTime").value = localNow();
+document.getElementById("awAdd").onclick = async ()=>{
+  const tv=document.getElementById("awTime").value; if(!tv){ toast("Kies een moment."); return; }
+  const ts=new Date(tv).getTime(); if(!isFinite(ts)){ toast("Ongeldig moment."); return; }
+  const measured=parseNum(document.getElementById("awBg").value);
+  const an={ id:"h"+Date.now()+"-"+Math.random().toString(36).slice(2,7), ts, type:"hypogevoel", measured, intensity:_awSel, created:Date.now() };
+  try{ await DB.putMany("annotations",[an]); }catch(e){ toast("Opslaan mislukt: "+e.message); return; }
+  document.getElementById("awBg").value=""; document.getElementById("awTime").value=localNow();
+  toast("Hypo-gevoel vastgelegd."); renderAware(); };
 
 initDeep();
 (async function init(){
