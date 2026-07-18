@@ -112,6 +112,17 @@ h2.sect{font-size:.72rem;font-weight:700;letter-spacing:.12em;text-transform:upp
 .muted{color:var(--muted);font-size:.78rem;line-height:1.5}
 .empty{font-family:var(--mono);font-size:.8rem;color:var(--muted);text-align:center;padding:3rem 1rem;line-height:1.8}
 
+.loading{font-family:var(--mono);font-size:.74rem;color:var(--dim);padding:.4rem 0}
+details.deep{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:.7rem 1rem;margin-bottom:.7rem;
+  box-shadow:0 1px 2px rgba(20,40,30,.04)}
+details.deep > summary{cursor:pointer;font-weight:650;font-size:.95rem;list-style:none;user-select:none}
+details.deep > summary::-webkit-details-marker{display:none}
+details.deep > summary::before{content:"▸ ";color:var(--dim)}
+details.deep[open] > summary::before{content:"▾ "}
+details.deep > summary span{color:var(--muted);font-weight:400;font-size:.76rem}
+details.deep > .body{padding-top:.7rem;margin-top:.5rem;border-top:1px solid var(--line)}
+details.deep[open] > .body{}
+
 footer{font-family:var(--mono);font-size:.64rem;color:var(--dim);border-top:1px solid var(--line);
   margin-top:2rem;padding-top:.8rem;line-height:1.7}
 
@@ -206,13 +217,20 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
       <div class="muted" id="trendTable" style="margin-top:.5rem"></div>
     </div>
   </section>
+
+  <section id="secDeep" hidden>
+    <h2 class="sect">Verdieping — voor wie wil sleutelen</h2>
+    <details class="deep" data-an="dagpatroon"><summary>Dagpatroon <span>— vaste uren waarop je wegdrijft (basaal)</span></summary><div class="body"><div class="loading">Openklappen om te berekenen…</div></div></details>
+    <details class="deep" data-an="meals"><summary>Maaltijdrespons <span>— hoe snel koolhydraten opnemen</span></summary><div class="body"><div class="loading">Openklappen om te berekenen…</div></div></details>
+    <details class="deep" data-an="model"><summary>Modelcontrole <span>— rekent de app goed? (zelftest)</span></summary><div class="body"><div class="loading">Openklappen om te berekenen…</div></div></details>
+  </section>
 </main>
 
 <footer class="wrap">
   Alles blijft op dit apparaat: cache in IndexedDB, token in localStorage. Er gaat niets naar een
   server behalve leesverzoeken aan je eigen Nightscout.<br>
   Observaties, geen instelwaarden. Wat je met een patroon doet is een gesprek met je behandelteam.<br>
-  <span style="opacity:.8">versie <b>2.0 · fase 2 · 18 jul 2026</b> — Nu · kern-KPI's · AGP · veiligheid · trend</span>
+  <span style="opacity:.8">versie <b>2.0 · fase 3 · 18 jul 2026</b> — Nu · KPI's · AGP · veiligheid · trend · verdieping</span>
 </footer>
 
 <dialog id="cfgDlg">
@@ -295,6 +313,25 @@ const NS = {
     }
     return out;
   },
+  async treatments(from, to, onChunk){
+    const iso=t=>new Date(t).toISOString(), out=[];
+    for (const [a,b] of this.chunks(from, to, 30)){
+      const rows = await this.get("/api/v1/treatments.json",
+        { "find[created_at][$gte]":iso(a), "find[created_at][$lt]":iso(b), count:this.COUNT });
+      out.push(...rows); onChunk?.(out.length, a);
+    }
+    return out;
+  },
+  profiles(){ return this.get("/api/v1/profile.json", { count:1000 }); },
+  async devicestatus(from, to, onChunk){
+    const iso=t=>new Date(t).toISOString(), out=[];
+    for (const [a,b] of this.chunks(from, to, 7)){
+      const rows = await this.get("/api/v1/devicestatus.json",
+        { "find[created_at][$gte]":iso(a), "find[created_at][$lt]":iso(b), count:this.COUNT });
+      out.push(...rows); onChunk?.(out.length, a);
+    }
+    return out;
+  },
 };
 
 /* ── Cache (IndexedDB) ──────────────────────────────────────────────────────
@@ -302,9 +339,11 @@ const NS = {
 const DB = {
   h:null,
   open(){ if (this.h) return Promise.resolve(this.h);
-    return new Promise((res,rej)=>{ const rq=indexedDB.open("dbdash2",1);
+    return new Promise((res,rej)=>{ const rq=indexedDB.open("dbdash2",2);
       rq.onupgradeneeded=()=>{ const db=rq.result;
-        if(!db.objectStoreNames.contains("entries")) db.createObjectStore("entries",{keyPath:"_id"}).createIndex("ts","ts");
+        for (const s of ["entries","treatments","devicestatus"])
+          if(!db.objectStoreNames.contains(s)) db.createObjectStore(s,{keyPath:"_id"}).createIndex("ts","ts");
+        if(!db.objectStoreNames.contains("profiles")) db.createObjectStore("profiles",{keyPath:"_id"});
         if(!db.objectStoreNames.contains("meta")) db.createObjectStore("meta",{keyPath:"k"}); };
       rq.onsuccess=()=>res(this.h=rq.result);
       rq.onerror=()=>rej(new Error("IndexedDB niet beschikbaar. In privémodus of een preview-iframe werkt de cache niet — open het bestand normaal.")); }); },
@@ -316,6 +355,8 @@ const DB = {
       rq.onsuccess=()=>res(rq.result); rq.onerror=()=>rej(rq.error); }); },
   async count(store){ const db=await this.open();
     return new Promise((res)=>{ const rq=db.transaction(store,"readonly").objectStore(store).count(); rq.onsuccess=()=>res(rq.result); rq.onerror=()=>res(0); }); },
+  async all(store){ const db=await this.open();
+    return new Promise((res,rej)=>{ const rq=db.transaction(store,"readonly").objectStore(store).getAll(); rq.onsuccess=()=>res(rq.result); rq.onerror=()=>rej(rq.error); }); },
   async meta(k,v){ const db=await this.open();
     if (v===undefined) return new Promise(res=>{ const rq=db.transaction("meta","readonly").objectStore("meta").get(k);
       rq.onsuccess=()=>res(rq.result?.v ?? null); rq.onerror=()=>res(null); });
@@ -327,16 +368,43 @@ const DB = {
 /* ── Sync (incrementeel) ─────────────────────────────────────────────────── */
 const REFETCH = 24*36e5;
 const parseTs = v => { if(v==null) return null; const t = typeof v==="number"?v:Date.parse(v); return isFinite(t)?t:null; };
+async function startFrom(store, days, refetch){
+  const floor = Date.now() - days*DAY;
+  const last = await DB.meta("sync."+store);
+  return last ? Math.max(floor, last - refetch) : floor;
+}
 async function syncAll(onProgress){
   const now = Date.now();
-  const floor = now - cfg.days*DAY;
-  const last = await DB.meta("sync.entries");
-  const from = last ? Math.max(floor, last - REFETCH) : floor;
-  const rows = await NS.entries(from, now, (n,at)=>onProgress?.(`metingen · ${n.toLocaleString("nl")} · ${new Date(at).toLocaleDateString("nl-NL",{day:"2-digit",month:"short"})}`));
+  const say = (s,n,at)=>onProgress?.(`${s} · ${n.toLocaleString("nl")} · ${new Date(at).toLocaleDateString("nl-NL",{day:"2-digit",month:"short"})}`);
+
+  // metingen (kern)
+  let rows = await NS.entries(await startFrom("entries", cfg.days, 24*36e5), now, (n,at)=>say("metingen",n,at));
   const E = rows.map(e=>({ _id:String(e._id), ts:parseTs(e.date)??parseTs(e.dateString), sgv:e.sgv, direction:e.direction }))
     .filter(e=>e.ts!=null && e.sgv>0);
   await DB.putMany("entries", E);
   if (E.length) await DB.meta("sync.entries", Math.max(...E.map(e=>e.ts)));
+
+  // behandelingen (voor de verdieping) — volledig document bewaren
+  rows = await NS.treatments(await startFrom("treatments", cfg.days, 72*36e5), now, (n,at)=>say("behandelingen",n,at));
+  const T = rows.map(t=>({ ...t, _id:String(t._id), ts:parseTs(t.created_at)??parseTs(t.mills) })).filter(t=>t.ts!=null);
+  await DB.putMany("treatments", T);
+  if (T.length) await DB.meta("sync.treatments", Math.max(...T.map(t=>t.ts)));
+
+  // profielen
+  try {
+    const P = (await NS.profiles()).map(p=>({ ...p, _id:String(p._id), ts:parseTs(p.mills)??parseTs(p.startDate)??0 }));
+    await DB.putMany("profiles", P);
+  } catch(_){ /* profielen zijn optioneel */ }
+
+  // loopstatus (AAPS IOB/COB) — alleen recent; NS ruimt dit doorgaans op
+  try {
+    rows = await NS.devicestatus(await startFrom("devicestatus", Math.min(cfg.days,30), 6*36e5), now, (n,at)=>say("loopstatus",n,at));
+    const D = rows.map(d=>({ _id:String(d._id), ts:parseTs(d.created_at)??parseTs(d.mills),
+      iob:d.openaps?.suggested?.IOB ?? d.openaps?.enacted?.IOB ?? null })).filter(d=>d.ts!=null && d.iob!=null);
+    await DB.putMany("devicestatus", D);
+    if (D.length) await DB.meta("sync.devicestatus", Math.max(...D.map(d=>d.ts)));
+  } catch(_){ /* optioneel */ }
+
   await DB.meta("sync.at", now);
 }
 
@@ -347,6 +415,61 @@ async function loadGlucose(days){
   const seen = new Map();                         // ontdubbelen op de minuut
   for (const r of rows) seen.set(Math.floor(r.ts/6e4), r);
   return [...seen.values()].map(r=>({ ts:r.ts, bg:mmol(r.sgv), dir:r.direction }));
+}
+
+async function loadTreatments(days){
+  const rows = await DB.range("treatments", Date.now()-days*DAY, Date.now()+6e4);
+  rows.sort((a,b)=>a.ts-b.ts);
+  return rows.map(t=>({ ts:t.ts, type:t.eventType, carbs:+t.carbs||0, insulin:+t.insulin||0,
+    duration:+t.duration||0, isSMB:!!t.isSMB, notes:t.notes||"", raw:t }));
+}
+
+/* ── Insulinemodel (oref exponentieel) — nagekeken tegen de oref-referentie ── */
+function insulinModel(peakMin, diaMin){
+  const td=Math.max(300,diaMin), tp=peakMin, tau=tp*(1-tp/td)/(1-2*tp/td), a=2*tau/td, S=1/(1-a+(1+a)*Math.exp(-td/tau));
+  return { td,tp,
+    activity(t){ if(t<=0||t>=td) return 0; return (S/(tau*tau))*t*(1-t/td)*Math.exp(-t/tau); },
+    iob(t){ if(t<=0) return 1; if(t>=td) return 0; return 1 - S*(1-a)*((t*t/(tau*td*(1-a))-t/tau-1)*Math.exp(-t/tau)+1); } };
+}
+function reconstructIOB(treatments, ts, peakMin, timeline){
+  let iob=0;
+  for (const t of treatments){ if(t.insulin<=0) continue;
+    const dtMin=(ts-t.ts)/60000; if(dtMin<0||dtMin>24*60) continue;
+    const dia=(timeline?profileAt(timeline,t.ts).dia:6)*60; if(dtMin>dia) continue;
+    iob += t.insulin*insulinModel(peakMin,dia).iob(dtMin); }
+  return iob;
+}
+
+/* ── Profielen (ISF/IC/basaal per moment, alles in mmol/L) ──────────────────── */
+async function loadProfiles(days){
+  const docs = (await DB.all("profiles")).sort((a,b)=>a.ts-b.ts);
+  const switches = (await DB.range("treatments", Date.now()-days*DAY, Date.now()+6e4))
+    .filter(t=>t.eventType==="Profile Switch").sort((a,b)=>a.ts-b.ts);
+  return { docs, switches };
+}
+function defaultStoreOf(doc){ const name=doc.defaultProfile||Object.keys(doc.store||{})[0]; return doc.store?doc.store[name]:null; }
+function hhmmToMin(s){ const [h,m]=String(s).split(":").map(Number); return h*60+(m||0); }
+function lookupTimeSeries(series, todMinV){
+  if(!series||!series.length) return null;
+  const wm=series.map(e=>({min:e.timeAsSeconds!=null?e.timeAsSeconds/60:hhmmToMin(e.time), value:+e.value})).sort((a,b)=>a.min-b.min);
+  let best=wm[wm.length-1]; for(const e of wm) if(e.min<=todMinV) best=e; return best.value;
+}
+const PEAK_MIN = 75;   // Novorapid/Humalog-piek; vast in deze versie (later instelbaar)
+function profileAt(timeline, ts){
+  const { docs, switches } = timeline;
+  let store=null, dia=6, units="mmol";
+  const sw=[...switches].reverse().find(s=>s.ts<=ts);
+  if(sw && sw.profileJson){ try{ const emb=JSON.parse(sw.profileJson); store=emb; dia=+emb.dia||dia; units=emb.units||units; }catch(_){} }
+  if(!store){ const doc=[...docs].reverse().find(d=>d.ts<=ts)||docs[docs.length-1];
+    if(doc){ store=defaultStoreOf(doc); if(store){ dia=+store.dia||dia; units=store.units||units; } } }
+  if(!store) return { basal:null, isf:null, ic:null, dia:6, source:"geen" };
+  const ld=new Date(new Date(ts).toLocaleString("en-US",{timeZone:TZ}));
+  let tod=ld.getHours()*60+ld.getMinutes();
+  const pct=sw?(sw.percentage??100):100, shift=sw?(sw.timeshift??0)*60:0, f=pct/100;
+  tod=((tod+shift)%1440+1440)%1440;
+  const toM=v=>v==null?null:units.toLowerCase().startsWith("mg")?mmol(v):v;
+  return { basal:lookupTimeSeries(store.basal,tod)*f, isf:toM(lookupTimeSeries(store.sens,tod))/f,
+    ic:lookupTimeSeries(store.carbratio,tod)/f, dia:Math.max(5,dia), source:sw&&sw.profileJson?"switch":"profiel" };
 }
 
 /* ── Dekking ────────────────────────────────────────────────────────────── */
@@ -504,7 +627,7 @@ function tick(ok){ return ok ? `<span class="badge ok">✓</span>` : `<span clas
 function render(glucose){
   const has = glucose.length>0;
   document.getElementById("empty").hidden = has;
-  for (const id of ["secNow","secSummary","secAgp","secSafety","secTrend"]) document.getElementById(id).hidden = !has;
+  for (const id of ["secNow","secSummary","secAgp","secSafety","secTrend","secDeep"]) document.getElementById(id).hidden = !has;
   if (!has) return;
 
   // Nu
@@ -529,9 +652,14 @@ function render(glucose){
     document.getElementById("opp").innerHTML = `<div class="lead">Deze periode</div><div class="msg">Nog te weinig dagen met voldoende sensordekking (≥70%) voor betrouwbare cijfers. Synchroniseer meer historie of wacht op meer sensordagen.</div>`;
     document.getElementById("kpis").innerHTML = "";
     document.getElementById("secAgp").hidden = true; document.getElementById("secSafety").hidden = true;
-    document.getElementById("secTrend").hidden = true;
+    document.getElementById("secTrend").hidden = true; document.getElementById("secDeep").hidden = true;
     return;
   }
+
+  // Data voor de (lui geladen) verdieping bewaren; open details resetten bij verse data.
+  _ctx = { glucose, q }; _deepData = null;
+  document.querySelectorAll("details.deep").forEach(d=>{ d.open=false; delete d.dataset.done;
+    d.querySelector(".body").innerHTML = '<div class="loading">Openklappen om te berekenen…</div>'; });
 
   const m = metrics(g), ag = agp(g), hy = hypoStats(g), tr = weeklyTrend(glucose, q);
 
@@ -593,7 +721,135 @@ function render(glucose){
   }
 }
 
+/* ══ VERDIEPING — geavanceerde analyses (lui: pas bij openklappen) ═════════ */
+function joinHrs(hs){ const s=[...hs].sort((a,b)=>a-b),o=[];
+  for(let i=0;i<s.length;i++){ let j=i; while(j+1<s.length&&s[j+1]===s[j]+1)j++;
+    o.push(`${String(s[i]).padStart(2,"0")}–${String(s[j]+1).padStart(2,"0")}u`); i=j; } return o; }
+
+function driftSvg(stat){
+  const has=stat.filter(s=>s.med!=null); if(!has.length) return "";
+  const W=320,H=150,PB=20,PL=26,PT=10,mid=PT+(H-PB-PT)/2;
+  const maxA=Math.max(0.5,...has.map(s=>Math.max(Math.abs(s.p25),Math.abs(s.p75),Math.abs(s.med))));
+  const Y=v=>mid-(v/maxA)*((H-PB-PT)/2), bw=(W-PL-6)/24;
+  let s=`<svg class="chart" viewBox="0 0 ${W} ${H}">`;
+  s+=`<line x1="${PL}" y1="${mid}" x2="${W}" y2="${mid}" stroke="var(--line2)" stroke-width="1"/>`;
+  s+=`<text x="${PL-3}" y="${(mid+3).toFixed(1)}" font-size="8" fill="var(--muted)" text-anchor="end">0</text>`;
+  for(const h of [0,6,12,18]){ const x=PL+h*bw; s+=`<text x="${x.toFixed(1)}" y="${H-4}" font-size="8" fill="var(--muted)">${h}u</text>`; }
+  has.forEach(o=>{ const x=PL+o.h*bw+bw*.15,w=bw*.7,y0=Y(0),y=Y(o.med),cx=x+w/2;
+    const col=o.structural?(o.med>0?"var(--high)":"var(--low)"):"var(--line2)";
+    s+=`<line x1="${cx.toFixed(1)}" y1="${Y(o.p75).toFixed(1)}" x2="${cx.toFixed(1)}" y2="${Y(o.p25).toFixed(1)}" stroke="var(--muted)" stroke-width="1"/>`;
+    s+=`<rect x="${x.toFixed(1)}" y="${Math.min(y0,y).toFixed(1)}" width="${w.toFixed(1)}" height="${Math.abs(y-y0).toFixed(1)}" rx="1.5" fill="${col}"/>`; });
+  s+=`<text x="${PL}" y="12" font-size="7.5" fill="var(--dim)">mmol/L per uur — omhoog = stijgt, omlaag = zakt</text>`;
+  return s+"</svg>";
+}
+function absorpSvg(GRID, medc, t50){
+  const W=320,H=150,PB=22,PL=24,PT=10;
+  const X=x=>PL+(x/240)*(W-PL), Y=p=>(H-PB)-(p/100)*(H-PB-PT);
+  let s=`<svg class="chart" viewBox="0 0 ${W} ${H}">`;
+  for(const p of [0,50,100]){ const y=Y(p); s+=`<line x1="${PL}" y1="${y.toFixed(1)}" x2="${W}" y2="${y.toFixed(1)}" stroke="var(--line)" stroke-width="1"${p===50?' stroke-dasharray="3 3"':''}/><text x="${PL-3}" y="${(y+3).toFixed(1)}" font-size="8" fill="var(--muted)" text-anchor="end">${p}</text>`; }
+  for(const mn of [60,120,180,240]){ const x=X(mn); s+=`<text x="${x.toFixed(1)}" y="${H-4}" font-size="8" fill="var(--muted)" text-anchor="middle">${mn}m</text>`; }
+  if(t50!=null){ const x=X(t50); s+=`<line x1="${x.toFixed(1)}" y1="${Y(0).toFixed(1)}" x2="${x.toFixed(1)}" y2="${Y(100).toFixed(1)}" stroke="var(--high)" stroke-width="1" stroke-dasharray="2 2"/>`; }
+  const d=GRID.map((x,i)=>(i?"L":"M")+X(x).toFixed(1)+" "+Y(medc[i]).toFixed(1)).join(" ");
+  s+=`<path d="${d}" fill="none" stroke="var(--inRange)" stroke-width="2" vector-effect="non-scaling-stroke"/>`;
+  s+=`<text x="${PL}" y="10" font-size="7.5" fill="var(--dim)">% koolhydraten opgenomen na de maaltijd</text>`;
+  return s+"</svg>";
+}
+
+function anDagpatroon(glucose, treatments, q){
+  const CLEAN=5*3600e3, MIN_DT=3*60e3, MAX_DT=15*60e3, MIN_N=15, TH=0.3;
+  const events=treatments.filter(t=>t.carbs>0||t.insulin>0).map(t=>t.ts).sort((a,b)=>a-b);
+  const g=glucose.filter(x=>q.usableKeys.has(localDayKey(x.ts)));
+  let ei=0; const clean=new Array(g.length);
+  for(let i=0;i<g.length;i++){ const t=g[i].ts; while(ei<events.length&&events[ei]<=t)ei++; clean[i]=(t-(ei>0?events[ei-1]:-Infinity))>=CLEAN; }
+  const perHour=Array.from({length:24},()=>[]);
+  for(let i=1;i<g.length;i++){ if(!clean[i]||!clean[i-1])continue; const dt=g[i].ts-g[i-1].ts; if(dt<MIN_DT||dt>MAX_DT)continue;
+    perHour[Math.floor(todMin(g[i-1].ts+dt/2)/60)%24].push((g[i].bg-g[i-1].bg)/(dt/3600e3)); }
+  const total=perHour.reduce((s,a)=>s+a.length,0);
+  if(total<120) return `<div class="muted">Te weinig maaltijd-/bolusvrije momenten (${total}) voor een dagpatroon. Bijna al je uren vallen binnen 5 uur na een maaltijd of bolus — met meer nuchtere periodes of historie komt dit beschikbaar.</div>`;
+  const stat=perHour.map((arr,h)=>{ if(arr.length<MIN_N)return{h,med:null}; const s=[...arr].sort((a,b)=>a-b);
+    const qf=p=>s[Math.min(s.length-1,Math.floor(p*s.length))]; const med=qf(.5),p25=qf(.25),p75=qf(.75);
+    return {h,med,p25,p75,structural:Math.abs(med)>=TH&&((p25>0&&p75>0)||(p25<0&&p75<0))}; });
+  const up=stat.filter(s=>s.structural&&s.med>0), down=stat.filter(s=>s.structural&&s.med<0);
+  const peak=l=>l.reduce((m,s)=>Math.abs(s.med)>Math.abs(m)?s.med:m,0);
+  let obs;
+  if(!up.length&&!down.length) obs="Geen uur waarop je in maaltijd- en bolusvrije vensters structureel wegdrijft — je basaal lijkt over de dag heen in balans.";
+  else { const parts=[];
+    if(up.length)parts.push(`stijg je rond <b>${joinHrs(up.map(s=>s.h)).join(", ")}</b> (tot ${nl1(peak(up))} mmol/L/u) — waar een iets hóger basaal in beeld komt`);
+    if(down.length)parts.push(`zak je rond <b>${joinHrs(down.map(s=>s.h)).join(", ")}</b> (tot ${nl1(peak(down))} mmol/L/u) — waar een iets láger basaal hypo's kan schelen`);
+    obs=`In stille vensters ${parts.join("; en ")}. In AAPS pas je een basaalblok doorgaans 1–2 uur vóór het effect aan. Observatie, geen instelwaarde — bespreek met je behandelteam.`; }
+  return driftSvg(stat)+`<div class="obs">${obs}</div><div class="muted" style="margin-top:.4rem">n = ${total.toLocaleString("nl")} driftmetingen in schone vensters · drempel 0,3 mmol/L/u · bij een closed loop kan temp-basaal een echt profielverschil maskeren</div>`;
+}
+
+function anMeals(glucose, treatments, q, timeline){
+  const MIN_CARBS=30, WIN=4*3600e3, PRE=2*3600e3, MIN_READ=40, MIN_MEALS=8;
+  const boluses=treatments.filter(t=>t.insulin>0).sort((a,b)=>a.ts-b.ts);
+  const carbTs=treatments.filter(t=>t.carbs>0).map(t=>t.ts).sort((a,b)=>a-b);
+  const meals=treatments.filter(t=>t.carbs>=MIN_CARBS).filter(m=>!carbTs.some(ct=>ct!==m.ts&&ct>m.ts-PRE&&ct<m.ts+WIN)).sort((a,b)=>a.ts-b.ts);
+  const T=glucose.map(g=>g.ts); const lb=ts=>{let lo=0,hi=T.length;while(lo<hi){const m=(lo+hi)>>1;if(T[m]<ts)lo=m+1;else hi=m;}return lo;};
+  const results=[];
+  for(const m of meals){ const prof=profileAt(timeline,m.ts); if(prof.source==="geen"||!prof.isf||!prof.ic)continue;
+    const isf=prof.isf,ic=prof.ic,dia=Math.max(300,(prof.dia||6)*60),mdl=insulinModel(PEAK_MIN,dia),diaMs=dia*60000;
+    const wB=boluses.filter(b=>b.ts>m.ts-diaMs&&b.ts<m.ts+WIN);
+    const win=[]; for(let i=lb(m.ts);i<T.length&&T[i]<=m.ts+WIN;i++)win.push(glucose[i]);
+    if(win.length<MIN_READ)continue; if(win[0].ts-m.ts>15*60e3)continue;
+    const bg0=win[0].bg; let cum=0,peak=bg0,tPeak=0; const curve=[{min:0,cum:0}];
+    for(let i=1;i<win.length;i++){ const dt=(win[i].ts-win[i-1].ts)/60000; if(dt<=0||dt>20)continue;
+      const mid=win[i-1].ts+(win[i].ts-win[i-1].ts)/2; let act=0;
+      for(const b of wB){ const dm=(mid-b.ts)/60000; if(dm<=0||dm>=dia)continue; act+=b.insulin*mdl.activity(dm); }
+      const dev=(win[i].bg-win[i-1].bg)-(-isf*act*dt); cum+=Math.max(0,dev)*ic/isf;
+      const ms=(win[i].ts-m.ts)/60000; curve.push({min:ms,cum}); if(win[i].bg>peak){peak=win[i].bg;tPeak=ms;} }
+    if(cum<5)continue; const half=cum/2; let t50=null;
+    for(let i=1;i<curve.length;i++){ if(curve[i].cum>=half){ const p=curve[i-1],qq=curve[i]; t50=qq.cum===p.cum?qq.min:p.min+(half-p.cum)/(qq.cum-p.cum)*(qq.min-p.min); break; } }
+    results.push({carbs:m.carbs,frac:cum/m.carbs,t50,peakRise:peak-bg0,tPeak,curve}); }
+  if(results.length<MIN_MEALS) return `<div class="muted">Te weinig geïsoleerde maaltijden (${results.length}, minimaal ${MIN_MEALS}) vanaf ${MIN_CARBS} g. Vereist ook profieldata (ISF/IC) uit Nightscout.</div>`;
+  const med=arr=>{const s=[...arr].sort((a,b)=>a-b);return s.length?s[Math.floor(s.length/2)]:null;};
+  const mt50=med(results.filter(r=>r.t50!=null).map(r=>r.t50)),mfrac=med(results.map(r=>r.frac)),mtpk=med(results.map(r=>r.tPeak));
+  const GRID=[];for(let x=0;x<=240;x+=10)GRID.push(x);
+  const pctAt=(c,x)=>{const fin=c[c.length-1].cum||1;let cc=0;for(const p of c){if(p.min<=x)cc=p.cum;else break;}return 100*cc/fin;};
+  const per=results.map(r=>GRID.map(x=>pctAt(r.curve,x))), medc=GRID.map((_,gi)=>med(per.map(y=>y[gi])));
+  const speed=mt50==null?"":mt50>60?" Aan de trage kant — passend bij grote of vette maaltijden.":mt50<35?" Snel — dan telt prebolus-timing zwaar mee.":" Vrij gemiddeld.";
+  const acc=mfrac>=0.8&&mfrac<=1.2?"je koolhydraatschatting sluit redelijk aan bij wat je glucose laat zien":mfrac<0.8?"je ziet minder terug dan ingevoerd — mogelijk tel je te hoog, of dekt insuline ruim":"je ziet meer terug dan ingevoerd — mogelijk ondergeteld, of te weinig bolus";
+  const stats=`<div class="kpis" style="margin-top:.6rem"><div class="kpi"><div class="k">t50</div><div class="v">${mt50==null?"—":Math.round(mt50)}</div><div class="s">min tot 50%</div></div><div class="kpi"><div class="k">Piek</div><div class="v">${Math.round(mtpk)}</div><div class="s">min na maaltijd</div></div><div class="kpi"><div class="k">Teruggezien</div><div class="v">${pct0(mfrac)}</div><div class="s">van ingevoerd</div></div></div>`;
+  return absorpSvg(GRID,medc,mt50)+stats+`<div class="obs">Je maaltijden vanaf ${MIN_CARBS} g zijn mediaan na ${mt50==null?"—":Math.round(mt50)} min voor de helft opgenomen, met de piek rond ${Math.round(mtpk)} min.${speed} Van de ingevoerde koolhydraten zie ik ${pct0(mfrac)} terug: ${acc}.</div><div class="muted" style="margin-top:.4rem">n = ${results.length} geïsoleerde maaltijden · alleen positieve deviaties, temp-basaal niet meegerekend — het percentage is indicatief</div>`;
+}
+
+async function anModelcheck(treatments, timeline){
+  const ds=await DB.range("devicestatus", Date.now()-14*DAY, Date.now()+6e4);
+  if(!ds.length) return `<div class="muted">Geen loopstatus in de cache — Nightscout bewaart die meestal maar enkele weken. Zonder dit ijkpunt kan de reconstructie niet bevestigd worden, maar de formule zelf is nagekeken tegen de oref-referentie.</div>`;
+  const sample=ds.filter((_,i)=>i%3===0), diffs=[];
+  for(const d of sample){ if(d.iob==null)continue; diffs.push(Math.abs(reconstructIOB(treatments,d.ts,PEAK_MIN,timeline)-d.iob)); }
+  if(diffs.length<20) return `<div class="muted">Te weinig overlappende loopstatus-momenten (${diffs.length}) voor een betrouwbare vergelijking.</div>`;
+  diffs.sort((a,b)=>a-b); const md=diffs[Math.floor(diffs.length/2)], p90=diffs[Math.floor(diffs.length*.9)];
+  const verdict=md<0.15?"Goede overeenkomst":md<0.4?"Merkbaar verschil":"Grote afwijking";
+  return `<div class="kpis"><div class="kpi"><div class="k">Mediane afwijking</div><div class="v">${nl1(md)}</div><div class="s">E</div></div><div class="kpi"><div class="k">90e percentiel</div><div class="v">${nl1(p90)}</div><div class="s">E</div></div><div class="kpi"><div class="k">Vergeleken</div><div class="v">${diffs.length}</div><div class="s">momenten</div></div></div>`+
+    `<div class="obs"><b>${verdict}:</b> mediane afwijking ${nl1(md)} E tussen zelf berekende en AAPS-gerapporteerde IOB. ${md>=0.4?"Grote afwijking wijst meestal op een verkeerd insulinetype of onvolledige profielhistorie.":"De reconstructie is bruikbaar als basis voor de maaltijdanalyse."}</div>`+
+    `<div class="muted" style="margin-top:.4rem">Dit is een zelftest van de rekenkern, geen bevinding over je diabetes.</div>`;
+}
+
 /* ══ UI ════════════════════════════════════════════════════════════════════ */
+let _ctx=null, _deepData=null;
+async function ensureDeepData(){
+  if (_deepData) return _deepData;
+  const treatments = await loadTreatments(cfg.days);
+  const timeline = await loadProfiles(cfg.days);
+  return _deepData = { treatments, timeline };
+}
+function initDeep(){
+  document.querySelectorAll("details.deep").forEach(d=>{
+    d.addEventListener("toggle", async ()=>{
+      if (!d.open || d.dataset.done || !_ctx) return;
+      d.dataset.done = "1";
+      const body = d.querySelector(".body"), an = d.dataset.an;
+      try {
+        const { treatments, timeline } = await ensureDeepData();
+        body.innerHTML = an==="dagpatroon" ? anDagpatroon(_ctx.glucose, treatments, _ctx.q)
+          : an==="meals" ? anMeals(_ctx.glucose, treatments, _ctx.q, timeline)
+          : await anModelcheck(treatments, timeline);
+      } catch(e){ body.innerHTML = `<div class="muted">Analyse mislukt: ${e.message}</div>`; console.error(an, e); }
+    });
+  });
+}
+
 const dot=document.getElementById("dot"), connTxt=document.getElementById("connTxt");
 const setConn=(s,t)=>{ dot.className="dot "+s; connTxt.textContent=t; };
 const dlg=document.getElementById("cfgDlg");
@@ -631,6 +887,7 @@ document.getElementById("btnWipe").onclick = async ()=>{
   if (!confirm("Cache wissen? De data wordt bij de volgende sync opnieuw opgehaald.")) return;
   await DB.wipe(); closeDlg(); await refresh(); };
 
+initDeep();
 (async function init(){
   if (!cfg.url){ setConn("","niet ingesteld"); openDlg(); }
   else { setConn("ok","ingesteld"); document.getElementById("btnSync").disabled=false; }
