@@ -6,10 +6,10 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>dbdash</title>
+<title>DiaMetric</title>
 <style>
 /* ══════════════════════════════════════════════════════════════════════════
-   dbdash 2.0 — lichte herbouw. Geen Plotly: alle grafieken zijn zelfgebouwde,
+   DiaMetric — lichte herbouw. Geen Plotly: alle grafieken zijn zelfgebouwde,
    schaalbare SVG (viewBox → passen zich vanzelf aan de breedte aan, zonder
    JavaScript-resize). Systeemletters voor maximale snelheid. Mobiel eerst.
    ══════════════════════════════════════════════════════════════════════════ */
@@ -156,7 +156,7 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:-1px;bor
   .card{box-shadow:none;border:1px solid #ccc;break-inside:avoid}
   section{break-inside:avoid}
   main{padding-top:0}
-  main::before{content:"dbdash — samenvatting voor het behandelteam";display:block;font-size:1.1rem;font-weight:700;margin:0 0 .6rem}
+  main::before{content:"DiaMetric — samenvatting voor het behandelteam";display:block;font-size:1.1rem;font-weight:700;margin:0 0 .6rem}
 }
 </style>
 </head>
@@ -176,7 +176,7 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
 <header>
   <div class="wrap">
     <div class="topbar">
-      <div class="brand">dbdash <span>/ eigen data</span></div>
+      <div class="brand">DiaMetric <span>/ eigen data</span></div>
       <div class="grow"></div>
       <div class="conn"><i class="dot" id="dot"></i><span id="connTxt">niet ingesteld</span></div>
       <button id="btnSync" disabled>Sync</button>
@@ -261,7 +261,7 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
   Alles blijft op dit apparaat: cache in IndexedDB, token in localStorage. Er gaat niets naar een
   server behalve leesverzoeken aan je eigen Nightscout.<br>
   Observaties, geen instelwaarden. Wat je met een patroon doet is een gesprek met je behandelteam.<br>
-  <span style="opacity:.8">versie <b>2.1 · 18 jul 2026</b> — band-verdeling · hypo-detail · insuline &amp; koolhydraten · AGP · trend · verdieping · deel-samenvatting</span>
+  <span style="opacity:.8">DiaMetric · versie <b>2.1 · 18 jul 2026</b> — band-verdeling · hypo-detail · insuline &amp; koolhydraten · AGP · trend · verdieping · deel-samenvatting</span>
 </footer>
 
 <dialog id="cfgDlg">
@@ -775,7 +775,7 @@ function render(glucose, treatments, timeline){
   const fd = t => t?new Date(t).toLocaleDateString("nl-NL",{day:"2-digit",month:"short",year:"numeric"}):"—";
   const yn = ok => ok?"✓":"✗";
   _summary =
-    `dbdash — samenvatting\n`+
+    `DiaMetric — samenvatting\n`+
     `Periode: ${fd(q.from)} – ${fd(q.to)} (${q.usable.length}/${q.days.length} dagen, ${pct0(q.coverage)} dekking)\n\n`+
     `Tijd in bereik 3,9–10,0 : ${pct0(m.tir)}  (streef >70%) ${yn(m.tir>=0.70)}\n`+
     `Tijd < 3,9 (hypo)       : ${pct0(m.tbr)}  (streef <4%)  ${yn(m.tbr<0.04)}\n`+
@@ -1007,7 +1007,7 @@ document.getElementById("btnSave").onclick = async ()=>{
 };
 document.getElementById("btnShare").onclick = async ()=>{
   if (!_summary) return;
-  try { if (navigator.share){ await navigator.share({ title:"dbdash-samenvatting", text:_summary }); return; } }
+  try { if (navigator.share){ await navigator.share({ title:"DiaMetric-samenvatting", text:_summary }); return; } }
   catch(e){ if (e.name==="AbortError") return; /* gebruiker annuleerde */ }
   try { await navigator.clipboard.writeText(_summary); toast("Samenvatting gekopieerd — plak het in een bericht of e-mail aan je team."); }
   catch(_){ toast("Kopiëren lukte niet. Selecteer de tekst handmatig of gebruik Print/PDF."); }
