@@ -148,6 +148,8 @@ h2.sect::after{content:"";flex:1;height:1px;background:var(--line)}
 
 .obs{font-size:.88rem;margin-top:.7rem;line-height:1.5;color:var(--muted)} .obs b{color:var(--ink);font-weight:600}
 .muted{color:var(--muted);font-size:.76rem;line-height:1.5}
+.qa{padding:.7rem 0;border-top:1px solid var(--line)} .qa:first-child{border-top:0;padding-top:0}
+.qa .q{font-weight:650;font-size:.92rem;color:var(--ink)} .qa .a{font-size:.86rem;color:var(--muted);margin-top:.2rem;line-height:1.5} .qa .a b{color:var(--ink);font-weight:600}
 .empty{font-family:var(--mono);font-size:.8rem;color:var(--muted);text-align:center;padding:3.5rem 1rem;line-height:1.9}
 
 /* ── Verdieping ────────────────────────────────────────────────────────────── */
@@ -253,6 +255,11 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
     </div>
   </section>
 
+  <section id="secQuestions" hidden>
+    <h2 class="sect">Jouw vragen beantwoord</h2>
+    <div class="card" id="questions"></div>
+  </section>
+
   <section id="secAgp" hidden>
     <h2 class="sect">Dagprofiel (AGP)</h2>
     <div class="card">
@@ -306,7 +313,7 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
   Alles blijft op dit apparaat: cache in IndexedDB, token in localStorage. Er gaat niets naar een
   server behalve leesverzoeken aan je eigen Nightscout.<br>
   Observaties, geen instelwaarden. Wat je met een patroon doet is een gesprek met je behandelteam.<br>
-  <span style="opacity:.8">DiaMetric · versie <b>2.2 · 18 jul 2026</b> — nieuw ontwerp · band-verdeling · hypo-detail · insuline &amp; koolhydraten · AGP · trend · verdieping</span>
+  <span style="opacity:.8">DiaMetric · versie <b>2.3 · 18 jul 2026</b> — jouw vragen beantwoord · beweging · band-verdeling · hypo-detail · insuline &amp; koolhydraten · AGP · trend · verdieping</span>
 </footer>
 
 <dialog id="cfgDlg">
@@ -754,7 +761,7 @@ function render(glucose, treatments, timeline){
   treatments = treatments||[]; timeline = timeline||null;
   const has = glucose.length>0;
   document.getElementById("empty").hidden = has;
-  for (const id of ["secNow","secSummary","secAgp","secSafety","secInsulin","secTrend","secDeep"]) document.getElementById(id).hidden = !has;
+  for (const id of ["secNow","secSummary","secQuestions","secAgp","secSafety","secInsulin","secTrend","secDeep"]) document.getElementById(id).hidden = !has;
   if (!has) return;
 
   // Nu
@@ -781,7 +788,7 @@ function render(glucose, treatments, timeline){
   if (!g.length){
     document.getElementById("opp").innerHTML = `<div class="lead">Deze periode</div><div class="msg">Nog te weinig dagen met voldoende sensordekking (≥70%) voor betrouwbare cijfers. Synchroniseer meer historie of wacht op meer sensordagen.</div>`;
     document.getElementById("kpis").innerHTML = "";
-    for (const id of ["secAgp","secSafety","secInsulin","secTrend","secDeep"]) document.getElementById(id).hidden = true;
+    for (const id of ["secQuestions","secAgp","secSafety","secInsulin","secTrend","secDeep"]) document.getElementById(id).hidden = true;
     return;
   }
 
@@ -819,6 +826,12 @@ function render(glucose, treatments, timeline){
   document.getElementById("agpObs").innerHTML = parts.length
     ? "Over de dag "+parts.join("; en ")+"."
     : "Je mediaan blijft de hele dag binnen bereik en de onderste band raakt 3,9 niet structureel — een voorspelbaar dagprofiel.";
+
+  // Jouw vragen beantwoord — interpretatielaag over de metrieken
+  const stack = hypoStacking(glucose, treatments, q);
+  const MR    = mealResults(glucose, treatments, timeline);
+  const ex    = exerciseEffect(glucose, treatments);
+  document.getElementById("questions").innerHTML = answerQuestions(m, ag, hy, stack, MR, tr, ex);
 
   // Samenvatting-tekst voor het behandelteam (delen/kopiëren)
   const fd = t => t?new Date(t).toLocaleDateString("nl-NL",{day:"2-digit",month:"short",year:"numeric"}):"—";
@@ -955,8 +968,10 @@ function anDagpatroon(glucose, treatments, q){
   return driftSvg(stat)+`<div class="obs">${obs}</div><div class="muted" style="margin-top:.4rem">n = ${total.toLocaleString("nl")} driftmetingen in schone vensters · drempel 0,3 mmol/L/u · bij een closed loop kan temp-basaal een echt profielverschil maskeren</div>`;
 }
 
-function anMeals(glucose, treatments, q, timeline){
-  const MIN_CARBS=30, WIN=4*3600e3, PRE=2*3600e3, MIN_READ=40, MIN_MEALS=8;
+// Herbruikbare maaltijd-berekening (gebruikt door de kaart én door "Jouw vragen").
+const MEAL_MIN=8;
+function mealResults(glucose, treatments, timeline){
+  const MIN_CARBS=30, WIN=4*3600e3, PRE=2*3600e3, MIN_READ=40;
   const boluses=treatments.filter(t=>t.insulin>0).sort((a,b)=>a.ts-b.ts);
   const carbTs=treatments.filter(t=>t.carbs>0).map(t=>t.ts).sort((a,b)=>a-b);
   const meals=treatments.filter(t=>t.carbs>=MIN_CARBS).filter(m=>!carbTs.some(ct=>ct!==m.ts&&ct>m.ts-PRE&&ct<m.ts+WIN)).sort((a,b)=>a.ts-b.ts);
@@ -967,6 +982,9 @@ function anMeals(glucose, treatments, q, timeline){
     const wB=boluses.filter(b=>b.ts>m.ts-diaMs&&b.ts<m.ts+WIN);
     const win=[]; for(let i=lb(m.ts);i<T.length&&T[i]<=m.ts+WIN;i++)win.push(glucose[i]);
     if(win.length<MIN_READ)continue; if(win[0].ts-m.ts>15*60e3)continue;
+    // timing van de bolus t.o.v. de maaltijd (negatief = prebolus)
+    const nb=wB.filter(b=>b.ts>=m.ts-30*60e3 && b.ts<=m.ts+30*60e3).sort((a,b)=>a.ts-b.ts)[0];
+    const bolusOffset = nb ? (nb.ts-m.ts)/60000 : null;
     const bg0=win[0].bg; let cum=0,peak=bg0,tPeak=0; const curve=[{min:0,cum:0}];
     for(let i=1;i<win.length;i++){ const dt=(win[i].ts-win[i-1].ts)/60000; if(dt<=0||dt>20)continue;
       const mid=win[i-1].ts+(win[i].ts-win[i-1].ts)/2; let act=0;
@@ -975,10 +993,19 @@ function anMeals(glucose, treatments, q, timeline){
       const ms=(win[i].ts-m.ts)/60000; curve.push({min:ms,cum}); if(win[i].bg>peak){peak=win[i].bg;tPeak=ms;} }
     if(cum<5)continue; const half=cum/2; let t50=null;
     for(let i=1;i<curve.length;i++){ if(curve[i].cum>=half){ const p=curve[i-1],qq=curve[i]; t50=qq.cum===p.cum?qq.min:p.min+(half-p.cum)/(qq.cum-p.cum)*(qq.min-p.min); break; } }
-    results.push({carbs:m.carbs,frac:cum/m.carbs,t50,peakRise:peak-bg0,tPeak,curve}); }
+    results.push({carbs:m.carbs,frac:cum/m.carbs,t50,peakRise:peak-bg0,tPeak,curve,peakBg:peak,bolusOffset}); }
+  const med=arr=>{const s=[...arr].sort((a,b)=>a-b);return s.length?s[Math.floor(s.length/2)]:null;};
+  return { results, MIN_CARBS,
+    mt50:med(results.filter(r=>r.t50!=null).map(r=>r.t50)), mfrac:med(results.map(r=>r.frac)),
+    mtpk:med(results.map(r=>r.tPeak)), mrise:med(results.map(r=>r.peakRise)), mpeak:med(results.map(r=>r.peakBg)),
+    moffset:med(results.filter(r=>r.bolusOffset!=null).map(r=>r.bolusOffset)) };
+}
+function anMeals(glucose, treatments, q, timeline){
+  const MR=mealResults(glucose, treatments, timeline);
+  const results=MR.results, MIN_CARBS=MR.MIN_CARBS, MIN_MEALS=MEAL_MIN;
   if(results.length<MIN_MEALS) return `<div class="muted">Te weinig geïsoleerde maaltijden (${results.length}, minimaal ${MIN_MEALS}) vanaf ${MIN_CARBS} g. Vereist ook profieldata (ISF/IC) uit Nightscout.</div>`;
   const med=arr=>{const s=[...arr].sort((a,b)=>a-b);return s.length?s[Math.floor(s.length/2)]:null;};
-  const mt50=med(results.filter(r=>r.t50!=null).map(r=>r.t50)),mfrac=med(results.map(r=>r.frac)),mtpk=med(results.map(r=>r.tPeak));
+  const mt50=MR.mt50,mfrac=MR.mfrac,mtpk=MR.mtpk;
   const GRID=[];for(let x=0;x<=240;x+=10)GRID.push(x);
   const pctAt=(c,x)=>{const fin=c[c.length-1].cum||1;let cc=0;for(const p of c){if(p.min<=x)cc=p.cum;else break;}return 100*cc/fin;};
   const per=results.map(r=>GRID.map(x=>pctAt(r.curve,x))), medc=GRID.map((_,gi)=>med(per.map(y=>y[gi])));
@@ -996,6 +1023,79 @@ function anStacking(glucose, treatments, q){
     ? `Gestapelde correcties (≥2 handmatige bijspuiten in de 3 uur ervoor) gingen <b>${pct0(r.caseRate)}</b> van je hypo's vooraf, tegen <b>${pct0(r.ctrlRate)}</b> op vergelijkbare momenten zónder hypo. Even wachten tot een eerdere correctie is uitgewerkt vóór je opnieuw bijspuit kan dit type hypo schelen.`
     : `Gestapelde correcties gingen ${pct0(r.caseRate)} van je hypo's vooraf, vergelijkbaar met ${pct0(r.ctrlRate)} op momenten zónder hypo — dit patroon springt er bij jou niet uit.`;
   return `<div class="obs">${obs}</div><div class="muted" style="margin-top:.4rem">n = ${r.cases} hypo's vs ${r.controls} controlemomenten (zelfde tijdstip, andere dagen). Observatie, geen instelwaarde.</div>`;
+}
+
+// Beweging: geregistreerde exercise-/activiteit-events koppelen aan glucosedalingen.
+function exerciseEffect(glucose, treatments){
+  const ev=treatments.filter(t=>
+    /exercis|activ|training|sport|beweg/i.test(t.type||"") ||
+    /sport|hardloop|fiets|wandel|training|gym|beweg|workout|run|ride/i.test(t.notes||""));
+  const T=glucose.map(g=>g.ts); const lb=ts=>{let lo=0,hi=T.length;while(lo<hi){const m=(lo+hi)>>1;if(T[m]<ts)lo=m+1;else hi=m;}return lo;};
+  const drops=[]; let lows=0;
+  for(const e of ev){
+    const dur=(e.duration||30)*60e3, from=e.ts, to=e.ts+dur+2*3600e3;
+    const win=[]; for(let i=lb(from);i<T.length&&T[i]<=to;i++)win.push(glucose[i]);
+    if(win.length<6) continue;
+    const bg0=win[0].bg, minBg=Math.min(...win.map(x=>x.bg));
+    drops.push(bg0-minBg); if(minBg<3.9) lows++;
+  }
+  if(drops.length<3) return { n:drops.length, events:ev.length };
+  const s=[...drops].sort((a,b)=>a-b);
+  return { n:drops.length, events:ev.length, medDrop:s[Math.floor(s.length/2)], lowFrac:lows/drops.length };
+}
+
+// ── "Jouw vragen beantwoord" — de interpretatielaag ────────────────────────
+function answerQuestions(m, ag, hy, stack, MR, tr, ex){
+  const highWin=joinBins(ag.filter(x=>x.p50>=10).map(x=>x.b));
+  const mealsOk = MR.results.length>=MEAL_MIN;
+  const qa=[];
+
+  // 1 — lows
+  let a1;
+  if(hy.episodes===0) a1="Je hebt geen hypo's onder 3,9 in deze periode — er is geen laag-patroon om te verklaren.";
+  else { let p=`Je had <b>${hy.episodes}</b> hypo${hy.episodes===1?"":"'s"}${hy.nocturnal?`, waarvan <b>${hy.nocturnal}</b> 's nachts`:""}.`;
+    if(stack.elevated) p+=` De duidelijkste oorzaak: <b>gestapelde correcties</b> gingen ${pct0(stack.caseRate)} van je lows vooraf (tegen ${pct0(stack.ctrlRate)} normaal).`;
+    else if(stack.cases) p+=` Gestapelde correcties springen er niet uit als oorzaak.`;
+    if(ex&&ex.lowFrac>=0.3) p+=` Ook rond beweging eindig je vaker laag.`;
+    a1=p; }
+  qa.push(["Wat veroorzaakt mijn lows?", a1]);
+
+  // 2 — highs
+  let a2;
+  if(highWin.length){ a2=`Je zit het vaakst hoog rond <b>${highWin.join(", ")}</b>.`;
+    if(mealsOk && MR.mrise>=3.5) a2+=` Na maaltijden piek je mediaan +${nl1(MR.mrise)} mmol/L, dus een deel is post-maaltijd.`; }
+  else a2="Je mediaan blijft de hele dag binnen bereik — geen vast hoog-venster.";
+  qa.push(["Wanneer ga ik het vaakst hoog?", a2]);
+
+  // 3 — meals vs insulin
+  let a3;
+  if(!mealsOk) a3="Nog te weinig geïsoleerde maaltijden (met profieldata) voor een oordeel.";
+  else {
+    const rise=MR.mrise, off=MR.moffset;
+    const timing = off==null ? "" : off>5 ? ` Je bolust nu gemiddeld ${Math.round(off)} min ná het eten — eerder bolussen dempt de piek.` :
+      off<-5 ? ` Je bolust gemiddeld ${Math.round(-off)} min vóór het eten (goede prebolus).` : ` Je bolust rond het moment van eten; een paar minuten prebolus helpt vaak.`;
+    if(rise>=4) a3=`Niet helemaal: je piekt na maaltijden mediaan <b>+${nl1(rise)} mmol/L</b> (tot ~${nl1(MR.mpeak)}). Dat wijst op te late of te weinig maaltijdinsuline.${timing}`;
+    else if(rise>=2.5) a3=`Redelijk: je maaltijdpiek is mediaan +${nl1(rise)} mmol/L.${timing}`;
+    else a3=`Ja: je maaltijdpieken blijven beperkt (+${nl1(rise)} mmol/L) — eten en insuline zijn goed op elkaar afgestemd.`;
+  }
+  qa.push(["Zijn mijn maaltijden goed afgestemd op insuline?", a3]);
+
+  // 4 — exercise (+ sleep/stress niet beschikbaar)
+  let a4;
+  if(!ex || ex.n<3) a4=`Ik zie ${ex&&ex.events?`${ex.events} beweeg-event(s), te weinig`:"geen beweeg-events"} in je Nightscout. Log je beweging in AAPS (Exercise/Activity), dan analyseer ik of het je glucose laat dalen. Slaap en stress zitten meestal niet in de data.`;
+  else { a4=`Rond je <b>${ex.n}</b> geregistreerde beweegmomenten daalt je glucose mediaan <b>${nl1(ex.medDrop)} mmol/L</b>${ex.lowFrac>0?`, en ${pct0(ex.lowFrac)} eindigt in een low`:""}.`;
+    if(ex.lowFrac>=0.3) a4+=` Overweeg minder insuline of extra koolhydraten rond inspanning — bespreek met je team.`; }
+  qa.push(["Beïnvloedt beweging (of slaap) mijn cijfers?", a4]);
+
+  // 5 — trend
+  let a5;
+  if(tr.length<2) a5="Nog te weinig weken met genoeg data voor een trend — kom hier over een paar weken op terug.";
+  else { const f=tr[0], l=tr[tr.length-1], d=l.tir-f.tir;
+    const dir=d>0.05?"<b>je wordt beter</b>":d<-0.05?"<b>het zakt iets</b>":"<b>het is stabiel</b>";
+    a5=`Over ${tr.length} weken ging je tijd in bereik van ${pct0(f.tir)} naar ${pct0(l.tir)} — ${dir}.${Math.abs(l.tbr-f.tbr)>=0.01?` Je hypo-tijd ging van ${pct0(f.tbr)} naar ${pct0(l.tbr)}.`:""}`; }
+  qa.push(["Word ik beter over de weken, niet alleen vandaag?", a5]);
+
+  return qa.map(([q,a])=>`<div class="qa"><div class="q">${q}</div><div class="a">${a}</div></div>`).join("");
 }
 
 /* ══ UI ════════════════════════════════════════════════════════════════════ */
