@@ -156,6 +156,17 @@ h2.sect::after{content:"";flex:1;height:1px;background:var(--line)}
 .prow{display:flex;justify-content:space-between;align-items:baseline;font-size:.82rem;padding:.12rem 0}
 .prow span{color:var(--muted);font-family:var(--mono);font-size:.72rem} .prow b{color:var(--ink);font-weight:650}
 .pcol .pu{font-size:.64rem;color:var(--muted);margin-top:.35rem;text-align:right}
+.tune{padding:.8rem 0;border-top:1px solid var(--line)} .tune:first-child{border-top:0;padding-top:.2rem}
+.tune .th{display:flex;align-items:center;gap:.5rem}
+.tn{width:1.4rem;height:1.4rem;flex:0 0 auto;border-radius:50%;background:var(--accent);color:var(--on-accent);font-size:.74rem;font-weight:700;display:grid;place-items:center;font-family:var(--mono)}
+.tt{font-weight:650;font-size:.95rem;color:var(--ink);flex:1}
+.tg{font-size:.64rem;font-weight:700;letter-spacing:.02em;padding:.14rem .45rem;border-radius:.4rem;white-space:nowrap}
+.tg.ok{color:var(--inRange);background:color-mix(in srgb,var(--inRange) 16%,transparent)}
+.tg.warn{color:var(--high);background:color-mix(in srgb,var(--high) 20%,transparent)}
+.tg.na{color:var(--muted);background:var(--surface-2)}
+.ta{font-size:.86rem;color:var(--muted);line-height:1.5;margin-top:.4rem} .ta b{color:var(--ink);font-weight:600}
+.td{font-size:.85rem;color:var(--ink);margin-top:.4rem;font-weight:550;padding-left:.6rem;border-left:2px solid var(--accent)}
+.te{font-size:.7rem;color:var(--dim);margin-top:.35rem;font-family:var(--mono)}
 .empty{font-family:var(--mono);font-size:.8rem;color:var(--muted);text-align:center;padding:3.5rem 1rem;line-height:1.9}
 
 /* ── Verdieping ────────────────────────────────────────────────────────────── */
@@ -304,6 +315,11 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
     <div class="card" id="profile"></div>
   </section>
 
+  <section id="secTune" hidden>
+    <h2 class="sect">Fine-tunen — waar instelling en data uiteenlopen</h2>
+    <div class="card" id="tune"></div>
+  </section>
+
   <section id="secTrend" hidden>
     <h2 class="sect">Trend — word je beter?</h2>
     <div class="card">
@@ -324,7 +340,7 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
   Alles blijft op dit apparaat: cache in IndexedDB, token in localStorage. Er gaat niets naar een
   server behalve leesverzoeken aan je eigen Nightscout.<br>
   Observaties, geen instelwaarden. Wat je met een patroon doet is een gesprek met je behandelteam.<br>
-  <span style="opacity:.8">DiaMetric · versie <b>2.4 · 18 jul 2026</b> — profiel (basaal/ISF/KH-ratio) · jouw vragen beantwoord · beweging · band-verdeling · hypo-detail · insuline &amp; koolhydraten · AGP · trend · verdieping</span>
+  <span style="opacity:.8">DiaMetric · versie <b>2.5 · 18 jul 2026</b> — fine-tunen per hefboom · profiel (basaal/ISF/KH-ratio) · jouw vragen beantwoord · beweging · band-verdeling · hypo-detail · insuline &amp; koolhydraten · AGP · trend · verdieping</span>
 </footer>
 
 <dialog id="cfgDlg">
@@ -652,6 +668,61 @@ function profileHtml(pi, oi, ins, MR){
     `<div class="obs">${obs.join(" ")}</div>`+
     `<div class="muted" style="margin-top:.5rem">${meta.join(" · ")}. Dit is je ingestelde profiel uit Nightscout; de vergelijkingen zijn observaties, geen insteladvies.</div>`;
 }
+// Fine-tune-paneel: per hefboom (basaal → ISF → KH-ratio → prebolus) een lezing —
+// "klopt", "mogelijk bijstellen + richting", of "te weinig data" — met het bewijs.
+// De volgorde is de testvolgorde: eerst de laag eronder, dan de laag erboven.
+function fineTune(drift, oi, MR, stack){
+  const rows=[]; const mealsOk = MR && MR.results.length>=MEAL_MIN;
+  const nMeals = MR?MR.results.length:0;
+
+  // 1 — Basaal
+  { let st="na", read, dir=null, ev;
+    if(!drift||!drift.stat){ read="Nog te weinig nuchtere (maaltijd- en bolusvrije) vensters om je basaal te toetsen."; ev="drempel 0,3 mmol/L/u"; }
+    else if(!drift.up.length && !drift.down.length){ st="ok"; read="In stille vensters drijf je nergens structureel weg — je basaal lijkt over de dag in balans."; ev=`n = ${drift.total.toLocaleString("nl")} driftmetingen`; }
+    else { st="warn"; const parts=[], dirs=[];
+      if(drift.up.length){ parts.push(`stijg je nuchter rond <b>${joinHrs(drift.up.map(s=>s.h)).join(", ")}</b> (tot ${nl1(drift.peakUp)} mmol/L/u)`); dirs.push(`iets hóger basaal rond ${joinHrs(drift.up.map(s=>s.h)).join(", ")}`); }
+      if(drift.down.length){ parts.push(`zak je nuchter rond <b>${joinHrs(drift.down.map(s=>s.h)).join(", ")}</b> (tot ${nl1(drift.peakDown)} mmol/L/u)`); dirs.push(`iets láger basaal rond ${joinHrs(drift.down.map(s=>s.h)).join(", ")}`); }
+      read=parts.join(" en ")+"."; dir=dirs.join("; ")+" — in AAPS pas je een blok ~1–2 u vóór het effect aan"; ev=`n = ${drift.total.toLocaleString("nl")} driftmetingen`; }
+    rows.push({n:1,title:"Basaal",st,read,dir,ev}); }
+
+  // 2 — ISF (correctiefactor)
+  { let st="na", read, dir=null, ev=`n = ${oi?oi.n:0}`;
+    if(!oi||oi.n<5){ read="Nog te weinig schone, koolhydraatvrije correcties om je ISF aan de praktijk te toetsen."; }
+    else if(oi.prof==null){ read=`Waargenomen daling ~${nl1(oi.obs)} mmol/L per E, maar geen profiel-ISF om mee te vergelijken.`; ev=`n = ${oi.n}`; }
+    else { const r=oi.obs/oi.prof; ev=`n = ${oi.n} correcties · indicatief`;
+      if(r>=0.8 && r<=1.25){ st="ok"; read=`Je waargenomen daling (${nl1(oi.obs)} mmol/L per E) sluit aan bij je ingestelde ISF (${nl1(oi.prof)}).`; }
+      else if(r>1.25){ st="warn"; read=`Je daalt méér per E (${nl1(oi.obs)}) dan je ISF aanneemt (${nl1(oi.prof)}) — correcties kunnen doorschieten naar een low${stack&&stack.elevated?`, en gestapelde correcties gingen inderdaad vaak vóór je hypo's`:``}.`; dir="ISF mogelijk te laag ingesteld (je bent gevoeliger dan het profiel aanneemt)"; }
+      else { st="warn"; read=`Je daalt mínder per E (${nl1(oi.obs)}) dan je ISF aanneemt (${nl1(oi.prof)}) — correcties werken mogelijk te traag weg.`; dir="ISF mogelijk te hoog ingesteld"; } }
+    rows.push({n:2,title:"ISF · correctiefactor",st,read,dir,ev}); }
+
+  // 3 — KH-ratio
+  { let st="na", read, dir=null, ev=`n = ${nMeals} maaltijden`;
+    if(!mealsOk){ read="Nog te weinig geïsoleerde maaltijden (met profieldata) om je KH-ratio te toetsen."; }
+    else { const rise=MR.mrise, fr=MR.mfrac; ev=`n = ${nMeals} maaltijden · indicatief`;
+      if(rise<2.5){ st="ok"; read=`Je maaltijdpieken blijven beperkt (mediaan +${nl1(rise)} mmol/L) — eten en insuline sluiten goed aan.`; }
+      else if(rise>=4 && fr>=1.0){ st="warn"; read=`Grote maaltijdpiek (+${nl1(rise)} mmol/L, tot ~${nl1(MR.mpeak)}) én je ziet ${pct0(fr)} van je koolhydraten terug — de maaltijddekking schiet tekort.`; dir="KH-ratio mogelijk te zwak (minder g per E) — óf koolhydraten worden onderteld"; }
+      else { st="warn"; read=`Matige maaltijdpiek (+${nl1(rise)} mmol/L). Deels een dekkings-, deels een timingkwestie.`; dir="overweeg een iets sterkere KH-ratio óf eerdere prebolus (zie hieronder)"; } }
+    rows.push({n:3,title:"KH-ratio",st,read,dir,ev}); }
+
+  // 4 — Prebolus / timing
+  { let st="na", read, dir=null, ev=`n = ${nMeals} maaltijden`;
+    if(!mealsOk || MR.moffset==null){ read="Nog te weinig maaltijden met bolus-timing om je prebolus te beoordelen."; }
+    else { const off=MR.moffset, rise=MR.mrise; const nT=MR.results.filter(r=>r.bolusOffset!=null).length; ev=`n = ${nT} maaltijden met timing`;
+      if(off<-5){ st="ok"; read=`Je bolust gemiddeld ${Math.round(-off)} min vóór het eten — een goede prebolus.`; }
+      else if(rise>=3){ st="warn"; read=`Je bolust ${off>5?`gemiddeld ${Math.round(off)} min ná`:"rond het moment van"} eten en piekt +${nl1(rise)} mmol/L.`; dir="bolus 10–15 min eerder — dat dempt de piek zónder meer insuline"; }
+      else { st="ok"; read=`Je bolust ${off>5?`${Math.round(off)} min ná`:"rond"} het eten, maar je piek blijft beperkt — timing is hier geen knelpunt.`; } }
+    rows.push({n:4,title:"Prebolus · timing",st,read,dir,ev}); }
+
+  const badge={ok:'<span class="tg ok">klopt</span>',warn:'<span class="tg warn">mogelijk bijstellen</span>',na:'<span class="tg na">te weinig data</span>'};
+  const html = rows.map(r=>`<div class="tune"><div class="th"><span class="tn">${r.n}</span><span class="tt">${r.title}</span>${badge[r.st]}</div>`+
+    `<div class="ta">${r.read}</div>`+(r.dir?`<div class="td">→ ${r.dir}</div>`:``)+`<div class="te">${r.ev}</div></div>`).join("");
+  const warns = rows.filter(r=>r.st==="warn").length;
+  const lead = warns
+    ? `Verander <b>één ding tegelijk</b>, van boven naar beneden in deze lijst, en geef het 1–2 weken. Er ${warns===1?"is 1 punt":`zijn ${warns} punten`} waar je instelling en je data uiteenlopen.`
+    : `Op de getoetste punten sluiten je instellingen aan bij wat je data laat zien. Blijf per wijziging één ding tegelijk aanpassen en 1–2 weken toetsen.`;
+  return `<div class="obs" style="margin:0 0 .4rem">${lead}</div>`+html+
+    `<div class="muted" style="margin-top:.6rem">Richtingen zijn hypotheses uit je eigen data, geen doses. De volgorde (basaal → ISF → KH-ratio → timing) is bewust: een laag erboven klopt pas als de laag eronder klopt. Zet een aanpassing met je behandelteam.</div>`;
+}
 
 /* ── Dekking ────────────────────────────────────────────────────────────── */
 const EXPECTED_PER_DAY = 288, MIN_COVERAGE = 0.70;
@@ -868,7 +939,7 @@ function render(glucose, treatments, timeline){
   treatments = treatments||[]; timeline = timeline||null;
   const has = glucose.length>0;
   document.getElementById("empty").hidden = has;
-  for (const id of ["secNow","secSummary","secQuestions","secAgp","secSafety","secInsulin","secProfile","secTrend","secDeep"]) document.getElementById(id).hidden = !has;
+  for (const id of ["secNow","secSummary","secQuestions","secAgp","secSafety","secInsulin","secProfile","secTune","secTrend","secDeep"]) document.getElementById(id).hidden = !has;
   if (!has) return;
 
   // Nu
@@ -895,7 +966,7 @@ function render(glucose, treatments, timeline){
   if (!g.length){
     document.getElementById("opp").innerHTML = `<div class="lead">Deze periode</div><div class="msg">Nog te weinig dagen met voldoende sensordekking (≥70%) voor betrouwbare cijfers. Synchroniseer meer historie of wacht op meer sensordagen.</div>`;
     document.getElementById("kpis").innerHTML = "";
-    for (const id of ["secQuestions","secAgp","secSafety","secInsulin","secProfile","secTrend","secDeep"]) document.getElementById(id).hidden = true;
+    for (const id of ["secQuestions","secAgp","secSafety","secInsulin","secProfile","secTune","secTrend","secDeep"]) document.getElementById(id).hidden = true;
     return;
   }
 
@@ -996,14 +1067,23 @@ function render(glucose, treatments, timeline){
 
   // Profiel — ingestelde basaal/ISF/KH-ratio, gekoppeld aan wat de data laat zien
   const pi = profileInfo(timeline, q.to || Date.now());
+  const oi = observedISF(glucose, treatments, timeline);
   if (!pi){
     document.getElementById("secProfile").hidden = true;
   } else {
     document.getElementById("secProfile").hidden = false;
-    const oi = observedISF(glucose, treatments, timeline);
     document.getElementById("profile").innerHTML = profileHtml(pi, oi, ins, MR);
     _summary += `\nProfiel: basaal ~${pi.basalDaily.toFixed(2).replace(".",",")} E/dag`+
       (oi.n>=5?`, waargenomen ISF ~${nl1(oi.obs)} mmol/L per E (indicatief)`:``)+`\n`;
+  }
+
+  // Fine-tunen — per hefboom: klopt de instelling met de data, en zo niet, welke kant op
+  const drift = basalDrift(glucose, treatments, q);
+  if (!treatments.length){
+    document.getElementById("secTune").hidden = true;
+  } else {
+    document.getElementById("secTune").hidden = false;
+    document.getElementById("tune").innerHTML = fineTune(drift, oi, MR, stack);
   }
 
   // Trend over de weken
@@ -1062,7 +1142,9 @@ function absorpSvg(GRID, medc, t50){
   return s+"</svg>";
 }
 
-function anDagpatroon(glucose, treatments, q){
+// Basaaldrift in maaltijd-/bolusvrije ("nuchtere") vensters, per uur van de dag.
+// Herbruikt door zowel de dagpatroon-verdieping als het fine-tune-paneel.
+function basalDrift(glucose, treatments, q){
   const CLEAN=5*3600e3, MIN_DT=3*60e3, MAX_DT=15*60e3, MIN_N=15, TH=0.3;
   const events=treatments.filter(t=>t.carbs>0||t.insulin>0).map(t=>t.ts).sort((a,b)=>a-b);
   const g=glucose.filter(x=>q.usableKeys.has(localDayKey(x.ts)));
@@ -1072,11 +1154,18 @@ function anDagpatroon(glucose, treatments, q){
   for(let i=1;i<g.length;i++){ if(!clean[i]||!clean[i-1])continue; const dt=g[i].ts-g[i-1].ts; if(dt<MIN_DT||dt>MAX_DT)continue;
     perHour[Math.floor(todMin(g[i-1].ts+dt/2)/60)%24].push((g[i].bg-g[i-1].bg)/(dt/3600e3)); }
   const total=perHour.reduce((s,a)=>s+a.length,0);
-  if(total<120) return `<div class="muted">Te weinig maaltijd-/bolusvrije momenten (${total}) voor een dagpatroon. Bijna al je uren vallen binnen 5 uur na een maaltijd of bolus — met meer nuchtere periodes of historie komt dit beschikbaar.</div>`;
+  if(total<120) return { total, stat:null, TH };
   const stat=perHour.map((arr,h)=>{ if(arr.length<MIN_N)return{h,med:null}; const s=[...arr].sort((a,b)=>a-b);
     const qf=p=>s[Math.min(s.length-1,Math.floor(p*s.length))]; const med=qf(.5),p25=qf(.25),p75=qf(.75);
     return {h,med,p25,p75,structural:Math.abs(med)>=TH&&((p25>0&&p75>0)||(p25<0&&p75<0))}; });
   const up=stat.filter(s=>s.structural&&s.med>0), down=stat.filter(s=>s.structural&&s.med<0);
+  const peak=l=>l.reduce((m,s)=>Math.abs(s.med)>Math.abs(m)?s.med:m,0);
+  return { total, stat, up, down, peakUp:peak(up), peakDown:peak(down), TH };
+}
+function anDagpatroon(glucose, treatments, q){
+  const d=basalDrift(glucose, treatments, q);
+  if(!d.stat) return `<div class="muted">Te weinig maaltijd-/bolusvrije momenten (${d.total}) voor een dagpatroon. Bijna al je uren vallen binnen 5 uur na een maaltijd of bolus — met meer nuchtere periodes of historie komt dit beschikbaar.</div>`;
+  const {stat,up,down,total}=d;
   const peak=l=>l.reduce((m,s)=>Math.abs(s.med)>Math.abs(m)?s.med:m,0);
   let obs;
   if(!up.length&&!down.length) obs="Geen uur waarop je in maaltijd- en bolusvrije vensters structureel wegdrijft — je basaal lijkt over de dag heen in balans.";
