@@ -211,6 +211,9 @@ h2.sect::after{content:"";flex:1;height:1px;background:var(--line)}
 .watch:last-of-type{margin-bottom:0}
 .watch.info{border-left-color:var(--line-2)}
 .watch .wt{font-weight:650;font-size:.9rem;color:var(--ink)} .watch .wd{font-size:.83rem;color:var(--muted);margin-top:.15rem} .watch .wd b{color:var(--ink);font-weight:600}
+.daynav{display:flex;align-items:center;gap:.6rem;margin-bottom:.6rem}
+.daynav button{padding:.3rem .7rem} .daynav button:disabled{opacity:.3}
+.daylabel{flex:1;text-align:center;font-weight:650;font-size:.92rem;color:var(--ink)}
 /* Consultrapport */
 body.reporting main>section, body.reporting main>.empty, body.reporting #tabbar, body.reporting footer{display:none}
 #report{margin-top:1.6rem}
@@ -433,6 +436,24 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
     </div>
   </section>
 
+  <section id="secDay" data-group="voortgang" hidden>
+    <h2 class="sect">Dag inzoomen</h2>
+    <div class="card">
+      <div class="daynav">
+        <button class="ghost" id="dayPrev" aria-label="vorige dag">◀</button>
+        <div class="daylabel" id="dayLabel">—</div>
+        <button class="ghost" id="dayNext" aria-label="volgende dag">▶</button>
+      </div>
+      <div id="dayChart"></div>
+      <div class="legend">
+        <span><i style="background:var(--high)"></i>koolhydraten</span>
+        <span><i style="background:var(--accent)"></i>bolus</span>
+        <span><i style="background:var(--low)"></i>hypo</span>
+      </div>
+      <div class="obs" id="dayNarr"></div>
+    </div>
+  </section>
+
   <section id="secLog" data-group="voortgang" hidden>
     <h2 class="sect">Logboek — markeer &amp; vergelijk</h2>
     <div class="card">
@@ -464,7 +485,7 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
   Alles blijft op dit apparaat: cache in IndexedDB, token in localStorage. Er gaat niets naar een
   server behalve leesverzoeken aan je eigen Nightscout.<br>
   Observaties, geen instelwaarden. Wat je met een patroon doet is een gesprek met je behandelteam.<br>
-  <span style="opacity:.8">DiaMetric · versie <b>3.4 · 19 jul 2026</b> — consultrapport · signalen (watch-list) · wat-als correctie-insuline (ISF) · thema-schakelaar · tabbladen (overzicht · veiligheid · instellen · voortgang) · wat-als nachtbasaal &amp; maaltijdinsuline · hypo-gevoel &amp; bewustzijn · logboek &amp; voor/na-vergelijken · fine-tunen per hefboom · profiel (basaal/ISF/KH-ratio) · jouw vragen beantwoord · beweging · band-verdeling · hypo-detail · insuline &amp; koolhydraten · AGP · trend · verdieping</span>
+  <span style="opacity:.8">DiaMetric · versie <b>3.5 · 19 jul 2026</b> — dag inzoomen (forensica) · consultrapport · signalen (watch-list) · wat-als correctie-insuline (ISF) · thema-schakelaar · tabbladen (overzicht · veiligheid · instellen · voortgang) · wat-als nachtbasaal &amp; maaltijdinsuline · hypo-gevoel &amp; bewustzijn · logboek &amp; voor/na-vergelijken · fine-tunen per hefboom · profiel (basaal/ISF/KH-ratio) · jouw vragen beantwoord · beweging · band-verdeling · hypo-detail · insuline &amp; koolhydraten · AGP · trend · verdieping</span>
 </footer>
 
 <dialog id="cfgDlg">
@@ -1091,6 +1112,45 @@ function agpSvg(ag){
     `<path d="${line("p50")}" fill="none" stroke="var(--ink)" stroke-width="2" vector-effect="non-scaling-stroke"/>`+
     `</svg>`;
 }
+// Dag-detail: één dag (00:00–24:00) met de glucosecurve, hypo's rood, en
+// markers voor maaltijden (koolhydraten) en bolussen — forensica per dag.
+function dayChartSvg(readings, events){
+  if(readings.length<3) return `<div class="muted">Te weinig metingen op deze dag.</div>`;
+  const W=320,H=175,PB=18,PL=22,PT=12;
+  const lo=Math.min(3,...readings.map(r=>r.bg))-.5, hi=Math.max(13,...readings.map(r=>r.bg))+.5;
+  const X=min=>PL+(min/1440)*(W-PL), Y=b=>(H-PB)-(b-lo)/(hi-lo)*(H-PB-PT);
+  let ax="";
+  for(const h of [0,6,12,18,24]){ const x=X(h*60);
+    ax+=`<line x1="${x.toFixed(1)}" y1="${PT}" x2="${x.toFixed(1)}" y2="${H-PB}" stroke="var(--line)" stroke-width="1"/>`+
+        `<text x="${x.toFixed(1)}" y="${H-5}" font-size="9" fill="var(--muted)" text-anchor="middle">${h}u</text>`; }
+  for(const b of [4,10,14]){ if(b<lo||b>hi)continue; const y=Y(b);
+    ax+=`<line x1="${PL}" y1="${y.toFixed(1)}" x2="${W}" y2="${y.toFixed(1)}" stroke="var(--line)" stroke-width="1"/>`+
+        `<text x="${PL-3}" y="${(y+3).toFixed(1)}" font-size="9" fill="var(--muted)" text-anchor="end">${b}</text>`; }
+  const band=`<rect x="${PL}" y="${Y(10).toFixed(1)}" width="${W-PL}" height="${(Y(3.9)-Y(10)).toFixed(1)}" fill="var(--inRange)" opacity=".08"/>`;
+  const pts=readings.map(r=>({x:X(todMin(r.ts)),y:Y(r.bg),bg:r.bg}));
+  let d=""; pts.forEach((p,i)=>{ d+=(i?"L":"M")+p.x.toFixed(1)+" "+p.y.toFixed(1); });
+  let red=""; for(let i=1;i<pts.length;i++){ if(readings[i].bg<3.9 && readings[i-1].bg<3.9)
+    red+=`<line x1="${pts[i-1].x.toFixed(1)}" y1="${pts[i-1].y.toFixed(1)}" x2="${pts[i].x.toFixed(1)}" y2="${pts[i].y.toFixed(1)}" stroke="var(--low)" stroke-width="2.5" vector-effect="non-scaling-stroke"/>`; }
+  let mk=""; for(const e of events){ const x=X(todMin(e.ts));
+    if(e.carbs>0){ mk+=`<circle cx="${x.toFixed(1)}" cy="${PT}" r="3" fill="var(--high)"/>`;
+      if(e.carbs>=10) mk+=`<text x="${x.toFixed(1)}" y="${(PT+12)}" font-size="8" fill="var(--muted)" text-anchor="middle">${Math.round(e.carbs)}g</text>`; }
+    if(e.insulin>0 && !e.isSMB) mk+=`<line x1="${x.toFixed(1)}" y1="${H-PB}" x2="${x.toFixed(1)}" y2="${H-PB-9}" stroke="var(--accent)" stroke-width="2"/>`; }
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}">${band}${ax}<path d="${d}" fill="none" stroke="var(--ink)" stroke-width="1.5" vector-effect="non-scaling-stroke"/>${red}${mk}</svg>`;
+}
+function dayNarrative(readings, events){
+  const n=readings.length; let inR=0,maxB=-Infinity,maxT=0,minB=Infinity,minT=0;
+  for(const r of readings){ if(r.bg>=3.9&&r.bg<10)inR++; if(r.bg>maxB){maxB=r.bg;maxT=r.ts;} if(r.bg<minB){minB=r.bg;minT=r.ts;} }
+  const below=readings.filter(r=>r.bg<3.9); let eps=0,last=-1e15;
+  for(const r of below){ if(r.ts-last>45*60e3)eps++; last=r.ts; }
+  const carbs=events.filter(e=>e.carbs>0).reduce((s,e)=>s+e.carbs,0);
+  const bolus=events.filter(e=>e.insulin>0).reduce((s,e)=>s+e.insulin,0);
+  const hm=ts=>fmtMin(todMin(ts));
+  const parts=[`TIR <b>${pct0(inR/n)}</b>`];
+  parts.push(eps ? `${eps} hypo${eps>1?"'s":""} (laagste ${nl1(minB)} om ${hm(minT)}${todMin(minT)<360?", 's nachts":""})` : `geen hypo's (laagste ${nl1(minB)})`);
+  parts.push(`hoogste ${nl1(maxB)} om ${hm(maxT)}`);
+  if(carbs||bolus) parts.push(`${Math.round(carbs)} g kh · ${nl1(bolus)} E`);
+  return parts.join(" · ")+".";
+}
 function hypoBarsSvg(hy){
   const W=320, H=96, PB=26, PT=16, max=Math.max(1,...hy.parts), n=hy.parts.length, bw=(W-20)/n;
   let s=`<svg class="chart" viewBox="0 0 ${W} ${H}">`;
@@ -1111,7 +1171,7 @@ function render(glucose, treatments, timeline){
   const has = glucose.length>0;
   document.getElementById("empty").hidden = has;
   document.getElementById("tabbar").hidden = !has;
-  for (const id of ["secNow","secSummary","secWatch","secQuestions","secAgp","secSafety","secAware","secInsulin","secProfile","secTune","secTrend","secLog","secDeep"]) document.getElementById(id).hidden = !has;
+  for (const id of ["secNow","secSummary","secWatch","secQuestions","secAgp","secSafety","secAware","secInsulin","secProfile","secTune","secTrend","secDay","secLog","secDeep"]) document.getElementById(id).hidden = !has;
   if (!has) return;
 
   // Nu
@@ -1138,7 +1198,7 @@ function render(glucose, treatments, timeline){
   if (!g.length){
     document.getElementById("opp").innerHTML = `<div class="lead">Deze periode</div><div class="msg">Nog te weinig dagen met voldoende sensordekking (≥70%) voor betrouwbare cijfers. Synchroniseer meer historie of wacht op meer sensordagen.</div>`;
     document.getElementById("kpis").innerHTML = "";
-    for (const id of ["secWatch","secQuestions","secAgp","secSafety","secAware","secInsulin","secProfile","secTune","secTrend","secLog","secDeep"]) document.getElementById(id).hidden = true;
+    for (const id of ["secWatch","secQuestions","secAgp","secSafety","secAware","secInsulin","secProfile","secTune","secTrend","secDay","secLog","secDeep"]) document.getElementById(id).hidden = true;
     return;
   }
 
@@ -1183,6 +1243,11 @@ function render(glucose, treatments, timeline){
   const MR    = mealResults(glucose, treatments, timeline);
   const ex    = exerciseEffect(glucose, treatments);
   document.getElementById("questions").innerHTML = answerQuestions(m, ag, hy, stack, MR, tr, ex);
+
+  // Dag-detail — lijst van dagen met data; standaard de laatste dag tonen
+  _dayKeys = [...new Set(glucose.map(x=>localDayKey(x.ts)))].sort();
+  _dayIdx = _dayKeys.length-1;
+  renderDay();
 
   // Signalen — proactieve watch-list (laatste 14 dagen vs de 14 daarvoor)
   const watch = watchList(glucose, q);
@@ -1642,7 +1707,21 @@ function hypoAwareness(glucose, felt){
     trend={ early:med(ev.slice(0,h).map(e=>e.thr)), late:med(ev.slice(h).map(e=>e.thr)) }; trend.delta=trend.late-trend.early; }
   return { n:ev.length, thr, confirmed, confirmedFrac:confirmed/ev.length, trend, ev };
 }
-let _ctx=null, _summary=null;
+let _ctx=null, _summary=null, _dayKeys=[], _dayIdx=0;
+// Dag-detail: teken de geselecteerde dag (glucosecurve + events + duiding).
+function renderDay(){
+  if(!_ctx || !_dayKeys.length) return;
+  _dayIdx=Math.max(0,Math.min(_dayKeys.length-1,_dayIdx));
+  const key=_dayKeys[_dayIdx];
+  const readings=_ctx.glucose.filter(x=>localDayKey(x.ts)===key);
+  const events=(_ctx.treatments||[]).filter(t=>localDayKey(t.ts)===key);
+  const dt=new Date(key+"T12:00:00");
+  document.getElementById("dayLabel").textContent=dt.toLocaleDateString("nl-NL",{weekday:"short",day:"2-digit",month:"short"});
+  document.getElementById("dayChart").innerHTML=dayChartSvg(readings,events);
+  document.getElementById("dayNarr").innerHTML=readings.length>=3?dayNarrative(readings,events):"Te weinig metingen op deze dag.";
+  document.getElementById("dayPrev").disabled=_dayIdx<=0;
+  document.getElementById("dayNext").disabled=_dayIdx>=_dayKeys.length-1;
+}
 function toast(msg){ let t=document.getElementById("toast");
   if(!t){ t=document.createElement("div"); t.id="toast"; document.body.appendChild(t); }
   t.textContent=msg; t.classList.add("show"); clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove("show"),3200); }
@@ -1892,6 +1971,8 @@ document.getElementById("btnShare").onclick = async ()=>{
   catch(_){ toast("Kopiëren lukte niet. Selecteer de tekst handmatig of gebruik Print/PDF."); }
 };
 document.getElementById("btnReport").onclick = openReport;
+document.getElementById("dayPrev").onclick = ()=>{ _dayIdx--; renderDay(); };
+document.getElementById("dayNext").onclick = ()=>{ _dayIdx++; renderDay(); };
 document.getElementById("btnWipe").onclick = async ()=>{
   if (!confirm("Cache wissen? De data wordt bij de volgende sync opnieuw opgehaald.")) return;
   await DB.wipe(); closeDlg(); await refresh(); };
