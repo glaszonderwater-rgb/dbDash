@@ -530,7 +530,7 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
   Alles blijft op dit apparaat: cache in IndexedDB, token in localStorage. Er gaat niets naar een
   server behalve leesverzoeken aan je eigen Nightscout.<br>
   Observaties, geen instelwaarden. Wat je met een patroon doet is een gesprek met je behandelteam.<br>
-  <span style="opacity:.8">DiaMetric · versie <b>3.9 · 19 jul 2026</b> — IOB &amp; COB op "Nu" · overzicht-bento (TIR-ring + kern-tegels) · app-native onderbalk-navigatie · opvallendste dagen · dag inzoomen (forensica) · consultrapport · signalen (watch-list) · wat-als correctie-insuline (ISF) · thema-schakelaar · tabbladen (overzicht · veiligheid · instellen · voortgang) · wat-als nachtbasaal &amp; maaltijdinsuline · hypo-gevoel &amp; bewustzijn · logboek &amp; voor/na-vergelijken · fine-tunen per hefboom · profiel (basaal/ISF/KH-ratio) · jouw vragen beantwoord · beweging · band-verdeling · hypo-detail · insuline &amp; koolhydraten · AGP · trend · verdieping</span>
+  <span style="opacity:.8">DiaMetric · versie <b>3.10 · 19 jul 2026</b> — logboek back-up (export/import) · IOB &amp; COB op "Nu" · overzicht-bento (TIR-ring + kern-tegels) · app-native onderbalk-navigatie · opvallendste dagen · dag inzoomen (forensica) · consultrapport · signalen (watch-list) · wat-als correctie-insuline (ISF) · thema-schakelaar · tabbladen (overzicht · veiligheid · instellen · voortgang) · wat-als nachtbasaal &amp; maaltijdinsuline · hypo-gevoel &amp; bewustzijn · logboek &amp; voor/na-vergelijken · fine-tunen per hefboom · profiel (basaal/ISF/KH-ratio) · jouw vragen beantwoord · beweging · band-verdeling · hypo-detail · insuline &amp; koolhydraten · AGP · trend · verdieping</span>
 </footer>
 
 <dialog id="cfgDlg">
@@ -550,6 +550,13 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
     <button class="ghost" id="btnClose">Annuleren</button>
     <div class="grow"></div>
     <button class="ghost" id="btnWipe" title="Cache wissen">Cache wissen</button>
+  </div>
+  <label style="margin-top:1.1rem">Logboek — back-up</label>
+  <div class="hint">Je markeringen en hypo-gevoel-logs staan alléén op dit apparaat. Exporteer ze als back-up (bijv. vóór je de cache wist of van toestel wisselt).</div>
+  <div class="actions" style="margin-top:.6rem">
+    <button class="ghost" id="btnExport">⭳ Exporteer logboek</button>
+    <button class="ghost" id="btnImport">⭱ Importeer</button>
+    <input type="file" id="fileImport" accept="application/json,.json" hidden>
   </div>
 </dialog>
 
@@ -2070,6 +2077,30 @@ document.getElementById("btnShare").onclick = async ()=>{
 document.getElementById("btnReport").onclick = openReport;
 document.getElementById("dayPrev").onclick = ()=>{ _dayIdx--; renderDay(); };
 document.getElementById("dayNext").onclick = ()=>{ _dayIdx++; renderDay(); };
+// Logboek-back-up: exporteer/importeer annotaties (de lokale geheugenlaag).
+document.getElementById("btnExport").onclick = async ()=>{
+  let anns=[]; try{ anns=await DB.all("annotations"); }catch(_){}
+  if(!anns.length){ toast("Nog niets in je logboek om te exporteren."); return; }
+  const data=JSON.stringify({app:"DiaMetric",kind:"logbook",version:1,exported:new Date().toISOString(),annotations:anns},null,2);
+  const url=URL.createObjectURL(new Blob([data],{type:"application/json"}));
+  const a=document.createElement("a"); a.href=url; a.download=`diametric-logboek-${new Date().toISOString().slice(0,10)}.json`;
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),1000);
+  toast(`${anns.length} markeringen geëxporteerd.`);
+};
+document.getElementById("btnImport").onclick = ()=>document.getElementById("fileImport").click();
+document.getElementById("fileImport").onchange = async (e)=>{
+  const file=e.target.files&&e.target.files[0]; e.target.value="";
+  if(!file) return;
+  try{
+    const obj=JSON.parse(await file.text());
+    const list=Array.isArray(obj)?obj:(obj.annotations||[]);
+    const valid=list.filter(a=>a&&a.id&&a.ts&&a.type);
+    if(!valid.length){ toast("Geen geldige markeringen in dit bestand."); return; }
+    await DB.putMany("annotations",valid);
+    toast(`${valid.length} markeringen geïmporteerd.`);
+    renderLog(); renderAware();
+  }catch(err){ toast("Importeren mislukt: geen geldig back-up-bestand."); }
+};
 document.getElementById("btnWipe").onclick = async ()=>{
   if (!confirm("Cache wissen? De data wordt bij de volgende sync opnieuw opgehaald.")) return;
   await DB.wipe(); closeDlg(); await refresh(); };
