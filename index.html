@@ -439,6 +439,7 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
   <section id="secDay" data-group="voortgang" hidden>
     <h2 class="sect">Dag inzoomen</h2>
     <div class="card">
+      <div class="chips" id="dayJump" style="margin-bottom:.55rem"></div>
       <div class="daynav">
         <button class="ghost" id="dayPrev" aria-label="vorige dag">◀</button>
         <div class="daylabel" id="dayLabel">—</div>
@@ -485,7 +486,7 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
   Alles blijft op dit apparaat: cache in IndexedDB, token in localStorage. Er gaat niets naar een
   server behalve leesverzoeken aan je eigen Nightscout.<br>
   Observaties, geen instelwaarden. Wat je met een patroon doet is een gesprek met je behandelteam.<br>
-  <span style="opacity:.8">DiaMetric · versie <b>3.5 · 19 jul 2026</b> — dag inzoomen (forensica) · consultrapport · signalen (watch-list) · wat-als correctie-insuline (ISF) · thema-schakelaar · tabbladen (overzicht · veiligheid · instellen · voortgang) · wat-als nachtbasaal &amp; maaltijdinsuline · hypo-gevoel &amp; bewustzijn · logboek &amp; voor/na-vergelijken · fine-tunen per hefboom · profiel (basaal/ISF/KH-ratio) · jouw vragen beantwoord · beweging · band-verdeling · hypo-detail · insuline &amp; koolhydraten · AGP · trend · verdieping</span>
+  <span style="opacity:.8">DiaMetric · versie <b>3.6 · 19 jul 2026</b> — opvallendste dagen · dag inzoomen (forensica) · consultrapport · signalen (watch-list) · wat-als correctie-insuline (ISF) · thema-schakelaar · tabbladen (overzicht · veiligheid · instellen · voortgang) · wat-als nachtbasaal &amp; maaltijdinsuline · hypo-gevoel &amp; bewustzijn · logboek &amp; voor/na-vergelijken · fine-tunen per hefboom · profiel (basaal/ISF/KH-ratio) · jouw vragen beantwoord · beweging · band-verdeling · hypo-detail · insuline &amp; koolhydraten · AGP · trend · verdieping</span>
 </footer>
 
 <dialog id="cfgDlg">
@@ -1244,8 +1245,18 @@ function render(glucose, treatments, timeline){
   const ex    = exerciseEffect(glucose, treatments);
   document.getElementById("questions").innerHTML = answerQuestions(m, ag, hy, stack, MR, tr, ex);
 
-  // Dag-detail — lijst van dagen met data; standaard de laatste dag tonen
-  _dayKeys = [...new Set(glucose.map(x=>localDayKey(x.ts)))].sort();
+  // Dag-detail — lijst van dagen met data + de opvallendste dagen bepalen
+  const dayStats=new Map();
+  for(const x of glucose){ const k=localDayKey(x.ts); let s=dayStats.get(k);
+    if(!s){ s={min:Infinity,max:-Infinity,inr:0,n:0}; dayStats.set(k,s); }
+    s.n++; if(x.bg<s.min)s.min=x.bg; if(x.bg>s.max)s.max=x.bg; if(x.bg>=3.9&&x.bg<10)s.inr++; }
+  _dayKeys = [...dayStats.keys()].sort();
+  let worst=null, high=null, best=null;
+  for(const [k,s] of dayStats){ if(s.n<50) continue;                 // genoeg metingen voor een oordeel
+    if(s.min<3.9 && (!worst||s.min<worst.v)) worst={k,v:s.min};
+    if(s.max>10 && (!high ||s.max>high.v )) high ={k,v:s.max};
+    const tir=s.inr/s.n; if(!best||tir>best.v) best={k,v:tir}; }
+  _notable = {worst,high,best};
   _dayIdx = _dayKeys.length-1;
   renderDay();
 
@@ -1707,7 +1718,18 @@ function hypoAwareness(glucose, felt){
     trend={ early:med(ev.slice(0,h).map(e=>e.thr)), late:med(ev.slice(h).map(e=>e.thr)) }; trend.delta=trend.late-trend.early; }
   return { n:ev.length, thr, confirmed, confirmedFrac:confirmed/ev.length, trend, ev };
 }
-let _ctx=null, _summary=null, _dayKeys=[], _dayIdx=0;
+let _ctx=null, _summary=null, _dayKeys=[], _dayIdx=0, _notable=null;
+// Snelkoppelingen naar de opvallendste dagen — de app wijst je waar te kijken.
+function renderDayJump(){
+  const el=document.getElementById("dayJump"); if(!el) return; const j=_notable||{};
+  const active=_dayKeys[_dayIdx];
+  const chips=[];
+  if(j.worst) chips.push([`⤓ Ergste hypo · ${nl1(j.worst.v)}`, j.worst.k]);
+  if(j.high)  chips.push([`⤒ Grootste piek · ${nl1(j.high.v)}`, j.high.k]);
+  if(j.best)  chips.push([`★ Beste dag · ${pct0(j.best.v)} TIR`, j.best.k]);
+  el.innerHTML=chips.map(([label,key])=>`<button type="button" class="chip${key===active?" sel":""}" data-key="${key}">${label}</button>`).join("");
+  el.querySelectorAll(".chip").forEach(b=>b.onclick=()=>{ const i=_dayKeys.indexOf(b.dataset.key); if(i>=0){ _dayIdx=i; renderDay(); } });
+}
 // Dag-detail: teken de geselecteerde dag (glucosecurve + events + duiding).
 function renderDay(){
   if(!_ctx || !_dayKeys.length) return;
@@ -1721,6 +1743,7 @@ function renderDay(){
   document.getElementById("dayNarr").innerHTML=readings.length>=3?dayNarrative(readings,events):"Te weinig metingen op deze dag.";
   document.getElementById("dayPrev").disabled=_dayIdx<=0;
   document.getElementById("dayNext").disabled=_dayIdx>=_dayKeys.length-1;
+  renderDayJump();
 }
 function toast(msg){ let t=document.getElementById("toast");
   if(!t){ t=document.createElement("div"); t.id="toast"; document.body.appendChild(t); }
