@@ -211,6 +211,24 @@ h2.sect::after{content:"";flex:1;height:1px;background:var(--line)}
 .watch:last-of-type{margin-bottom:0}
 .watch.info{border-left-color:var(--line-2)}
 .watch .wt{font-weight:650;font-size:.9rem;color:var(--ink)} .watch .wd{font-size:.83rem;color:var(--muted);margin-top:.15rem} .watch .wd b{color:var(--ink);font-weight:600}
+/* Consultrapport */
+body.reporting main>section, body.reporting main>.empty, body.reporting #tabbar, body.reporting footer{display:none}
+#report{margin-top:1.6rem}
+.rtoolbar{display:flex;gap:.5rem;justify-content:flex-end;margin-bottom:.9rem}
+.rep{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:1.3rem;box-shadow:var(--shadow)}
+.rep h1{font-size:1.2rem;letter-spacing:-.01em;margin-bottom:.15rem}
+.rmeta{font-size:.8rem;color:var(--muted);margin-bottom:.6rem}
+.rep h2{font-size:.68rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);margin:1.2rem 0 .5rem;border-bottom:1px solid var(--line);padding-bottom:.25rem}
+.rep table{width:100%;border-collapse:collapse;font-size:.85rem}
+.rep td{padding:.3rem 0;border-bottom:1px solid var(--line);vertical-align:baseline}
+.rep .rv{font-weight:650;text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.rep .rt{color:var(--muted);font-size:.76rem;padding-left:.8rem;white-space:nowrap}
+.rep .rc{text-align:right;width:1.3rem;font-weight:700}
+.rep .rp{font-size:.85rem;color:var(--ink);margin:.35rem 0;line-height:1.5} .rep .rp b{font-weight:650}
+.rep .rp .rdir{display:block;color:var(--muted);font-size:.82rem;margin-top:.1rem}
+.rep ul.rlist{font-size:.85rem;line-height:1.5;padding-left:1.1rem;margin:.2rem 0} .rep ul.rlist li{margin:.3rem 0}
+.rep .rnone{font-size:.85rem;color:var(--muted)}
+.rep .rfoot{font-size:.72rem;color:var(--muted);margin-top:1.3rem;border-top:1px solid var(--line);padding-top:.6rem;line-height:1.5}
 .empty{font-family:var(--mono);font-size:.8rem;color:var(--muted);text-align:center;padding:3.5rem 1rem;line-height:1.9}
 
 /* ── Verdieping ────────────────────────────────────────────────────────────── */
@@ -254,16 +272,28 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:-1px;bor
   transition:opacity .2s,transform .2s;max-width:90%;text-align:center}
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 
-/* ── Print / PDF voor het behandelteam ─────────────────────────────────────── */
+/* ── Print / PDF ───────────────────────────────────────────────────────────── */
 @media print{
-  header,#shareRow,#secDeep,footer,dialog,#toast{display:none!important}
-  section.tabhide:not([hidden]){display:block!important}   /* alle secties in de PDF, ongeacht het actieve tabblad */
-  body{background:#fff;color:#000;font-size:12px}
-  .card,.kpis,details.deep{box-shadow:none;border:1px solid #ccc;break-inside:avoid}
-  .kpi{background:#fff}
-  section{break-inside:avoid}
-  main{padding-top:0}
-  main::before{content:"DiaMetric — samenvatting voor het behandelteam";display:block;font-size:1.1rem;font-weight:700;margin:0 0 .6rem}
+  #toast{display:none!important}
+  body{background:#fff;color:#000}
+  /* Consultrapport open → print alléén het rapport, schoon. */
+  body.reporting header, body.reporting #tabbar, body.reporting footer, body.reporting dialog,
+  body.reporting main>section, body.reporting main>.empty{display:none!important}
+  body.reporting #report{display:block!important}
+  body.reporting main{padding-top:0}
+  #report .rtoolbar{display:none!important}
+  body.reporting .rep{border:none;box-shadow:none;padding:0}
+  .rep h2, .rep tr, .rep li{break-inside:avoid}
+  /* Directe Ctrl+P zonder rapport → de oude hele-app-weergave. */
+  body:not(.reporting) header, body:not(.reporting) #shareRow, body:not(.reporting) #secDeep,
+  body:not(.reporting) footer, body:not(.reporting) dialog, body:not(.reporting) #report{display:none!important}
+  body:not(.reporting) section.tabhide:not([hidden]){display:block!important}
+  body:not(.reporting){font-size:12px}
+  body:not(.reporting) .card, body:not(.reporting) .kpis, body:not(.reporting) details.deep{box-shadow:none;border:1px solid #ccc;break-inside:avoid}
+  body:not(.reporting) .kpi{background:#fff}
+  body:not(.reporting) section{break-inside:avoid}
+  body:not(.reporting) main{padding-top:0}
+  body:not(.reporting) main::before{content:"DiaMetric — samenvatting voor het behandelteam";display:block;font-size:1.1rem;font-weight:700;margin:0 0 .6rem}
 }
 </style>
 </head>
@@ -321,7 +351,7 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
     <div class="kpis" id="kpis"></div>
     <div id="shareRow" style="margin-top:.8rem;display:flex;gap:.5rem;flex-wrap:wrap">
       <button class="ghost" id="btnShare" style="font-size:.78rem">📋 Samenvatting delen</button>
-      <button class="ghost" id="btnPrint" style="font-size:.78rem">🖨 Print / PDF voor je team</button>
+      <button class="ghost" id="btnReport" style="font-size:.78rem">📄 Consultrapport</button>
     </div>
   </section>
 
@@ -426,13 +456,15 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
     <details class="deep" data-an="watifmeal"><summary>Wat-als: maaltijdinsuline <span>— een andere KH-ratio doorgerekend op je maaltijdpieken</span></summary><div class="body"><div class="loading">Openklappen om te berekenen…</div></div></details>
     <details class="deep" data-an="watifisf"><summary>Wat-als: correctie-insuline <span>— een andere ISF doorgerekend op je correcties</span></summary><div class="body"><div class="loading">Openklappen om te berekenen…</div></div></details>
   </section>
+
+  <div id="report" hidden></div>
 </main>
 
 <footer class="wrap">
   Alles blijft op dit apparaat: cache in IndexedDB, token in localStorage. Er gaat niets naar een
   server behalve leesverzoeken aan je eigen Nightscout.<br>
   Observaties, geen instelwaarden. Wat je met een patroon doet is een gesprek met je behandelteam.<br>
-  <span style="opacity:.8">DiaMetric · versie <b>3.3 · 19 jul 2026</b> — signalen (watch-list) · wat-als correctie-insuline (ISF) · thema-schakelaar · tabbladen (overzicht · veiligheid · instellen · voortgang) · wat-als nachtbasaal &amp; maaltijdinsuline · hypo-gevoel &amp; bewustzijn · logboek &amp; voor/na-vergelijken · fine-tunen per hefboom · profiel (basaal/ISF/KH-ratio) · jouw vragen beantwoord · beweging · band-verdeling · hypo-detail · insuline &amp; koolhydraten · AGP · trend · verdieping</span>
+  <span style="opacity:.8">DiaMetric · versie <b>3.4 · 19 jul 2026</b> — consultrapport · signalen (watch-list) · wat-als correctie-insuline (ISF) · thema-schakelaar · tabbladen (overzicht · veiligheid · instellen · voortgang) · wat-als nachtbasaal &amp; maaltijdinsuline · hypo-gevoel &amp; bewustzijn · logboek &amp; voor/na-vergelijken · fine-tunen per hefboom · profiel (basaal/ISF/KH-ratio) · jouw vragen beantwoord · beweging · band-verdeling · hypo-detail · insuline &amp; koolhydraten · AGP · trend · verdieping</span>
 </footer>
 
 <dialog id="cfgDlg">
@@ -774,7 +806,7 @@ function profileHtml(pi, oi, ins, MR){
 // Fine-tune-paneel: per hefboom (basaal → ISF → KH-ratio → prebolus) een lezing —
 // "klopt", "mogelijk bijstellen + richting", of "te weinig data" — met het bewijs.
 // De volgorde is de testvolgorde: eerst de laag eronder, dan de laag erboven.
-function fineTune(drift, oi, MR, stack){
+function fineTuneData(drift, oi, MR, stack){
   const rows=[]; const mealsOk = MR && MR.results.length>=MEAL_MIN;
   const nMeals = MR?MR.results.length:0;
 
@@ -816,6 +848,10 @@ function fineTune(drift, oi, MR, stack){
       else { st="ok"; read=`Je bolust ${off>5?`${Math.round(off)} min ná`:"rond"} het eten, maar je piek blijft beperkt — timing is hier geen knelpunt.`; } }
     rows.push({n:4,title:"Prebolus · timing",st,read,dir,ev}); }
 
+  return rows;
+}
+function fineTune(drift, oi, MR, stack){
+  const rows=fineTuneData(drift, oi, MR, stack);
   const badge={ok:'<span class="tg ok">klopt</span>',warn:'<span class="tg warn">mogelijk bijstellen</span>',na:'<span class="tg na">te weinig data</span>'};
   const html = rows.map(r=>`<div class="tune"><div class="th"><span class="tn">${r.n}</span><span class="tt">${r.title}</span>${badge[r.st]}</div>`+
     `<div class="ta">${r.read}</div>`+(r.dir?`<div class="td">→ ${r.dir}</div>`:``)+`<div class="te">${r.ev}</div></div>`).join("");
@@ -1722,6 +1758,98 @@ async function renderAware(){
     renderAware(); });
 }
 
+// ── Consultrapport ────────────────────────────────────────────────────────────
+// Bundelt alle bevindingen tot één schoon, arts-klaar document. Hergebruikt de
+// bestaande analyses (o.a. fineTuneData) zodat er geen tweede waarheid ontstaat.
+async function buildReport(){
+  if(!_ctx) return `<div class="rep"><p class="rnone">Geen data.</p></div>`;
+  const {glucose,q,treatments,timeline}=_ctx;
+  const g=glucose.filter(x=>q.usableKeys.has(localDayKey(x.ts)));
+  if(!g.length) return `<div class="rep"><p class="rnone">Onvoldoende bruikbare dagen voor een rapport.</p></div>`;
+  const m=metrics(g), hy=hypoStats(g);
+  const ins=insulinCarbs(treatments,timeline,q);
+  const pi=timeline?profileInfo(timeline,q.to||Date.now()):null;
+  const oi=observedISF(glucose,treatments,timeline);
+  const MR=mealResults(glucose,treatments,timeline);
+  const drift=basalDrift(glucose,treatments,q), stack=hypoStacking(glucose,treatments,q);
+  const watch=watchList(glucose,q);
+  let anns=[]; try{ anns=await DB.all("annotations"); }catch(_){}
+  const felt=anns.filter(a=>a.type==="hypogevoel").map(f=>({ts:f.ts,measured:f.measured,intensity:f.intensity}));
+  const aw=hypoAwareness(glucose,felt);
+  const changes=anns.filter(a=>a.type==="wijziging").sort((a,b)=>b.ts-a.ts).slice(0,6);
+  const findings=fineTuneData(drift,oi,MR,stack).filter(r=>r.st==="warn");
+  const fd=t=>t?new Date(t).toLocaleDateString("nl-NL",{day:"2-digit",month:"short",year:"numeric"}):"—";
+  const yn=ok=>ok?"✓":"✗", nl2=v=>v==null?"—":v.toFixed(2).replace(".",",");
+  const icf=v=>{const r=Math.round(v*10)/10;return (r%1===0?String(r):r.toFixed(1)).replace(".",",");};
+  const range=(arr,f)=>{if(!arr||!arr.length)return "—";const vs=arr.map(b=>b.value),mn=Math.min(...vs),mx=Math.max(...vs);return Math.abs(mx-mn)<1e-9?f(mn):`${f(mn)}–${f(mx)}`;};
+
+  const kern=[
+    ["Tijd in bereik 3,9–10,0", pct0(m.tir), ">70%", m.tir>=0.70],
+    ["Tijd <3,9 (hypo)", pct0(m.tbr), "<4%", m.tbr<0.04],
+    ["Tijd <3,0", pct0(m.veryLow), "<1%", m.veryLow<0.01],
+    ["Tijd >10,0", pct0(m.tar), "", null],
+    ["Tijd >13,9", pct0(m.veryHigh), "<5%", m.veryHigh<0.05],
+    ["Variatie (CV)", pct0(m.cv), "≤36%", m.cv<=0.36],
+    ["GMI (gesch. HbA1c)", nl1(m.gmi)+"%", "", null],
+    ["Gemiddelde glucose", nl1(m.mean)+" mmol/L", "", null],
+  ].map(([l,v,t,ok])=>`<tr><td>${l}</td><td class="rv">${v}</td><td class="rt">${t}</td><td class="rc">${ok==null?"":yn(ok)}</td></tr>`).join("");
+
+  let veil=`<p class="rp"><b>${hy.episodes}</b> hypo-episode(s) onder 3,9`+
+    (hy.level2?`, waarvan <b>${hy.level2}</b> ernstig (<3,0)`:``)+
+    (hy.nocturnal?`; <b>${hy.nocturnal}</b> 's nachts (00–06 u)`:``)+
+    (hy.prolonged?`; <b>${hy.prolonged}</b> langdurig (≥15 min)`:``)+`.</p>`;
+  if(aw.n>=3) veil+=`<p class="rp">Hypo-voelgrens mediaan <b>${nl1(aw.thr)} mmol/L</b> (n=${aw.n})`+
+    (aw.trend&&Math.abs(aw.trend.delta)>=0.5?`; verlopen van ${nl1(aw.trend.early)} naar ${nl1(aw.trend.late)}${aw.trend.delta<0?" — mogelijk afnemend hypogevoel":""}`:``)+`.</p>`;
+
+  const sig = watch.few ? "" : (watch.alerts.length
+    ? `<ul class="rlist">`+watch.alerts.map(a=>`<li><b>${a.title}</b> — ${a.detail}</li>`).join("")+`</ul>`
+    : `<p class="rnone">Geen oplopende signalen de laatste 2 weken.</p>`);
+
+  let insP="";
+  if(ins.tdd!=null) insP+=`<p class="rp">Totale dagdosis ~<b>${nl1(ins.tdd)} E</b> (basaal/bolus ${Math.round(ins.basalPct*100)}/${Math.round(ins.bolusPct*100)}%, basaal geschat) · koolhydraten ~${Math.round(ins.carbsDay)} g/dag.</p>`;
+  if(pi) insP+=`<p class="rp">Profiel <b>${pi.name?esc(pi.name):"—"}</b>: basaal ${nl2(pi.basalDaily)} E/dag · ISF ${range(pi.isf,nl1)} mmol/L·E · KH-ratio ${range(pi.ic,icf)} g/E · DIA ${nl1(pi.dia)} u.</p>`;
+  if(oi&&oi.n>=5) insP+=`<p class="rp">Waargenomen daling ~<b>${nl1(oi.obs)} mmol/L per E</b> correctie${oi.prof!=null?` (ingestelde ISF ${nl1(oi.prof)})`:``} — indicatief, n=${oi.n}.</p>`;
+
+  const besp = findings.length
+    ? `<ul class="rlist">`+findings.map(f=>`<li><b>${f.title}:</b> ${f.read.replace(/<[^>]+>/g,"")}${f.dir?`<span class="rdir">→ ${f.dir}</span>`:``}</li>`).join("")+`</ul>`
+    : `<p class="rnone">Geen duidelijke mismatch tussen instellingen en data op de getoetste punten.</p>`;
+
+  let wijz;
+  if(changes.length){ wijz=`<ul class="rlist">`+changes.map(c=>{ const ba=beforeAfter(glucose,q,c.ts,14); let eff="";
+    if(ba.before.ok&&ba.after.ok){ const b=ba.before.m,a2=ba.after.m; eff=` — TIR ${pct0(b.tir)}→${pct0(a2.tir)}, hypo ${pct0(b.tbr)}→${pct0(a2.tbr)}`; }
+    return `<li>${fd(c.ts)}: ${c.note?esc(c.note):"instelling aangepast"}${eff}</li>`; }).join("")+`</ul>`; }
+  else wijz=`<p class="rnone">Geen instelwijzigingen gemarkeerd in deze periode.</p>`;
+
+  const vragen=[];
+  if(hy.nocturnal>=1) vragen.push(`Ik had ${hy.nocturnal} nachtelijke hypo('s) — kunnen we de nachtbasaal of avonddosering herzien?`);
+  if(m.tbr>=0.04) vragen.push(`Mijn tijd onder 3,9 is ${pct0(m.tbr)} (streef <4%) — hoe verlagen we dat veilig?`);
+  findings.forEach(f=>{ if(f.dir) vragen.push(`${f.title}: klopt de richting "${esc(f.dir.replace(/\s*—.*$/,"").trim())}"?`); });
+  if(aw.n>=6 && aw.trend && aw.trend.delta<=-0.5) vragen.push(`Mijn hypo-voelgrens lijkt te zakken (${nl1(aw.trend.early)}→${nl1(aw.trend.late)}) — moeten we mijn hypo-bewustzijn bespreken?`);
+  const vragenHtml = vragen.length ? `<ul class="rlist">`+vragen.slice(0,6).map(v=>`<li>${v}</li>`).join("")+`</ul>` : `<p class="rnone">—</p>`;
+
+  return `<div class="rtoolbar"><button class="ghost" id="btnRepPrint">🖨 Opslaan als PDF</button><button class="ghost" id="btnRepClose">✕ Sluiten</button></div>`+
+    `<div class="rep"><h1>Consultrapport — DiaMetric</h1>`+
+    `<div class="rmeta">Periode ${fd(q.from)} – ${fd(q.to)} · ${q.usable.length}/${q.days.length} dagen · ${pct0(q.coverage)} dekking · opgesteld ${fd(Date.now())}</div>`+
+    `<h2>Kernwaarden</h2><table>${kern}</table>`+
+    `<h2>Veiligheid</h2>${veil}`+
+    (sig?`<h2>Wat verandert (laatste 2 weken)</h2>${sig}`:``)+
+    `<h2>Insuline &amp; profiel</h2>${insP||'<p class="rnone">Geen behandel-/profieldata beschikbaar.</p>'}`+
+    `<h2>Bespreekpunten</h2>${besp}`+
+    `<h2>Wijzigingen &amp; effect</h2>${wijz}`+
+    `<h2>Vragen voor het gesprek</h2>${vragenHtml}`+
+    `<div class="rfoot">Observaties uit eigen CGM- en pompdata (Nightscout / AndroidAPS), automatisch samengevat door DiaMetric. Geen insteladviezen; richtingen zijn hypotheses ter bespreking. Glucose in mmol/L.</div></div>`;
+}
+async function openReport(){
+  const el=document.getElementById("report");
+  el.innerHTML=`<div class="rep"><p class="rnone">Rapport opstellen…</p></div>`;
+  el.hidden=false; document.body.classList.add("reporting");
+  try{ el.innerHTML=await buildReport(); }catch(e){ el.innerHTML=`<div class="rep"><p class="rnone">Rapport mislukte: ${esc(e.message)}</p></div>`; }
+  const bp=document.getElementById("btnRepPrint"); if(bp) bp.onclick=()=>window.print();
+  const bc=document.getElementById("btnRepClose"); if(bc) bc.onclick=closeReport;
+  window.scrollTo({top:0});
+}
+function closeReport(){ const el=document.getElementById("report"); el.hidden=true; el.innerHTML=""; document.body.classList.remove("reporting"); }
+
 const dot=document.getElementById("dot"), connTxt=document.getElementById("connTxt");
 const setConn=(s,t)=>{ dot.className="dot "+s; connTxt.textContent=t; };
 const dlg=document.getElementById("cfgDlg");
@@ -1763,7 +1891,7 @@ document.getElementById("btnShare").onclick = async ()=>{
   try { await navigator.clipboard.writeText(_summary); toast("Samenvatting gekopieerd — plak het in een bericht of e-mail aan je team."); }
   catch(_){ toast("Kopiëren lukte niet. Selecteer de tekst handmatig of gebruik Print/PDF."); }
 };
-document.getElementById("btnPrint").onclick = ()=>window.print();
+document.getElementById("btnReport").onclick = openReport;
 document.getElementById("btnWipe").onclick = async ()=>{
   if (!confirm("Cache wissen? De data wordt bij de volgende sync opnieuw opgehaald.")) return;
   await DB.wipe(); closeDlg(); await refresh(); };
