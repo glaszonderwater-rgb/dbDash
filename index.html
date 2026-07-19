@@ -530,7 +530,7 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
   Alles blijft op dit apparaat: cache in IndexedDB, token in localStorage. Er gaat niets naar een
   server behalve leesverzoeken aan je eigen Nightscout.<br>
   Observaties, geen instelwaarden. Wat je met een patroon doet is een gesprek met je behandelteam.<br>
-  <span style="opacity:.8">DiaMetric · versie <b>3.11 · 19 jul 2026</b> — maaltijden per dagdeel · logboek back-up (export/import) · IOB &amp; COB op "Nu" · overzicht-bento (TIR-ring + kern-tegels) · app-native onderbalk-navigatie · opvallendste dagen · dag inzoomen (forensica) · consultrapport · signalen (watch-list) · wat-als correctie-insuline (ISF) · thema-schakelaar · tabbladen (overzicht · veiligheid · instellen · voortgang) · wat-als nachtbasaal &amp; maaltijdinsuline · hypo-gevoel &amp; bewustzijn · logboek &amp; voor/na-vergelijken · fine-tunen per hefboom · profiel (basaal/ISF/KH-ratio) · jouw vragen beantwoord · beweging · band-verdeling · hypo-detail · insuline &amp; koolhydraten · AGP · trend · verdieping</span>
+  <span style="opacity:.8">DiaMetric · versie <b>3.12 · 19 jul 2026</b> — instelbaar insulinetype (piektijd) · maaltijden per dagdeel · logboek back-up (export/import) · IOB &amp; COB op "Nu" · overzicht-bento (TIR-ring + kern-tegels) · app-native onderbalk-navigatie · opvallendste dagen · dag inzoomen (forensica) · consultrapport · signalen (watch-list) · wat-als correctie-insuline (ISF) · thema-schakelaar · tabbladen (overzicht · veiligheid · instellen · voortgang) · wat-als nachtbasaal &amp; maaltijdinsuline · hypo-gevoel &amp; bewustzijn · logboek &amp; voor/na-vergelijken · fine-tunen per hefboom · profiel (basaal/ISF/KH-ratio) · jouw vragen beantwoord · beweging · band-verdeling · hypo-detail · insuline &amp; koolhydraten · AGP · trend · verdieping</span>
 </footer>
 
 <dialog id="cfgDlg">
@@ -544,6 +544,13 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
     <b>readable</b>. Gebruik nooit je API_SECRET.</div>
   <label for="inDays">Historie ophalen (dagen)</label>
   <input id="inDays" type="number" min="7" max="365" value="30">
+  <label for="inInsulin">Insulinetype</label>
+  <select id="inInsulin">
+    <option value="75">Snelwerkend — Novorapid / Humalog / Apidra</option>
+    <option value="55">Ultrasnel — Fiasp</option>
+    <option value="45">Ultrasnel — Lyumjev</option>
+  </select>
+  <div class="hint">Bepaalt de piektijd van het insulinemodel en verbetert alle insuline-analyses (IOB, waargenomen ISF, alle wat-als's).</div>
   <div class="err" id="cfgErr" hidden></div>
   <div class="actions">
     <button id="btnSave">Bewaren</button>
@@ -565,7 +572,7 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
 
 /* ── Config ─────────────────────────────────────────────────────────────── */
 const CFG_KEY = "dbdash.cfg";
-const cfg = Object.assign({ url:"", token:"", days:30 },
+const cfg = Object.assign({ url:"", token:"", days:30, peak:75 },
   JSON.parse(localStorage.getItem(CFG_KEY) || "{}"));
 const saveCfg = () => localStorage.setItem(CFG_KEY, JSON.stringify(cfg));
 
@@ -769,7 +776,7 @@ function lookupTimeSeries(series, todMinV){
   const wm=series.map(e=>({min:e.timeAsSeconds!=null?e.timeAsSeconds/60:hhmmToMin(e.time), value:+e.value})).sort((a,b)=>a.min-b.min);
   let best=wm[wm.length-1]; for(const e of wm) if(e.min<=todMinV) best=e; return best.value;
 }
-const PEAK_MIN = 75;   // Novorapid/Humalog-piek; vast in deze versie (later instelbaar)
+let PEAK_MIN = cfg.peak || 75;   // insuline-piektijd (min); instelbaar per insulinetype
 function profileAt(timeline, ts){
   const { docs, switches } = timeline;
   let store=null, dia=6, units="mmol";
@@ -2071,7 +2078,8 @@ async function doSync(){
 document.getElementById("btnSync").onclick = doSync;
 document.getElementById("btnCfg").onclick = ()=>{
   document.getElementById("inUrl").value=cfg.url; document.getElementById("inTok").value=cfg.token;
-  document.getElementById("inDays").value=cfg.days; document.getElementById("cfgErr").hidden=true; openDlg(); };
+  document.getElementById("inDays").value=cfg.days; document.getElementById("inInsulin").value=String(cfg.peak||75);
+  document.getElementById("cfgErr").hidden=true; openDlg(); };
 document.getElementById("btnClose").onclick = closeDlg;
 document.getElementById("btnSave").onclick = async ()=>{
   const err=document.getElementById("cfgErr");
@@ -2079,6 +2087,8 @@ document.getElementById("btnSave").onclick = async ()=>{
   if (!/^https:\/\/.+/.test(url)){ err.textContent="Adres moet met https:// beginnen."; err.hidden=false; return; }
   cfg.url=url; cfg.token=document.getElementById("inTok").value.trim();
   cfg.days=Math.min(365,Math.max(7,+document.getElementById("inDays").value||30));
+  cfg.peak=[45,55,75].includes(+document.getElementById("inInsulin").value)?+document.getElementById("inInsulin").value:75;
+  PEAK_MIN=cfg.peak;
   setConn("busy","controleren…");
   try { await NS.get("/api/v1/status.json"); saveCfg(); document.getElementById("btnSync").disabled=false; closeDlg(); await doSync(); }
   catch(e){ setConn("err","geen verbinding"); err.textContent=e.message; err.hidden=false; }
