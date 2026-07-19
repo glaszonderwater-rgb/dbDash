@@ -121,6 +121,9 @@ h2.sect::after{content:"";flex:1;height:1px;background:var(--line)}
 .now .age{margin-left:auto;font-size:.7rem;color:var(--dim);align-self:center}
 .now .age.stale{color:var(--warn)}
 .spark{width:100%;height:56px;display:block;margin-top:.7rem}
+.onboard{display:flex;gap:1.1rem;margin-top:.5rem;font-size:.8rem;color:var(--muted);flex-wrap:wrap}
+.onboard b{color:var(--ink);font-weight:650;font-family:var(--mono)}
+.onboard .ob-hint{color:var(--warn);font-weight:600}
 
 /* ── Overzicht-bento (hero-tegels) ─────────────────────────────────────────── */
 .glance{display:flex;flex-direction:column;gap:.5rem}
@@ -356,6 +359,7 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
       <span class="age" id="nowAge"></span>
     </div>
     <div id="spark"></div>
+    <div class="onboard" id="onboard" hidden></div>
   </section>
 
   <section id="secGlance" data-group="overzicht" hidden>
@@ -526,7 +530,7 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
   Alles blijft op dit apparaat: cache in IndexedDB, token in localStorage. Er gaat niets naar een
   server behalve leesverzoeken aan je eigen Nightscout.<br>
   Observaties, geen instelwaarden. Wat je met een patroon doet is een gesprek met je behandelteam.<br>
-  <span style="opacity:.8">DiaMetric · versie <b>3.8 · 19 jul 2026</b> — overzicht-bento (TIR-ring + kern-tegels) · app-native onderbalk-navigatie · opvallendste dagen · dag inzoomen (forensica) · consultrapport · signalen (watch-list) · wat-als correctie-insuline (ISF) · thema-schakelaar · tabbladen (overzicht · veiligheid · instellen · voortgang) · wat-als nachtbasaal &amp; maaltijdinsuline · hypo-gevoel &amp; bewustzijn · logboek &amp; voor/na-vergelijken · fine-tunen per hefboom · profiel (basaal/ISF/KH-ratio) · jouw vragen beantwoord · beweging · band-verdeling · hypo-detail · insuline &amp; koolhydraten · AGP · trend · verdieping</span>
+  <span style="opacity:.8">DiaMetric · versie <b>3.9 · 19 jul 2026</b> — IOB &amp; COB op "Nu" · overzicht-bento (TIR-ring + kern-tegels) · app-native onderbalk-navigatie · opvallendste dagen · dag inzoomen (forensica) · consultrapport · signalen (watch-list) · wat-als correctie-insuline (ISF) · thema-schakelaar · tabbladen (overzicht · veiligheid · instellen · voortgang) · wat-als nachtbasaal &amp; maaltijdinsuline · hypo-gevoel &amp; bewustzijn · logboek &amp; voor/na-vergelijken · fine-tunen per hefboom · profiel (basaal/ISF/KH-ratio) · jouw vragen beantwoord · beweging · band-verdeling · hypo-detail · insuline &amp; koolhydraten · AGP · trend · verdieping</span>
 </footer>
 
 <dialog id="cfgDlg">
@@ -735,6 +739,13 @@ function reconstructIOB(treatments, ts, peakMin, timeline){
     const dia=(timeline?profileAt(timeline,t.ts).dia:6)*60; if(dtMin>dia) continue;
     iob += t.insulin*insulinModel(peakMin,dia).iob(dtMin); }
   return iob;
+}
+// Koolhydraten-on-board: eenvoudige lineaire afbraak over ~3 uur (indicatief).
+function carbsOnBoard(treatments, ts){
+  const ABS=180; let cob=0;
+  for (const t of treatments){ if(!(t.carbs>0)) continue;
+    const dt=(ts-t.ts)/60000; if(dt<0||dt>=ABS) continue; cob += t.carbs*(1-dt/ABS); }
+  return cob;
 }
 
 /* ── Profielen (ISF/IC/basaal per moment, alles in mmol/L) ──────────────────── */
@@ -1235,6 +1246,18 @@ function render(glucose, treatments, timeline){
   const age=document.getElementById("nowAge"); age.textContent = ageMin<90?`${ageMin} min geleden`:`${Math.round(ageMin/60)} uur geleden`;
   age.classList.toggle("stale", ageMin>20);
   document.getElementById("spark").innerHTML = sparkline(glucose);
+
+  // Actieve insuline & koolhydraten (nu) — context voor de dagelijkse blik
+  const ob = document.getElementById("onboard");
+  if (treatments.length){
+    const iobNow = reconstructIOB(treatments, Date.now(), PEAK_MIN, timeline);
+    const cobNow = carbsOnBoard(treatments, Date.now());
+    const fresh = ageMin<=20;                       // hint alleen bij verse sensordata
+    const hint = fresh && iobNow>=1 && last.dir && /Down/i.test(last.dir) && last.bg<8
+      ? ` <span class="ob-hint">· let op verder dalen</span>` : "";
+    ob.innerHTML = `<span>IOB <b>${nl1(iobNow)}</b> E</span><span>COB <b>${Math.round(cobNow)}</b> g</span>${hint}`;
+    ob.hidden = false;
+  } else ob.hidden = true;
 
   // alleen bruikbare dagen voor de statistiek
   const q = quality(glucose);
