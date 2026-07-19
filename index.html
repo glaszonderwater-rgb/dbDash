@@ -530,7 +530,7 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
   Alles blijft op dit apparaat: cache in IndexedDB, token in localStorage. Er gaat niets naar een
   server behalve leesverzoeken aan je eigen Nightscout.<br>
   Observaties, geen instelwaarden. Wat je met een patroon doet is een gesprek met je behandelteam.<br>
-  <span style="opacity:.8">DiaMetric · versie <b>3.12 · 19 jul 2026</b> — instelbaar insulinetype (piektijd) · maaltijden per dagdeel · logboek back-up (export/import) · IOB &amp; COB op "Nu" · overzicht-bento (TIR-ring + kern-tegels) · app-native onderbalk-navigatie · opvallendste dagen · dag inzoomen (forensica) · consultrapport · signalen (watch-list) · wat-als correctie-insuline (ISF) · thema-schakelaar · tabbladen (overzicht · veiligheid · instellen · voortgang) · wat-als nachtbasaal &amp; maaltijdinsuline · hypo-gevoel &amp; bewustzijn · logboek &amp; voor/na-vergelijken · fine-tunen per hefboom · profiel (basaal/ISF/KH-ratio) · jouw vragen beantwoord · beweging · band-verdeling · hypo-detail · insuline &amp; koolhydraten · AGP · trend · verdieping</span>
+  <span style="opacity:.8">DiaMetric · versie <b>3.13 · 19 jul 2026</b> — loop-IOB/COB uit devicestatus · instelbaar insulinetype (piektijd) · maaltijden per dagdeel · logboek back-up (export/import) · IOB &amp; COB op "Nu" · overzicht-bento (TIR-ring + kern-tegels) · app-native onderbalk-navigatie · opvallendste dagen · dag inzoomen (forensica) · consultrapport · signalen (watch-list) · wat-als correctie-insuline (ISF) · thema-schakelaar · tabbladen (overzicht · veiligheid · instellen · voortgang) · wat-als nachtbasaal &amp; maaltijdinsuline · hypo-gevoel &amp; bewustzijn · logboek &amp; voor/na-vergelijken · fine-tunen per hefboom · profiel (basaal/ISF/KH-ratio) · jouw vragen beantwoord · beweging · band-verdeling · hypo-detail · insuline &amp; koolhydraten · AGP · trend · verdieping</span>
 </footer>
 
 <dialog id="cfgDlg">
@@ -720,7 +720,21 @@ async function syncAll(onProgress){
     await DB.putMany("profiles", P);
   } catch(_){ /* profielen zijn optioneel */ }
 
+  // devicestatus (loop-IOB/COB voor "nu") — alleen recent nodig; minimaal opgeslagen
+  try {
+    const dsRows = await NS.devicestatus(now - 2*DAY, now);
+    const DS = dsRows.map(d=>{ const x=dsExtract(d);
+      return { _id:String(d._id), ts:parseTs(d.created_at)??parseTs(d.mills)??0, iob:x.iob, cob:x.cob }; })
+      .filter(d=>d.ts>0 && (d.iob!=null || d.cob!=null));
+    if (DS.length) await DB.putMany("devicestatus", DS);
+  } catch(_){ /* devicestatus is optioneel */ }
+
   await DB.meta("sync.at", now);
+}
+async function loadDeviceStatus(){
+  const rows = await DB.range("devicestatus", Date.now()-6*3600e3, Date.now()+6e4);
+  rows.sort((a,b)=>a.ts-b.ts);
+  return rows;
 }
 
 /* ── Loader — de conversiegrens mg/dL → mmol/L ─────────────────────────────── */
@@ -760,6 +774,17 @@ function carbsOnBoard(treatments, ts){
   for (const t of treatments){ if(!(t.carbs>0)) continue;
     const dt=(ts-t.ts)/60000; if(dt<0||dt>=ABS) continue; cob += t.carbs*(1-dt/ABS); }
   return cob;
+}
+// IOB/COB uit een devicestatus-document (loop) — defensief over bekende
+// veldpaden (AAPS/oref/loop-varianten), want de structuur verschilt per versie.
+function dsExtract(d){
+  const num=v=>(typeof v==="number"&&isFinite(v))?v:null;
+  const oa=d.openaps||{}, lp=d.loop||{};
+  const iobObj = (Array.isArray(oa.iob)?oa.iob[0]:oa.iob) || lp.iob || d.iob || {};
+  const iob = num(iobObj.iob) ?? num(d.iob&&d.iob.iob);
+  const cob = num(oa.suggested&&oa.suggested.COB) ?? num(oa.enacted&&oa.enacted.COB)
+    ?? num(lp.cob&&lp.cob.cob) ?? num(d.cob&&d.cob.cob);
+  return { iob, cob };
 }
 
 /* ── Profielen (ISF/IC/basaal per moment, alles in mmol/L) ──────────────────── */
@@ -1263,13 +1288,17 @@ function render(glucose, treatments, timeline){
 
   // Actieve insuline & koolhydraten (nu) — context voor de dagelijkse blik
   const ob = document.getElementById("onboard");
-  if (treatments.length){
-    const iobNow = reconstructIOB(treatments, Date.now(), PEAK_MIN, timeline);
-    const cobNow = carbsOnBoard(treatments, Date.now());
+  if (treatments.length || _dsRecent.length){
+    const dsLast = _dsRecent.length ? _dsRecent[_dsRecent.length-1] : null;
+    const dsFresh = dsLast && (Date.now()-dsLast.ts) < 15*60e3;   // loop-data van < 15 min
+    const iobNow = (dsFresh && dsLast.iob!=null) ? dsLast.iob : reconstructIOB(treatments, Date.now(), PEAK_MIN, timeline);
+    const cobNow = (dsFresh && dsLast.cob!=null) ? dsLast.cob : carbsOnBoard(treatments, Date.now());
+    const viaLoop = dsFresh && dsLast.iob!=null;
     const fresh = ageMin<=20;                       // hint alleen bij verse sensordata
     const hint = fresh && iobNow>=1 && last.dir && /Down/i.test(last.dir) && last.bg<8
       ? ` <span class="ob-hint">· let op verder dalen</span>` : "";
-    ob.innerHTML = `<span>IOB <b>${nl1(iobNow)}</b> E</span><span>COB <b>${Math.round(cobNow)}</b> g</span>${hint}`;
+    ob.innerHTML = `<span>IOB <b>${nl1(iobNow)}</b> E</span><span>COB <b>${Math.round(cobNow)}</b> g</span>`+
+      (viaLoop?`<span style="color:var(--dim)">· via loop</span>`:``)+hint;
     ob.hidden = false;
   } else ob.hidden = true;
 
@@ -2063,10 +2092,12 @@ function openDlg(){ try{ if(typeof dlg.showModal==="function"){ if(!dlg.open) dl
   dlg.classList.add("fb"); dlg.setAttribute("open",""); }
 function closeDlg(){ try{ dlg.close?.(); }catch(_){} dlg.removeAttribute("open"); }
 
+let _dsRecent = [];
 async function refresh(){
   const glucose = await loadGlucose(cfg.days);
   const treatments = glucose.length ? await loadTreatments(cfg.days) : [];
   const timeline = glucose.length ? await loadProfiles(cfg.days) : null;
+  _dsRecent = glucose.length ? await loadDeviceStatus() : [];
   render(glucose, treatments, timeline);
 }
 async function doSync(){
