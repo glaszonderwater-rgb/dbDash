@@ -31,8 +31,9 @@
   --shadow:0 1px 2px rgba(16,32,26,.05), 0 10px 26px -14px rgba(16,32,26,.14);
   --shadow-sm:0 1px 2px rgba(16,32,26,.05);
 }
-@media (prefers-color-scheme:dark){
-  :root{
+/* Donkere waarden: automatisch bij systeem-donker (tenzij handmatig "licht"),
+   én altijd bij handmatig "donker". De data-theme-keuze wint van het systeem. */
+@media (prefers-color-scheme:dark){ :root:not([data-theme="light"]){
     --bg:#0E1311; --surface:#161D19; --surface-2:#1B2320; --raised:#1E2723;
     --ink:#E9EFEB; --muted:#96A69F; --dim:#66756E;
     --line:#242D29; --line-2:#303A35;
@@ -41,7 +42,16 @@
     --warn:#D9A441; --risk-bg:#241816; --risk-line:#43241F;
     --shadow:0 1px 2px rgba(0,0,0,.35), 0 12px 30px -16px rgba(0,0,0,.6);
     --shadow-sm:0 1px 2px rgba(0,0,0,.35);
-  }
+} }
+:root[data-theme="dark"]{
+    --bg:#0E1311; --surface:#161D19; --surface-2:#1B2320; --raised:#1E2723;
+    --ink:#E9EFEB; --muted:#96A69F; --dim:#66756E;
+    --line:#242D29; --line-2:#303A35;
+    --accent:#37C6AC; --accent-soft:#12332C; --on-accent:#08201B;
+    --inRange:#43C795; --high:#EABB4A; --low:#E85F59; --veryHigh:#E08843; --veryLow:#C05149;
+    --warn:#D9A441; --risk-bg:#241816; --risk-line:#43241F;
+    --shadow:0 1px 2px rgba(0,0,0,.35), 0 12px 30px -16px rgba(0,0,0,.6);
+    --shadow-sm:0 1px 2px rgba(0,0,0,.35);
 }
 *{box-sizing:border-box;margin:0;padding:0}
 html{-webkit-text-size-adjust:100%}
@@ -258,6 +268,7 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:-1px;bor
 <!-- Foutvanger: op een telefoon is de console onzichtbaar. Deze balk maakt een
      fout in het script zichtbaar in plaats van de app stil kapot te laten gaan. -->
 <script>
+(function(){try{var _th=localStorage.getItem("theme");if(_th==="light"||_th==="dark")document.documentElement.dataset.theme=_th;}catch(_){}})();
 (function(){function show(m){var b=document.getElementById("fatalBar");if(!b){b=document.createElement("div");b.id="fatalBar";}
 b.textContent="⚠ Er ging iets mis — meld deze tekst: "+m;
 b.setAttribute("style","position:fixed;left:0;right:0;bottom:0;z-index:99999;background:#B03A3A;color:#fff;font:12px/1.45 system-ui,sans-serif;padding:10px 14px;white-space:pre-wrap");
@@ -273,6 +284,7 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
       <div class="grow"></div>
       <div class="conn"><i class="dot" id="dot"></i><span id="connTxt">niet ingesteld</span></div>
       <button id="btnSync" disabled>Sync</button>
+      <button class="ghost" id="btnTheme" title="Thema">◐</button>
       <button class="ghost" id="btnCfg" title="Instellingen">⚙</button>
     </div>
     <div class="scope" id="scope"><span><i>periode</i> <b>—</b></span></div>
@@ -410,7 +422,7 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
   Alles blijft op dit apparaat: cache in IndexedDB, token in localStorage. Er gaat niets naar een
   server behalve leesverzoeken aan je eigen Nightscout.<br>
   Observaties, geen instelwaarden. Wat je met een patroon doet is een gesprek met je behandelteam.<br>
-  <span style="opacity:.8">DiaMetric · versie <b>3.0 · 18 jul 2026</b> — tabbladen (overzicht · veiligheid · instellen · voortgang) · wat-als nachtbasaal &amp; maaltijdinsuline · hypo-gevoel &amp; bewustzijn · logboek &amp; voor/na-vergelijken · fine-tunen per hefboom · profiel (basaal/ISF/KH-ratio) · jouw vragen beantwoord · beweging · band-verdeling · hypo-detail · insuline &amp; koolhydraten · AGP · trend · verdieping</span>
+  <span style="opacity:.8">DiaMetric · versie <b>3.1 · 19 jul 2026</b> — thema-schakelaar (systeem/licht/donker) · tabbladen (overzicht · veiligheid · instellen · voortgang) · wat-als nachtbasaal &amp; maaltijdinsuline · hypo-gevoel &amp; bewustzijn · logboek &amp; voor/na-vergelijken · fine-tunen per hefboom · profiel (basaal/ISF/KH-ratio) · jouw vragen beantwoord · beweging · band-verdeling · hypo-detail · insuline &amp; koolhydraten · AGP · trend · verdieping</span>
 </footer>
 
 <dialog id="cfgDlg">
@@ -1693,6 +1705,18 @@ document.getElementById("logAdd").onclick = async ()=>{
   try{ await DB.putMany("annotations",[an]); }catch(e){ toast("Opslaan mislukt: "+e.message); return; }
   document.getElementById("logNote").value=""; toast("Markering toegevoegd.");
   renderLog(); };
+
+// Thema — handmatige keuze (systeem → licht → donker) die de systeeminstelling overschrijft
+const THEMES=["auto","light","dark"], THEME_ICON={auto:"◐",light:"☀",dark:"☾"}, THEME_NAME={auto:"systeem",light:"licht",dark:"donker"};
+function applyTheme(t){
+  if(t==="auto") delete document.documentElement.dataset.theme; else document.documentElement.dataset.theme=t;
+  try{ localStorage.setItem("theme",t); }catch(_){}
+  const b=document.getElementById("btnTheme"); if(b){ b.textContent=THEME_ICON[t]; b.title="Thema: "+THEME_NAME[t]; }
+}
+document.getElementById("btnTheme").onclick=()=>{
+  const cur=document.documentElement.dataset.theme||"auto";
+  applyTheme(THEMES[(THEMES.indexOf(cur)+1)%THEMES.length]); };
+applyTheme(document.documentElement.dataset.theme||"auto");
 
 // Tabbladen — verdeelt de secties over Overzicht / Veiligheid / Instellen / Voortgang
 let _tab = "overzicht";
