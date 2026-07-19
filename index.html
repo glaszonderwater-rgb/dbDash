@@ -56,7 +56,7 @@
 *{box-sizing:border-box;margin:0;padding:0}
 html{-webkit-text-size-adjust:100%}
 body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15px;
-  line-height:1.5;-webkit-font-smoothing:antialiased;padding-bottom:3.5rem}
+  line-height:1.5;-webkit-font-smoothing:antialiased;padding-bottom:calc(5rem + env(safe-area-inset-bottom,0px))}
 .wrap{max-width:640px;margin:0 auto;padding:0 1.1rem}
 
 /* ── Kop ─────────────────────────────────────────────────────────────────── */
@@ -92,12 +92,17 @@ button.ghost:hover:not(:disabled){color:var(--ink);opacity:1}
 .scope i{font-style:normal;opacity:.7} .scope b{color:var(--ink);font-weight:600}
 .scope .warn b{color:var(--warn)}
 
-.tabs{display:flex;gap:.25rem;padding:.45rem 0 .55rem;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
-.tabs::-webkit-scrollbar{display:none}
-.tab{flex:1 1 0;min-width:max-content;white-space:nowrap;background:transparent;border:1px solid transparent;
-  color:var(--muted);font-size:.78rem;font-weight:600;padding:.4rem .5rem;border-radius:9px;box-shadow:none;letter-spacing:0}
-.tab:hover:not(:disabled){color:var(--ink);opacity:1}
-.tab.on{background:var(--accent-soft);color:var(--accent)}
+/* Onderbalk-navigatie — duim-bereikbaar, vast onderaan */
+.nav{position:fixed;left:0;right:0;bottom:0;z-index:30;display:flex;
+  background:color-mix(in srgb,var(--surface) 90%,transparent);backdrop-filter:blur(16px) saturate(1.4);
+  border-top:1px solid var(--line);padding:.35rem .3rem calc(.35rem + env(safe-area-inset-bottom,0px))}
+.nav .tab{flex:1 1 0;display:flex;flex-direction:column;align-items:center;gap:.16rem;
+  background:transparent;border:0;box-shadow:none;color:var(--dim);font-size:.62rem;font-weight:600;
+  letter-spacing:.01em;padding:.3rem .2rem;border-radius:12px;cursor:pointer;transition:color .14s}
+.nav .tab svg{width:23px;height:23px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.nav .tab.on{color:var(--accent)}
+.nav .tab:active{transform:translateY(.5px)}
+@media (hover:hover){ .nav .tab:hover:not(.on){color:var(--muted)} }
 .tabhide{display:none!important}
 
 main{padding-top:1.4rem}
@@ -269,7 +274,7 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:-1px;bor
 .actions{display:flex;gap:.5rem;margin-top:1.3rem;flex-wrap:wrap;align-items:center}
 .err{font-family:var(--mono);font-size:.72rem;color:var(--low);margin-top:.8rem;white-space:pre-wrap}
 
-#toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%) translateY(20px);z-index:9998;
+#toast{position:fixed;left:50%;bottom:calc(74px + env(safe-area-inset-bottom,0px));transform:translateX(-50%) translateY(20px);z-index:9998;
   background:var(--ink);color:var(--bg);font-size:.8rem;padding:.65rem 1.1rem;border-radius:12px;
   box-shadow:0 10px 30px rgba(0,0,0,.25);opacity:0;pointer-events:none;
   transition:opacity .2s,transform .2s;max-width:90%;text-align:center}
@@ -277,8 +282,8 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:-1px;bor
 
 /* ── Print / PDF ───────────────────────────────────────────────────────────── */
 @media print{
-  #toast{display:none!important}
-  body{background:#fff;color:#000}
+  #toast,#tabbar{display:none!important}
+  body{background:#fff;color:#000;padding-bottom:0}
   /* Consultrapport open → print alléén het rapport, schoon. */
   body.reporting header, body.reporting #tabbar, body.reporting footer, body.reporting dialog,
   body.reporting main>section, body.reporting main>.empty{display:none!important}
@@ -325,12 +330,6 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
       <button class="ghost" id="btnCfg" title="Instellingen">⚙</button>
     </div>
     <div class="scope" id="scope"><span><i>periode</i> <b>—</b></span></div>
-    <nav class="tabs" id="tabbar" hidden>
-      <button class="tab on" data-tab="overzicht">Overzicht</button>
-      <button class="tab" data-tab="veiligheid">Veiligheid</button>
-      <button class="tab" data-tab="instellen">Instellen</button>
-      <button class="tab" data-tab="voortgang">Voortgang</button>
-    </nav>
   </div>
 </header>
 
@@ -482,11 +481,26 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
   <div id="report" hidden></div>
 </main>
 
+<nav id="tabbar" class="nav" hidden aria-label="Hoofdnavigatie">
+  <button class="tab on" data-tab="overzicht">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7.5" height="7.5" rx="1.5"/><rect x="13.5" y="3" width="7.5" height="7.5" rx="1.5"/><rect x="3" y="13.5" width="7.5" height="7.5" rx="1.5"/><rect x="13.5" y="13.5" width="7.5" height="7.5" rx="1.5"/></svg>
+    <span>Overzicht</span></button>
+  <button class="tab" data-tab="veiligheid">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l7 2.5v5.5c0 4.5-3 7.7-7 9-4-1.3-7-4.5-7-9V5.5z"/></svg>
+    <span>Veiligheid</span></button>
+  <button class="tab" data-tab="instellen">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><line x1="4" y1="8" x2="20" y2="8"/><line x1="4" y1="16" x2="20" y2="16"/><circle cx="9" cy="8" r="2.4"/><circle cx="15" cy="16" r="2.4"/></svg>
+    <span>Instellen</span></button>
+  <button class="tab" data-tab="voortgang">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="4 15 9 10 13 13 20 5"/><polyline points="15 5 20 5 20 10"/></svg>
+    <span>Voortgang</span></button>
+</nav>
+
 <footer class="wrap">
   Alles blijft op dit apparaat: cache in IndexedDB, token in localStorage. Er gaat niets naar een
   server behalve leesverzoeken aan je eigen Nightscout.<br>
   Observaties, geen instelwaarden. Wat je met een patroon doet is een gesprek met je behandelteam.<br>
-  <span style="opacity:.8">DiaMetric · versie <b>3.6 · 19 jul 2026</b> — opvallendste dagen · dag inzoomen (forensica) · consultrapport · signalen (watch-list) · wat-als correctie-insuline (ISF) · thema-schakelaar · tabbladen (overzicht · veiligheid · instellen · voortgang) · wat-als nachtbasaal &amp; maaltijdinsuline · hypo-gevoel &amp; bewustzijn · logboek &amp; voor/na-vergelijken · fine-tunen per hefboom · profiel (basaal/ISF/KH-ratio) · jouw vragen beantwoord · beweging · band-verdeling · hypo-detail · insuline &amp; koolhydraten · AGP · trend · verdieping</span>
+  <span style="opacity:.8">DiaMetric · versie <b>3.7 · 19 jul 2026</b> — app-native onderbalk-navigatie · opvallendste dagen · dag inzoomen (forensica) · consultrapport · signalen (watch-list) · wat-als correctie-insuline (ISF) · thema-schakelaar · tabbladen (overzicht · veiligheid · instellen · voortgang) · wat-als nachtbasaal &amp; maaltijdinsuline · hypo-gevoel &amp; bewustzijn · logboek &amp; voor/na-vergelijken · fine-tunen per hefboom · profiel (basaal/ISF/KH-ratio) · jouw vragen beantwoord · beweging · band-verdeling · hypo-detail · insuline &amp; koolhydraten · AGP · trend · verdieping</span>
 </footer>
 
 <dialog id="cfgDlg">
