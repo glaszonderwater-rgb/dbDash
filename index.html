@@ -207,6 +207,10 @@ h2.sect::after{content:"";flex:1;height:1px;background:var(--line)}
 .warow.head{border-top:0;color:var(--muted);font-size:.68rem;text-transform:uppercase;letter-spacing:.05em}
 .warow span:first-child{color:var(--muted)}
 .warow.cur{font-weight:700} .warow.cur span{color:var(--ink)}
+.watch{padding:.55rem .7rem;border-radius:.55rem;background:var(--surface-2);border-left:3px solid var(--high);margin-bottom:.45rem}
+.watch:last-of-type{margin-bottom:0}
+.watch.info{border-left-color:var(--line-2)}
+.watch .wt{font-weight:650;font-size:.9rem;color:var(--ink)} .watch .wd{font-size:.83rem;color:var(--muted);margin-top:.15rem} .watch .wd b{color:var(--ink);font-weight:600}
 .empty{font-family:var(--mono);font-size:.8rem;color:var(--muted);text-align:center;padding:3.5rem 1rem;line-height:1.9}
 
 /* ── Verdieping ────────────────────────────────────────────────────────────── */
@@ -321,6 +325,11 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
     </div>
   </section>
 
+  <section id="secWatch" data-group="overzicht" hidden>
+    <h2 class="sect">Signalen — wat verandert?</h2>
+    <div class="card" id="watch"></div>
+  </section>
+
   <section id="secQuestions" data-group="overzicht" hidden>
     <h2 class="sect">Jouw vragen beantwoord</h2>
     <div class="card" id="questions"></div>
@@ -423,7 +432,7 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
   Alles blijft op dit apparaat: cache in IndexedDB, token in localStorage. Er gaat niets naar een
   server behalve leesverzoeken aan je eigen Nightscout.<br>
   Observaties, geen instelwaarden. Wat je met een patroon doet is een gesprek met je behandelteam.<br>
-  <span style="opacity:.8">DiaMetric · versie <b>3.2 · 19 jul 2026</b> — wat-als correctie-insuline (ISF) · thema-schakelaar · tabbladen (overzicht · veiligheid · instellen · voortgang) · wat-als nachtbasaal &amp; maaltijdinsuline · hypo-gevoel &amp; bewustzijn · logboek &amp; voor/na-vergelijken · fine-tunen per hefboom · profiel (basaal/ISF/KH-ratio) · jouw vragen beantwoord · beweging · band-verdeling · hypo-detail · insuline &amp; koolhydraten · AGP · trend · verdieping</span>
+  <span style="opacity:.8">DiaMetric · versie <b>3.3 · 19 jul 2026</b> — signalen (watch-list) · wat-als correctie-insuline (ISF) · thema-schakelaar · tabbladen (overzicht · veiligheid · instellen · voortgang) · wat-als nachtbasaal &amp; maaltijdinsuline · hypo-gevoel &amp; bewustzijn · logboek &amp; voor/na-vergelijken · fine-tunen per hefboom · profiel (basaal/ISF/KH-ratio) · jouw vragen beantwoord · beweging · band-verdeling · hypo-detail · insuline &amp; koolhydraten · AGP · trend · verdieping</span>
 </footer>
 
 <dialog id="cfgDlg">
@@ -958,6 +967,38 @@ function trendSvg(weeks){
   return s+"</svg>";
 }
 
+// Watch-list — vergelijkt de laatste 14 dagen met de 14 dagen daarvóór en meldt
+// wat er verslechtert (hypo's, nachtelijke hypo's, tijd in bereik, variabiliteit).
+// Proactief: signaleert een oplopende trend vóórdat hij een probleem wordt.
+function watchList(glucose, q){
+  const usable = ts => q.usableKeys.has(localDayKey(ts));
+  const to = q.to || Date.now();
+  const g = glucose.filter(x=>usable(x.ts));
+  const recent = g.filter(x=>x.ts> to-14*DAY);
+  const prior  = g.filter(x=>x.ts<=to-14*DAY && x.ts> to-28*DAY);
+  const nDays=arr=>new Set(arr.map(x=>localDayKey(x.ts))).size;
+  const rD=nDays(recent), pD=nDays(prior);
+  if(rD<5 || pD<5) return { few:true };
+  const mR=metrics(recent), mP=metrics(prior), hR=hypoStats(recent), hP=hypoStats(prior);
+  const a=[];
+  if(hR.nocturnal>hP.nocturnal && hR.nocturnal>=2)
+    a.push({w:4,title:"Meer nachtelijke hypo's",detail:`${hP.nocturnal} → <b>${hR.nocturnal}</b> in 00–06 u — het gevaarlijkst omdat je slaapt.`});
+  if(mR.tbr-mP.tbr>=0.015 && mR.tbr>=0.04)
+    a.push({w:3,title:"Hypo-tijd loopt op",detail:`van ${pct0(mP.tbr)} naar <b>${pct0(mR.tbr)}</b> (streef <4%).`});
+  if(mP.tir-mR.tir>=0.06)
+    a.push({w:2,title:"Tijd in bereik zakt",detail:`van ${pct0(mP.tir)} naar <b>${pct0(mR.tir)}</b>.`});
+  if(mR.cv-mP.cv>=0.03 && mR.cv>0.36)
+    a.push({w:1,title:"Variabiliteit neemt toe",detail:`CV van ${pct0(mP.cv)} naar <b>${pct0(mR.cv)}</b> (streef ≤36%).`,info:true});
+  a.sort((x,y)=>y.w-x.w);
+  return { alerts:a, rD, pD };
+}
+function watchHtml(w){
+  if(w.alerts.length===0)
+    return `<div class="obs" style="margin:0">Niets dat oploopt: je hypo-tijd, tijd in bereik en variabiliteit zijn de laatste 2 weken stabiel of beter dan de 2 weken daarvoor.</div>`;
+  return w.alerts.map(x=>`<div class="watch${x.info?" info":""}"><div class="wt">${x.title}</div><div class="wd">${x.detail}</div></div>`).join("")+
+    `<div class="muted" style="margin-top:.5rem">Vergelijking: de laatste 2 weken vs de 2 weken daarvoor (alleen dagen met ≥70% dekking). Een vroeg signaal, geen alarm.</div>`;
+}
+
 // Grootste kans — veiligheid eerst
 function opportunity(m, ag, hy, trend){
   // Trend-signaal: verslechtert de veiligheid of het bereik zichtbaar?
@@ -1034,7 +1075,7 @@ function render(glucose, treatments, timeline){
   const has = glucose.length>0;
   document.getElementById("empty").hidden = has;
   document.getElementById("tabbar").hidden = !has;
-  for (const id of ["secNow","secSummary","secQuestions","secAgp","secSafety","secAware","secInsulin","secProfile","secTune","secTrend","secLog","secDeep"]) document.getElementById(id).hidden = !has;
+  for (const id of ["secNow","secSummary","secWatch","secQuestions","secAgp","secSafety","secAware","secInsulin","secProfile","secTune","secTrend","secLog","secDeep"]) document.getElementById(id).hidden = !has;
   if (!has) return;
 
   // Nu
@@ -1061,7 +1102,7 @@ function render(glucose, treatments, timeline){
   if (!g.length){
     document.getElementById("opp").innerHTML = `<div class="lead">Deze periode</div><div class="msg">Nog te weinig dagen met voldoende sensordekking (≥70%) voor betrouwbare cijfers. Synchroniseer meer historie of wacht op meer sensordagen.</div>`;
     document.getElementById("kpis").innerHTML = "";
-    for (const id of ["secQuestions","secAgp","secSafety","secAware","secInsulin","secProfile","secTune","secTrend","secLog","secDeep"]) document.getElementById(id).hidden = true;
+    for (const id of ["secWatch","secQuestions","secAgp","secSafety","secAware","secInsulin","secProfile","secTune","secTrend","secLog","secDeep"]) document.getElementById(id).hidden = true;
     return;
   }
 
@@ -1106,6 +1147,11 @@ function render(glucose, treatments, timeline){
   const MR    = mealResults(glucose, treatments, timeline);
   const ex    = exerciseEffect(glucose, treatments);
   document.getElementById("questions").innerHTML = answerQuestions(m, ag, hy, stack, MR, tr, ex);
+
+  // Signalen — proactieve watch-list (laatste 14 dagen vs de 14 daarvoor)
+  const watch = watchList(glucose, q);
+  if (watch.few){ document.getElementById("secWatch").hidden = true; }
+  else { document.getElementById("secWatch").hidden = false; document.getElementById("watch").innerHTML = watchHtml(watch); }
 
   // Samenvatting-tekst voor het behandelteam (delen/kopiëren)
   const fd = t => t?new Date(t).toLocaleDateString("nl-NL",{day:"2-digit",month:"short",year:"numeric"}):"—";
