@@ -530,7 +530,7 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
   Alles blijft op dit apparaat: cache in IndexedDB, token in localStorage. Er gaat niets naar een
   server behalve leesverzoeken aan je eigen Nightscout.<br>
   Observaties, geen instelwaarden. Wat je met een patroon doet is een gesprek met je behandelteam.<br>
-  <span style="opacity:.8">DiaMetric · versie <b>3.10 · 19 jul 2026</b> — logboek back-up (export/import) · IOB &amp; COB op "Nu" · overzicht-bento (TIR-ring + kern-tegels) · app-native onderbalk-navigatie · opvallendste dagen · dag inzoomen (forensica) · consultrapport · signalen (watch-list) · wat-als correctie-insuline (ISF) · thema-schakelaar · tabbladen (overzicht · veiligheid · instellen · voortgang) · wat-als nachtbasaal &amp; maaltijdinsuline · hypo-gevoel &amp; bewustzijn · logboek &amp; voor/na-vergelijken · fine-tunen per hefboom · profiel (basaal/ISF/KH-ratio) · jouw vragen beantwoord · beweging · band-verdeling · hypo-detail · insuline &amp; koolhydraten · AGP · trend · verdieping</span>
+  <span style="opacity:.8">DiaMetric · versie <b>3.11 · 19 jul 2026</b> — maaltijden per dagdeel · logboek back-up (export/import) · IOB &amp; COB op "Nu" · overzicht-bento (TIR-ring + kern-tegels) · app-native onderbalk-navigatie · opvallendste dagen · dag inzoomen (forensica) · consultrapport · signalen (watch-list) · wat-als correctie-insuline (ISF) · thema-schakelaar · tabbladen (overzicht · veiligheid · instellen · voortgang) · wat-als nachtbasaal &amp; maaltijdinsuline · hypo-gevoel &amp; bewustzijn · logboek &amp; voor/na-vergelijken · fine-tunen per hefboom · profiel (basaal/ISF/KH-ratio) · jouw vragen beantwoord · beweging · band-verdeling · hypo-detail · insuline &amp; koolhydraten · AGP · trend · verdieping</span>
 </footer>
 
 <dialog id="cfgDlg">
@@ -1542,8 +1542,8 @@ function mealResults(glucose, treatments, timeline){
       const ms=(win[i].ts-m.ts)/60000; curve.push({min:ms,cum}); if(win[i].bg>peak){peak=win[i].bg;tPeak=ms;} }
     if(cum<5)continue; const half=cum/2; let t50=null;
     for(let i=1;i<curve.length;i++){ if(curve[i].cum>=half){ const p=curve[i-1],qq=curve[i]; t50=qq.cum===p.cum?qq.min:p.min+(half-p.cum)/(qq.cum-p.cum)*(qq.min-p.min); break; } }
-    results.push({carbs:m.carbs,frac:cum/m.carbs,t50,peakRise:peak-bg0,tPeak,curve,peakBg:peak,bolusOffset,
-      win,wB,isf,dia,bg0}); }   // ruwe data voor de maaltijd-simulatie (wat-als)
+    results.push({ts:m.ts,carbs:m.carbs,frac:cum/m.carbs,t50,peakRise:peak-bg0,tPeak,curve,peakBg:peak,bolusOffset,
+      win,wB,isf,dia,bg0}); }   // ts = moment (voor split per dagdeel); ruwe data voor de wat-als
   const med=arr=>{const s=[...arr].sort((a,b)=>a-b);return s.length?s[Math.floor(s.length/2)]:null;};
   return { results, MIN_CARBS,
     mt50:med(results.filter(r=>r.t50!=null).map(r=>r.t50)), mfrac:med(results.map(r=>r.frac)),
@@ -1562,7 +1562,23 @@ function anMeals(glucose, treatments, q, timeline){
   const speed=mt50==null?"":mt50>60?" Aan de trage kant — passend bij grote of vette maaltijden.":mt50<35?" Snel — dan telt prebolus-timing zwaar mee.":" Vrij gemiddeld.";
   const acc=mfrac>=0.8&&mfrac<=1.2?"je koolhydraatschatting sluit redelijk aan bij wat je glucose laat zien":mfrac<0.8?"je ziet minder terug dan ingevoerd — mogelijk tel je te hoog, of dekt insuline ruim":"je ziet meer terug dan ingevoerd — mogelijk ondergeteld, of te weinig bolus";
   const stats=`<div class="kpis" style="margin-top:.6rem"><div class="kpi"><div class="k">t50</div><div class="v">${mt50==null?"—":Math.round(mt50)}</div><div class="s">min tot 50%</div></div><div class="kpi"><div class="k">Piek</div><div class="v">${Math.round(mtpk)}</div><div class="s">min na maaltijd</div></div></div>`;
-  return absorpSvg(GRID,medc,mt50)+stats+`<div class="obs">Je maaltijden vanaf ${MIN_CARBS} g zijn mediaan na ${mt50==null?"—":Math.round(mt50)} min voor de helft opgenomen, met de piek rond ${Math.round(mtpk)} min.${speed} Dit is het bruikbaarste voor je bolus-timing.</div><div class="muted" style="margin-top:.4rem">Terzijde (indicatief): van de ingevoerde koolhydraten zie ik mediaan ${pct0(mfrac)} terug — ${acc}. Alleen positieve deviaties, temp-basaal niet meegerekend, dus neem dit percentage met een korrel zout. n = ${results.length} maaltijden.</div>`;
+  return absorpSvg(GRID,medc,mt50)+stats+mealDayparts(results,med)+`<div class="obs">Je maaltijden vanaf ${MIN_CARBS} g zijn mediaan na ${mt50==null?"—":Math.round(mt50)} min voor de helft opgenomen, met de piek rond ${Math.round(mtpk)} min.${speed} Dit is het bruikbaarste voor je bolus-timing.</div><div class="muted" style="margin-top:.4rem">Terzijde (indicatief): van de ingevoerde koolhydraten zie ik mediaan ${pct0(mfrac)} terug — ${acc}. Alleen positieve deviaties, temp-basaal niet meegerekend, dus neem dit percentage met een korrel zout. n = ${results.length} maaltijden.</div>`;
+}
+// Maaltijden per dagdeel: legt ochtendresistentie (hoger ontbijt-piek) bloot.
+function mealDayparts(results, med){
+  const parts=[ {id:"ontbijt",lo:240,hi:660}, {id:"lunch",lo:660,hi:900}, {id:"diner",lo:900,hi:1320} ];
+  const rows=parts.map(p=>{ const rs=results.filter(r=>r.ts!=null && todMin(r.ts)>=p.lo && todMin(r.ts)<p.hi);
+    return { id:p.id, n:rs.length, rise:med(rs.map(r=>r.peakRise)), t50:med(rs.filter(r=>r.t50!=null).map(r=>r.t50)) }; });
+  const shown=rows.filter(r=>r.n>=3);
+  if(shown.length<2) return "";   // pas zinvol bij ≥2 dagdelen met genoeg maaltijden
+  const cap=s=>s.charAt(0).toUpperCase()+s.slice(1);
+  const table=`<div class="watable" style="margin-top:.7rem"><div class="warow head"><span>dagdeel</span><span>piek (med.)</span><span>t50</span></div>`+
+    shown.map(r=>`<div class="warow"><span>${cap(r.id)} <span style="color:var(--dim)">· n=${r.n}</span></span><span>+${nl1(r.rise)}</span><span>${r.t50==null?"—":Math.round(r.t50)} min</span></div>`).join("")+`</div>`;
+  const withRise=shown.filter(r=>r.rise!=null).sort((a,b)=>b.rise-a.rise);
+  let obs="";
+  if(withRise.length>=2){ const top=withRise[0], lo=withRise[withRise.length-1];
+    if(top.rise-lo.rise>=1.5) obs=`<div class="obs" style="margin-top:.4rem">Je <b>${top.id}</b> piekt het hoogst (+${nl1(top.rise)} mmol/L) tegen +${nl1(lo.rise)} bij ${lo.id}${top.id==="ontbijt"?" — klassiek voor ochtendresistentie; een sterkere KH-ratio of ruimere prebolus rond het ontbijt kan schelen":""}.</div>`; }
+  return table+obs;
 }
 
 // Stapeling-detail: HTML voor het correctie-stapelen vóór hypo's
