@@ -122,6 +122,18 @@ h2.sect::after{content:"";flex:1;height:1px;background:var(--line)}
 .now .age.stale{color:var(--warn)}
 .spark{width:100%;height:56px;display:block;margin-top:.7rem}
 
+/* ── Overzicht-bento (hero-tegels) ─────────────────────────────────────────── */
+.glance{display:flex;flex-direction:column;gap:.5rem}
+.gtile{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:.85rem .9rem;box-shadow:var(--shadow-sm)}
+.gfeat{display:flex;align-items:center;gap:1rem}
+.ring{width:64px;height:64px;flex:none}
+.gfeatx{display:flex;flex-direction:column;gap:.15rem}
+.gk{font-size:.64rem;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);font-weight:700}
+.gfeat .gk{font-size:.9rem;letter-spacing:0;text-transform:none;color:var(--ink);font-weight:650}
+.gs{font-size:.72rem;color:var(--muted);line-height:1.35}
+.grow{display:grid;grid-template-columns:1fr 1fr;gap:.5rem}
+.grow .gv{font-family:var(--mono);font-size:1.5rem;font-weight:600;letter-spacing:-.01em;margin:.12rem 0 .1rem;color:var(--ink);font-variant-numeric:tabular-nums}
+
 /* ── Kaart ───────────────────────────────────────────────────────────────── */
 .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
   padding:1.05rem;box-shadow:var(--shadow)}
@@ -346,11 +358,25 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
     <div id="spark"></div>
   </section>
 
+  <section id="secGlance" data-group="overzicht" hidden>
+    <div class="glance">
+      <div class="gtile gfeat">
+        <div id="tirRing"></div>
+        <div class="gfeatx"><div class="gk">tijd in bereik</div><div class="gs" id="tirSub"></div></div>
+      </div>
+      <div class="grow">
+        <div class="gtile"><div class="gk">hypo</div><div class="gv" id="gHypo">—</div><div class="gs">&lt;3,9</div></div>
+        <div class="gtile"><div class="gk">variatie</div><div class="gv" id="gCv">—</div><div class="gs">CV · streef ≤36%</div></div>
+        <div class="gtile"><div class="gk">GMI</div><div class="gv" id="gGmi">—</div><div class="gs">geschat HbA1c</div></div>
+        <div class="gtile"><div class="gk">gemiddeld</div><div class="gv" id="gMean">—</div><div class="gs">mmol/L</div></div>
+      </div>
+    </div>
+  </section>
+
   <section id="secSummary" data-group="overzicht" hidden>
     <h2 class="sect">Deze periode</h2>
     <div class="card opp" id="opp"></div>
     <div class="card" id="bandCard"><div id="bandBar"></div></div>
-    <div class="kpis" id="kpis"></div>
     <div id="shareRow" style="margin-top:.8rem;display:flex;gap:.5rem;flex-wrap:wrap">
       <button class="ghost" id="btnShare" style="font-size:.78rem">📋 Samenvatting delen</button>
       <button class="ghost" id="btnReport" style="font-size:.78rem">📄 Consultrapport</button>
@@ -500,7 +526,7 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
   Alles blijft op dit apparaat: cache in IndexedDB, token in localStorage. Er gaat niets naar een
   server behalve leesverzoeken aan je eigen Nightscout.<br>
   Observaties, geen instelwaarden. Wat je met een patroon doet is een gesprek met je behandelteam.<br>
-  <span style="opacity:.8">DiaMetric · versie <b>3.7 · 19 jul 2026</b> — app-native onderbalk-navigatie · opvallendste dagen · dag inzoomen (forensica) · consultrapport · signalen (watch-list) · wat-als correctie-insuline (ISF) · thema-schakelaar · tabbladen (overzicht · veiligheid · instellen · voortgang) · wat-als nachtbasaal &amp; maaltijdinsuline · hypo-gevoel &amp; bewustzijn · logboek &amp; voor/na-vergelijken · fine-tunen per hefboom · profiel (basaal/ISF/KH-ratio) · jouw vragen beantwoord · beweging · band-verdeling · hypo-detail · insuline &amp; koolhydraten · AGP · trend · verdieping</span>
+  <span style="opacity:.8">DiaMetric · versie <b>3.8 · 19 jul 2026</b> — overzicht-bento (TIR-ring + kern-tegels) · app-native onderbalk-navigatie · opvallendste dagen · dag inzoomen (forensica) · consultrapport · signalen (watch-list) · wat-als correctie-insuline (ISF) · thema-schakelaar · tabbladen (overzicht · veiligheid · instellen · voortgang) · wat-als nachtbasaal &amp; maaltijdinsuline · hypo-gevoel &amp; bewustzijn · logboek &amp; voor/na-vergelijken · fine-tunen per hefboom · profiel (basaal/ISF/KH-ratio) · jouw vragen beantwoord · beweging · band-verdeling · hypo-detail · insuline &amp; koolhydraten · AGP · trend · verdieping</span>
 </footer>
 
 <dialog id="cfgDlg">
@@ -1104,6 +1130,15 @@ function sparkline(g){
     `<rect x="0" y="${y10.toFixed(1)}" width="${W}" height="${(y39-y10).toFixed(1)}" fill="var(--inRange)" opacity=".10"/>`+
     `<path d="${d}" fill="none" stroke="var(--inRange)" stroke-width="1.5" vector-effect="non-scaling-stroke"/></svg>`;
 }
+// Donut-ring voor de kern-tegel (tijd in bereik) op het Overzicht.
+function ringSvg(frac, ok){
+  const R=26, C=2*Math.PI*R, f=Math.max(0,Math.min(1,frac)), off=C*(1-f);
+  const col = ok ? "var(--inRange)" : (f>=0.5 ? "var(--high)" : "var(--low)");
+  return `<svg viewBox="0 0 64 64" class="ring" aria-hidden="true">`+
+    `<circle cx="32" cy="32" r="${R}" fill="none" stroke="var(--line)" stroke-width="7"/>`+
+    `<circle cx="32" cy="32" r="${R}" fill="none" stroke="${col}" stroke-width="7" stroke-linecap="round" stroke-dasharray="${C.toFixed(1)}" stroke-dashoffset="${off.toFixed(1)}" transform="rotate(-90 32 32)"/>`+
+    `<text x="32" y="37" text-anchor="middle" font-size="15" font-weight="700" fill="var(--ink)" font-family="var(--mono)">${pct0(frac)}</text></svg>`;
+}
 function agpSvg(ag){
   if (ag.length<12) return `<div class="muted">Nog te weinig gespreide data voor een dagprofiel.</div>`;
   const W=320, H=170, PB=18, PL=22;                 // padding onder/links voor labels
@@ -1186,7 +1221,7 @@ function render(glucose, treatments, timeline){
   const has = glucose.length>0;
   document.getElementById("empty").hidden = has;
   document.getElementById("tabbar").hidden = !has;
-  for (const id of ["secNow","secSummary","secWatch","secQuestions","secAgp","secSafety","secAware","secInsulin","secProfile","secTune","secTrend","secDay","secLog","secDeep"]) document.getElementById(id).hidden = !has;
+  for (const id of ["secNow","secGlance","secSummary","secWatch","secQuestions","secAgp","secSafety","secAware","secInsulin","secProfile","secTune","secTrend","secDay","secLog","secDeep"]) document.getElementById(id).hidden = !has;
   if (!has) return;
 
   // Nu
@@ -1212,8 +1247,7 @@ function render(glucose, treatments, timeline){
 
   if (!g.length){
     document.getElementById("opp").innerHTML = `<div class="lead">Deze periode</div><div class="msg">Nog te weinig dagen met voldoende sensordekking (≥70%) voor betrouwbare cijfers. Synchroniseer meer historie of wacht op meer sensordagen.</div>`;
-    document.getElementById("kpis").innerHTML = "";
-    for (const id of ["secWatch","secQuestions","secAgp","secSafety","secAware","secInsulin","secProfile","secTune","secTrend","secDay","secLog","secDeep"]) document.getElementById(id).hidden = true;
+    for (const id of ["secGlance","secWatch","secQuestions","secAgp","secSafety","secAware","secInsulin","secProfile","secTune","secTrend","secDay","secLog","secDeep"]) document.getElementById(id).hidden = true;
     return;
   }
 
@@ -1234,13 +1268,16 @@ function render(glucose, treatments, timeline){
   // Volledige 5-banden-balk (de standaard doelbalk)
   document.getElementById("bandBar").innerHTML = bandBarHtml(m);
 
-  // Afgeleide maten die niet al in de band-balk staan (TIR/hypo/>13,9 staan daar).
+  // Bento — kern-tegels op het Overzicht (in één oogopslag)
   const enough = q.usable.length>=14;
-  document.getElementById("kpis").innerHTML = [
-    ["Variatie (CV)", pct0(m.cv), "streef ≤36%", tick(m.cv<=0.36)],
-    ["GMI", nl1(m.gmi)+"%", "geschat HbA1c", ""],
-    ["Gemiddeld", nl1(m.mean), "mmol/L", ""],
-  ].map(([k,v,s,b])=>`<div class="kpi"><div class="k">${k} ${b}</div><div class="v">${v}</div><div class="s">${s}</div></div>`).join("");
+  document.getElementById("tirRing").innerHTML = ringSvg(m.tir, m.tir>=0.70);
+  document.getElementById("tirSub").innerHTML = m.tir>=0.70
+    ? "streef &gt;70% ✓ — je zit goed"
+    : "streef &gt;70% — nog niet gehaald";
+  document.getElementById("gHypo").textContent = pct0(m.tbr);
+  document.getElementById("gCv").textContent   = pct0(m.cv);
+  document.getElementById("gGmi").textContent  = nl1(m.gmi)+"%";
+  document.getElementById("gMean").textContent = nl1(m.mean);
 
   // AGP
   document.getElementById("agp").innerHTML = agpSvg(ag);
