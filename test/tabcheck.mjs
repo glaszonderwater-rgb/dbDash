@@ -14,13 +14,13 @@ await page.fill('#inUrl','https://mock.nightscout.test');await page.fill('#inTok
 await page.click('#btnSave');
 await page.waitForFunction(()=>!document.getElementById('secInsulin').hidden,{timeout:40000}).catch(()=>{});
 await page.waitForTimeout(300);
-// scrubber-test: klik → aria-current
-await page.click('#tabbar .tab[data-tab="maand"]'); await page.waitForTimeout(500);
+// 3-schermen-test: klik Analyses → view wisselt, tegels zichtbaar
+await page.click('#tabbar .tab[data-tab="analyses"]'); await page.waitForTimeout(300);
 const r=await page.evaluate(()=>({
   aria:document.querySelector('#tabbar .tab[aria-current="page"]')?.dataset.tab,
-  scrolled:window.scrollY>50,
-  epochs:[...document.querySelectorAll('main .epoch')].map(s=>s.id).join('→') }));
-console.log('na klik maand: aria=',r.aria,'| gescrold:',r.scrolled);
-console.log('epochs:',r.epochs);
+  anaVis:!document.querySelector('.view[data-view="analyses"]').hidden,
+  ovHid:document.querySelector('.view[data-view="overzicht"]').hidden,
+  tiles:document.querySelectorAll('#anaTiles .tile').length }));
+console.log('na klik analyses: aria=',r.aria,'| analyses zichtbaar:',r.anaVis,'| overzicht dicht:',r.ovHid,'| tegels:',r.tiles);
 console.log('errors:',errors.length?errors:'geen');
 await browser.close();

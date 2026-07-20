@@ -24,7 +24,7 @@ await page.waitForTimeout(300);
 // voeg een wijziging + hypogevoel toe zodat die secties gevuld zijn
 await page.evaluate(async()=>{ await DB.putMany("annotations",[{id:"c1",ts:Date.now()-16*864e5,type:"wijziging",note:"nachtbasaal 03u +0,05",created:Date.now()}]);
   for(let i=0;i<7;i++) await DB.putMany("annotations",[{id:"h"+i,ts:Date.now()-(20-i*2)*864e5,type:"hypogevoel",measured:3.6-i*0.08,intensity:"duidelijk",created:Date.now()}]); });
-await page.evaluate(()=>{const n=document.getElementById('tabbar'); if(n) n.style.display='none';});
+await page.evaluate(()=>{showTab('consult'); const n=document.getElementById('tabbar'); if(n) n.style.display='none';});
 await page.click('#btnReport');
 await page.waitForFunction(()=>{const r=document.getElementById('report');return r&&!r.hidden&&r.querySelector('.rep h1');},{timeout:15000}).catch(()=>{});
 await page.waitForTimeout(300);

@@ -196,6 +196,20 @@ h2.sect::after{content:"";flex:1;height:1px;background:var(--line)}
 .onboard b{color:var(--ink);font-weight:650;font-family:var(--mono)}
 .onboard .ob-hint{color:var(--warn);font-weight:600}
 
+/* analyse-index (tegels) */
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-bottom:1.1rem}
+.tile{text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:14px;
+  box-shadow:var(--shadow-sm);padding:.7rem .8rem;cursor:pointer;color:var(--ink);
+  display:flex;flex-direction:column;gap:.1rem;font:inherit;letter-spacing:0}
+.tile b{font-size:.86rem;font-weight:650}
+.tile span{font-size:.68rem;color:var(--muted)}
+.tile:active{transform:translateY(.5px)}
+.tolink{margin-top:.7rem;font-size:.8rem;font-weight:650;color:var(--accent);cursor:pointer}
+.view[data-view="consult"] .epoch{padding-left:0}
+.view[data-view="consult"] .epoch::before{display:none}
+details.fold{scroll-margin-top:7.5rem}
+details.deep{scroll-margin-top:7.5rem}
+
 /* inklapbare kaart (fold) */
 details.fold{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);margin-top:.6rem}
 details.fold>summary{list-style:none;cursor:pointer;padding:.85rem 1.05rem;font-size:.88rem;font-weight:650;color:var(--ink);display:flex;align-items:baseline;gap:.6rem}
@@ -412,10 +426,12 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
     <span class="onb" id="onboard" hidden></span>
   </div>
 
-  <div id="tl" class="tl" hidden>
+  <div id="tl" hidden>
 
-  <!-- VANDAAG -->
-  <section class="epoch" id="epVandaag" data-epoch="vandaag">
+  <!-- OVERZICHT — het verhaal -->
+  <div class="view" data-view="overzicht">
+  <div class="tl">
+  <section class="epoch" id="epVandaag">
     <div class="eh"><h2>Vandaag</h2><span class="sub" id="todaySub"></span></div>
     <div id="findToday"></div>
     <div class="card" id="secDay" hidden>
@@ -450,36 +466,12 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
     </details>
   </section>
 
-  <!-- DEZE WEEK -->
-  <section class="epoch" id="epWeek" data-epoch="week">
+  <section class="epoch" id="epWeek">
     <div class="eh"><h2>Deze week</h2><span class="sub" id="weekSub"></span></div>
     <div id="findWeek"></div>
-    <details class="fold" id="secTrend" hidden>
-      <summary>Weektrend <span class="foldhint">tijd in bereik per week</span></summary>
-      <div class="foldbody">
-        <div id="trend"></div>
-        <div class="obs" id="trendObs"></div>
-        <div class="muted" id="trendTable" style="margin-top:.5rem"></div>
-      </div>
-    </details>
-    <details class="fold" id="secLog" hidden>
-      <summary>Logboek <span class="foldhint">markeer een wijziging of gebeurtenis</span></summary>
-      <div class="foldbody">
-        <div class="logform">
-          <div class="chips" id="logChips"></div>
-          <div class="logrow">
-            <input type="date" id="logDate" aria-label="datum">
-            <input type="text" id="logNote" maxlength="80" placeholder="wat veranderde er? (optioneel)">
-            <button class="ghost" id="logAdd">Toevoegen</button>
-          </div>
-        </div>
-        <div id="logList"></div>
-      </div>
-    </details>
   </section>
 
-  <!-- DEZE MAAND -->
-  <section class="epoch" id="epMaand" data-epoch="maand">
+  <section class="epoch" id="epMaand">
     <div class="eh"><h2>Deze maand</h2><span class="sub" id="monthSub"></span></div>
     <div class="kpis" id="kpis"></div>
     <div id="secWatch" hidden><div id="watch" style="margin-top:.6rem"></div></div>
@@ -487,55 +479,88 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
       <div class="mvshead"><span>instelling</span><span>gemeten · ingesteld</span></div>
       <div id="tune"></div>
     </div>
-    <details class="fold" id="bandCard">
-      <summary>Verdeling per band <span class="foldhint">alle 5 banden + streefwaarden</span></summary>
-      <div class="foldbody"><div id="bandBar"></div></div>
-    </details>
-    <details class="fold" id="secAgp" hidden>
-      <summary>Dagprofiel (AGP) <span class="foldhint">je typische dag als band</span></summary>
-      <div class="foldbody">
-        <div id="agp"></div>
-        <div class="legend">
-          <span><i style="background:var(--inRange)"></i>mediaan</span>
-          <span><i style="background:#bfe6d6"></i>middelste 50%</span>
-          <span><i style="background:#e5f2ec"></i>10–90%</span>
-        </div>
-        <div class="obs" id="agpObs"></div>
-      </div>
-    </details>
-    <details class="fold" id="secSafety" hidden>
-      <summary>Veiligheid — hypo's <span class="foldhint">episodes, dips, patronen</span></summary>
-      <div class="foldbody">
-        <div class="kpis" id="hypoKpis" style="margin-bottom:.8rem"></div>
-        <div id="hypoBars"></div>
-        <div class="obs" id="safetyObs"></div>
-        <div class="muted" id="safetyEv" style="margin-top:.4rem"></div>
-        <details class="deep" data-an="stacking" style="margin-top:.8rem"><summary>Wat gaat vooraf aan je hypo's? <span>— gestapelde correcties</span></summary><div class="body"><div class="loading">Openklappen om te berekenen…</div></div></details>
-      </div>
-    </details>
-    <details class="fold" id="secInsulin" hidden>
-      <summary>Insuline &amp; koolhydraten <span class="foldhint">dagdosis en verhouding</span></summary>
-      <div class="foldbody">
-        <div class="kpis" id="insKpis"></div>
-        <div class="muted" id="insObs" style="margin-top:.5rem"></div>
-      </div>
-    </details>
-    <details class="fold" id="secProfile" hidden>
-      <summary>Profiel <span class="foldhint">je ingestelde schema's</span></summary>
-      <div class="foldbody"><div id="profile"></div></div>
-    </details>
-    <div id="secDeep" hidden>
-      <div class="h3">Verdieping — voor wie wil sleutelen</div>
-      <details class="deep" data-an="dagpatroon"><summary>Dagpatroon <span>— vaste uren waarop je wegdrijft (basaal)</span></summary><div class="body"><div class="loading">Openklappen om te berekenen…</div></div></details>
-      <details class="deep" data-an="meals"><summary>Maaltijdrespons <span>— hoe snel koolhydraten opnemen</span></summary><div class="body"><div class="loading">Openklappen om te berekenen…</div></div></details>
-      <details class="deep" data-an="watif"><summary>Wat-als: nachtbasaal <span>— doorgerekend op je eigen nachten</span></summary><div class="body"><div class="loading">Openklappen om te berekenen…</div></div></details>
-      <details class="deep" data-an="watifmeal"><summary>Wat-als: maaltijdinsuline <span>— doorgerekend op je maaltijdpieken</span></summary><div class="body"><div class="loading">Openklappen om te berekenen…</div></div></details>
-      <details class="deep" data-an="watifisf"><summary>Wat-als: correctie-insuline <span>— doorgerekend op je correcties</span></summary><div class="body"><div class="loading">Openklappen om te berekenen…</div></div></details>
-    </div>
+    <div class="tolink" data-goto="anaGrid">Alle analyses →</div>
   </section>
+  </div>
+  </div>
+
+  <!-- ANALYSES — de bibliotheek: alles bij naam, één tik -->
+  <div class="view" data-view="analyses" hidden>
+  <div class="h3" id="anaGrid" style="margin-top:.2rem">Alle analyses</div>
+  <div class="grid" id="anaTiles"></div>
+
+  <details class="fold" id="bandCard">
+    <summary>Verdeling per band <span class="foldhint">alle 5 banden + streefwaarden</span></summary>
+    <div class="foldbody"><div id="bandBar"></div></div>
+  </details>
+  <details class="fold" id="secAgp" hidden>
+    <summary>Dagprofiel (AGP) <span class="foldhint">je typische dag als band</span></summary>
+    <div class="foldbody">
+      <div id="agp"></div>
+      <div class="legend">
+        <span><i style="background:var(--inRange)"></i>mediaan</span>
+        <span><i style="background:#bfe6d6"></i>middelste 50%</span>
+        <span><i style="background:#e5f2ec"></i>10–90%</span>
+      </div>
+      <div class="obs" id="agpObs"></div>
+    </div>
+  </details>
+  <details class="fold" id="secSafety" hidden>
+    <summary>Veiligheid — hypo's <span class="foldhint">episodes, dips, patronen</span></summary>
+    <div class="foldbody">
+      <div class="kpis" id="hypoKpis" style="margin-bottom:.8rem"></div>
+      <div id="hypoBars"></div>
+      <div class="obs" id="safetyObs"></div>
+      <div class="muted" id="safetyEv" style="margin-top:.4rem"></div>
+      <details class="deep" data-an="stacking" style="margin-top:.8rem"><summary>Wat gaat vooraf aan je hypo's? <span>— gestapelde correcties</span></summary><div class="body"><div class="loading">Openklappen om te berekenen…</div></div></details>
+    </div>
+  </details>
+  <details class="fold" id="secInsulin" hidden>
+    <summary>Insuline &amp; koolhydraten <span class="foldhint">dagdosis en verhouding</span></summary>
+    <div class="foldbody">
+      <div class="kpis" id="insKpis"></div>
+      <div class="muted" id="insObs" style="margin-top:.5rem"></div>
+    </div>
+  </details>
+  <details class="fold" id="secProfile" hidden>
+    <summary>Profiel <span class="foldhint">je ingestelde schema's</span></summary>
+    <div class="foldbody"><div id="profile"></div></div>
+  </details>
+  <details class="fold" id="secTrend" hidden>
+    <summary>Weektrend <span class="foldhint">tijd in bereik per week</span></summary>
+    <div class="foldbody">
+      <div id="trend"></div>
+      <div class="obs" id="trendObs"></div>
+      <div class="muted" id="trendTable" style="margin-top:.5rem"></div>
+    </div>
+  </details>
+  <details class="fold" id="secLog" hidden>
+    <summary>Logboek <span class="foldhint">markeer een wijziging of gebeurtenis</span></summary>
+    <div class="foldbody">
+      <div class="logform">
+        <div class="chips" id="logChips"></div>
+        <div class="logrow">
+          <input type="date" id="logDate" aria-label="datum">
+          <input type="text" id="logNote" maxlength="80" placeholder="wat veranderde er? (optioneel)">
+          <button class="ghost" id="logAdd">Toevoegen</button>
+        </div>
+      </div>
+      <div id="logList"></div>
+    </div>
+  </details>
+  <div id="secDeep" hidden>
+    <div class="h3">Verdieping — voor wie wil sleutelen</div>
+    <details class="deep" data-an="dagpatroon"><summary>Dagpatroon <span>— vaste uren waarop je wegdrijft (basaal)</span></summary><div class="body"><div class="loading">Openklappen om te berekenen…</div></div></details>
+    <details class="deep" data-an="meals"><summary>Maaltijdrespons <span>— hoe snel koolhydraten opnemen</span></summary><div class="body"><div class="loading">Openklappen om te berekenen…</div></div></details>
+    <details class="deep" data-an="watif"><summary>Wat-als: nachtbasaal <span>— doorgerekend op je eigen nachten</span></summary><div class="body"><div class="loading">Openklappen om te berekenen…</div></div></details>
+    <details class="deep" data-an="watifmeal"><summary>Wat-als: maaltijdinsuline <span>— doorgerekend op je maaltijdpieken</span></summary><div class="body"><div class="loading">Openklappen om te berekenen…</div></div></details>
+    <details class="deep" data-an="watifisf"><summary>Wat-als: correctie-insuline <span>— doorgerekend op je correcties</span></summary><div class="body"><div class="loading">Openklappen om te berekenen…</div></div></details>
+  </div>
+  </div>
 
   <!-- CONSULT -->
-  <section class="epoch" id="epConsult" data-epoch="consult">
+  <div class="view" data-view="consult" hidden>
+  <section class="epoch" id="epConsult" style="margin-left:0">
     <div class="eh"><h2>Richting je consult</h2><span class="sub" id="consultSub"></span></div>
     <div id="consultList"></div>
     <div id="shareRow" style="margin-top:.7rem;display:flex;gap:.5rem;flex-wrap:wrap">
@@ -543,17 +568,16 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
       <button class="ghost" id="btnShare" style="font-size:.78rem">📋 Samenvatting delen</button>
     </div>
   </section>
+  </div>
 
   </div>
 
   <div id="report" hidden></div>
 </main>
 
-<nav id="tabbar" class="nav" hidden aria-label="Tijdschaal">
-  <button class="tab on" data-tab="nu">Nu</button>
-  <button class="tab" data-tab="vandaag">Vandaag</button>
-  <button class="tab" data-tab="week">Week</button>
-  <button class="tab" data-tab="maand">Maand</button>
+<nav id="tabbar" class="nav" hidden aria-label="Hoofdnavigatie">
+  <button class="tab on" data-tab="overzicht">Overzicht</button>
+  <button class="tab" data-tab="analyses">Analyses</button>
   <button class="tab" data-tab="consult">Consult<span class="cbadge" id="consultBadge" hidden></span></button>
 </nav>
 
@@ -561,7 +585,7 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
   Alles blijft op dit apparaat: cache in IndexedDB, token in localStorage. Er gaat niets naar een
   server behalve leesverzoeken aan je eigen Nightscout.<br>
   Observaties, geen instelwaarden. Wat je met een patroon doet is een gesprek met je behandelteam.<br>
-  <span style="opacity:.8">DiaMetric · versie <b>5.0 · 20 jul 2026</b> — de synthese: tijdlijn · bevindingen · bewijsketens · consultlijst</span>
+  <span style="opacity:.8">DiaMetric · versie <b>5.1 · 20 jul 2026</b> — drie schermen: Overzicht (het verhaal) · Analyses (alles op naam) · Consult</span>
 </footer>
 
 <dialog id="cfgDlg">
@@ -2282,23 +2306,45 @@ function applyTheme(t){
 document.getElementById("inTheme").onchange=e=>applyTheme(e.target.value);   // direct effect, geen "Bewaren" nodig
 applyTheme(document.documentElement.dataset.theme||"auto");
 
-// Tijdschaal-scrubber — springt naar een epoch; scrollspy houdt de actieve bij
-const _epochOf={nu:"secNow",vandaag:"epVandaag",week:"epWeek",maand:"epMaand",consult:"epConsult"};
-function setScrub(tab){
+// Drie lagen: Overzicht (verhaal) · Analyses (bibliotheek) · Consult
+function showTab(tab){
   document.querySelectorAll("#tabbar .tab").forEach(b=>{ const on=b.dataset.tab===tab;
     b.classList.toggle("on",on); if(on) b.setAttribute("aria-current","page"); else b.removeAttribute("aria-current"); });
+  document.querySelectorAll(".view").forEach(v=>v.hidden = v.dataset.view!==tab);
+  window.scrollTo({top:0});
 }
-document.querySelectorAll("#tabbar .tab").forEach(b=>b.onclick=()=>{
-  setScrub(b.dataset.tab);
-  if (b.dataset.tab==="nu"){ window.scrollTo({top:0,behavior:"smooth"}); return; }
-  const el=document.getElementById(_epochOf[b.dataset.tab]); if(el) el.scrollIntoView({behavior:"smooth",block:"start"});
-});
-try{
-  const _io=new IntersectionObserver(es=>{ for(const e of es) if(e.isIntersecting) setScrub(e.target.dataset.epoch); },
-    {rootMargin:"-35% 0px -55% 0px"});
-  document.querySelectorAll(".epoch").forEach(el=>_io.observe(el));
-  window.addEventListener("scroll",()=>{ if(window.scrollY<80) setScrub("nu"); },{passive:true});
-}catch(_){}
+document.querySelectorAll("#tabbar .tab").forEach(b=>b.onclick=()=>showTab(b.dataset.tab));
+
+// De index: élke analyse bij naam, één tik — geen zoeken
+const ANA_TILES=[
+  ["an:watif","Wat-als: nachtbasaal","simulatie op je nachten"],
+  ["an:watifmeal","Wat-als: maaltijd","simulatie op je pieken"],
+  ["an:watifisf","Wat-als: ISF","simulatie op je correcties"],
+  ["secSafety","Veiligheid","hypo's & patronen"],
+  ["secAgp","Dagprofiel (AGP)","je typische dag"],
+  ["bandCard","Banden","verdeling + streef"],
+  ["secProfile","Profiel","je schema's"],
+  ["secInsulin","Insuline & KH","dagdosis"],
+  ["an:dagpatroon","Dagpatroon","basaaldrift per uur"],
+  ["an:meals","Maaltijdrespons","opname & dagdelen"],
+  ["secTrend","Weektrend","word je beter?"],
+  ["secLog","Logboek","markeer & vergelijk"],
+  ["secAware","Hypo-gevoel","voelgrens volgen","overzicht"],
+];
+function goTo(target, view){
+  showTab(view||"analyses");
+  const el = target.startsWith("an:")
+    ? document.querySelector(`details[data-an="${target.slice(3)}"]`)
+    : document.getElementById(target);
+  if(!el) return;
+  if(el.tagName==="DETAILS") el.open=true;
+  setTimeout(()=>el.scrollIntoView({behavior:"smooth",block:"start"}),60);
+}
+document.getElementById("anaTiles").innerHTML =
+  ANA_TILES.map(([t,l,h,v])=>`<button class="tile" data-target="${t}" data-view="${v||"analyses"}"><b>${l}</b><span>${h}</span></button>`).join("");
+document.querySelectorAll("#anaTiles .tile").forEach(b=>b.onclick=()=>goTo(b.dataset.target,b.dataset.view));
+document.querySelectorAll("[data-goto]").forEach(el=>el.onclick=()=>showTab("analyses"));
+
 // stickyhoogte van de kop voor de Nu-strip
 try{ document.documentElement.style.setProperty("--headh", document.querySelector("header").offsetHeight+"px"); }catch(_){}
 

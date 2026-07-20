@@ -22,7 +22,7 @@ await page.waitForFunction(()=>!document.getElementById('secLog').hidden||docume
 await page.waitForTimeout(300);
 // datum 15 dagen geleden
 const d15=new Date(now-15*DAY),dv=`${d15.getFullYear()}-${String(d15.getMonth()+1).padStart(2,'0')}-${String(d15.getDate()).padStart(2,'0')}`;
-await page.evaluate(()=>{document.getElementById('secLog').open=true; const n=document.getElementById('tabbar'); if(n) n.style.display='none';}); await page.waitForTimeout(120);
+await page.evaluate(()=>{showTab('analyses'); document.getElementById('secLog').open=true; const n=document.getElementById('tabbar'); if(n) n.style.display='none';}); await page.waitForTimeout(120);
 await page.fill('#logDate',dv);
 await page.fill('#logNote','basaal 03u +0,1');
 await page.$eval('#logAdd', el=>el.scrollIntoView({block:'center'})); await page.waitForTimeout(50);
