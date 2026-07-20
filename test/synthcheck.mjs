@@ -53,6 +53,6 @@ if(btn){ await btn.click(); await page.waitForTimeout(300);
   console.log('na → consultlijst: badge=',c2.n,'| items:',c2.list); }
 console.log('errors:',errors.length?errors:'geen');
 await page.evaluate(()=>window.scrollTo(0,0));await page.waitForTimeout(200);
-await page.screenshot({path:'synth-top.png'});
-await page.screenshot({path:'synth-full.png',fullPage:true});
+await page.screenshot({path:'/tmp/diametric-tests/synth-top.png'});
+await page.screenshot({path:'/tmp/diametric-tests/synth-full.png',fullPage:true});
 await browser.close();
