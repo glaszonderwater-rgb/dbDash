@@ -17,6 +17,14 @@ Persoonlijk diabetes-dashboard voor eigen analyse van [Nightscout](https://night
 Open de app, klik op ⚙, en vul je Nightscout-adres + een token met alléén de rol
 `readable` in. Gebruik nooit je `API_SECRET` — dit dashboard hoeft nooit te schrijven.
 
+## Hosting
+
+De app is één statisch bestand zonder build en draait op **GitHub Pages**
+(Settings → Pages → Deploy from a branch → `main` / `/root`). Omdat het geen
+Jekyll-verwerking nodig heeft, staat er een leeg `.nojekyll`-bestand in de
+hoofdmap. Je kunt `index.html` ook lokaal openen of op elke andere statische
+host zetten.
+
 ## Let op
 
 Dit is een persoonlijk analysehulpmiddel. De bevindingen zijn observaties, geen
