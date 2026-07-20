@@ -296,7 +296,7 @@ details.fold>.foldbody{padding:0 1.05rem 1.05rem}
 .warow.head{border-top:0;color:var(--muted);font-size:.68rem;text-transform:uppercase;letter-spacing:.05em}
 .warow span:first-child{color:var(--muted)}
 .warow.cur{font-weight:700} .warow.cur span{color:var(--ink)}
-/* Kandidaat-instellingen */
+/* Bespreekwaarden */
 .pcard{border:1px solid var(--line);border-radius:.7rem;padding:.75rem .85rem;margin-bottom:.6rem;background:var(--surface-2)}
 .pchead{display:flex;align-items:baseline;gap:.5rem}
 .pctitle{font-weight:650;font-size:.95rem;color:var(--ink)}
@@ -507,7 +507,7 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
   <div class="grid" id="anaTiles"></div>
 
   <details class="fold" id="secProposals" open hidden>
-    <summary>Kandidaat-instellingen <span class="foldhint">concrete waarden — bespreekpunten voor je team</span></summary>
+    <summary>Bespreekwaarden <span class="foldhint">concrete getallen om met je team te bespreken</span></summary>
     <div class="foldbody"><div id="proposals"></div></div>
   </details>
   <details class="fold" id="bandCard">
@@ -606,7 +606,7 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
   Alles blijft op dit apparaat: cache in IndexedDB, token in localStorage. Er gaat niets naar een
   server behalve leesverzoeken aan je eigen Nightscout.<br>
   Observaties, geen instelwaarden. Wat je met een patroon doet is een gesprek met je behandelteam.<br>
-  <span style="opacity:.8">DiaMetric · versie <b>5.2 · 20 jul 2026</b> — kandidaat-instellingen: concrete waarden (behoudend + gemeten) met dóórgerekend effect, als bespreekpunt</span>
+  <span style="opacity:.8">DiaMetric · versie <b>5.3 · 20 jul 2026</b> — bespreekwaarden: concrete getallen (behoudend + gemeten) met dóórgerekend effect, om met je team te bespreken</span>
 </footer>
 
 <dialog id="cfgDlg">
@@ -1933,7 +1933,7 @@ function anWatIfISF(glucose, treatments, q, timeline){
     `<div class="muted" style="margin-top:.4rem">Eerste-orde benadering over ${r.n} schone correcties, met je gemeten daling van ~${nl1(r.realISF)} mmol/L per E als sensitiviteit. Tegenregulatie zit er níét in, dus "eindigt laag" is een risico-indicatie. Meer correctie-insuline (sterkere ISF) landt lager maar verhoogt het hypo-risico. Ter lering, geen instelwaarde.</div>`;
 }
 
-// ── Kandidaat-instellingen ──────────────────────────────────────────────────
+// ── Bespreekwaarden ─────────────────────────────────────────────────────────
 // De hefbomen uit de fine-tune-lezing, maar concreet: per hefboom een huidige
 // waarde en één of twee kandidaten — een behoudende halve stap én de volledige
 // gemeten waarde — elk met het dóórgerekende effect (zelfde simulaties als de
@@ -2010,9 +2010,9 @@ function proposalEngine(drift, oi, MR, pi, glucose, treatments, q, timeline){
   return items;
 }
 function proposalsHtml(drift, oi, MR, pi, glucose, treatments, q, timeline){
-  if(!timeline) return `<div class="muted">Geen profiel met basaal/ISF/KH-ratio in Nightscout gevonden — nodig om kandidaatwaarden naast je instellingen te leggen.</div>`;
+  if(!timeline) return `<div class="muted">Geen profiel met basaal/ISF/KH-ratio in Nightscout gevonden — nodig om bespreekwaarden naast je instellingen te leggen.</div>`;
   const items=proposalEngine(drift, oi, MR, pi, glucose, treatments, q, timeline);
-  if(!items.length) return `<div class="pgood">Geen kandidaat-wijzigingen. Op de hefbomen die genoeg data hebben, sluiten je instellingen aan bij wat je glucose laat zien — of er is nog te weinig schone data om een concreet getal te onderbouwen.</div>`;
+  if(!items.length) return `<div class="pgood">Niets te bespreken. Op de hefbomen die genoeg data hebben, sluiten je instellingen aan bij wat je glucose laat zien — of er is nog te weinig schone data om een concreet getal te onderbouwen.</div>`;
   const card=it=>{
     const cand=c=>`<div class="pcand${c.risky?" risk":""}">
         <div class="pctag">${c.tag}${c.risky?` <span class="prisk">hypo-risico ↑</span>`:""}</div>
@@ -2026,7 +2026,7 @@ function proposalsHtml(drift, oi, MR, pi, glucose, treatments, q, timeline){
       <div class="pcands">${it.cands.map(cand).join("")}</div>
     </div>`; };
   return items.map(card).join("")+
-    `<div class="muted" style="margin-top:.6rem">Kandidaten zijn dóórgerekend met je eigen data (dezelfde eerste-orde simulaties als de wat-als; gevoeligheid uit je gemeten daling waar betrouwbaar). Tegenregulatie zit er níét in — "hypo-risico" en "eindigt laag" zijn risico-indicaties, geen exacte tellingen. <b>Bespreekpunten voor je behandelteam — geen instel- of pompopdracht.</b> Reken zelf niets om op je pomp.</div>`;
+    `<div class="muted" style="margin-top:.6rem">Elk getal is dóórgerekend met je eigen data (dezelfde eerste-orde simulaties als de wat-als; gevoeligheid uit je gemeten daling waar betrouwbaar). Tegenregulatie zit er níét in — "hypo-risico" en "eindigt laag" zijn risico-indicaties, geen exacte tellingen. <b>Bespreekpunten voor je behandelteam — geen instel- of pompopdracht.</b> Reken zelf niets om op je pomp.</div>`;
 }
 
 // ── Logboek & voor/na-vergelijker ──────────────────────────────────────────
@@ -2434,7 +2434,7 @@ document.querySelectorAll("#tabbar .tab").forEach(b=>b.onclick=()=>showTab(b.dat
 
 // De index: élke analyse bij naam, één tik — geen zoeken
 const ANA_TILES=[
-  ["secProposals","Kandidaat-instellingen","concrete waarden voor je team"],
+  ["secProposals","Bespreekwaarden","concrete getallen voor je team"],
   ["an:watif","Wat-als: nachtbasaal","simulatie op je nachten"],
   ["an:watifmeal","Wat-als: maaltijd","simulatie op je pieken"],
   ["an:watifisf","Wat-als: ISF","simulatie op je correcties"],
