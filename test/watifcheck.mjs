@@ -1,0 +1,38 @@
+import { chromium } from 'playwright-core';
+const EXE='/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
+const FILE = new URL('../index.html', import.meta.url).href;
+const MG=18.0182,DAY=864e5,STEP=5*60e3,NDAYS=45,now=Date.now(),start=now-NDAYS*DAY;
+const entries=[],treatments=[],idx=new Map();
+// nachten drijven licht omhoog (basaal iets te laag) → +basaal zou ontwaakwaarde verlagen
+for(let t=start;t<now;t+=STEP){const d=new Date(t),h=d.getUTCHours()+d.getUTCMinutes()/60;let bg=6.2;if(h>=0&&h<6)bg=6.0+h*0.35;bg+=(Math.random()-0.5)*0.4;const r={_id:'e'+t,date:t,dateString:d.toISOString(),sgv:Math.round(Math.max(2.5,Math.min(18,bg))*MG),type:'sgv',direction:'Flat'};entries.push(r);idx.set(t,entries.length-1);}
+for(let day=start;day<now;day+=DAY){for(const [hh,carbs,ins] of [[8,40,4],[13,60,6],[19,70,7]]){const mt=day+hh*3600e3;treatments.push({_id:'t'+mt,created_at:new Date(mt).toISOString(),eventType:'Meal Bolus',carbs,insulin:ins});}}
+treatments.push({_id:'psw',created_at:new Date(start+DAY).toISOString(),eventType:'Profile Switch',percentage:100,timeshift:0,profileJson:JSON.stringify({dia:6,units:'mmol',basal:[{time:'00:00',value:0.9}],sens:[{time:'00:00',value:2.0}],carbratio:[{time:'00:00',value:10}]})});
+const profile=[{_id:'p1',mills:start,defaultProfile:'Default',units:'mmol',store:{Default:{dia:6,units:'mmol',basal:[{time:'00:00',value:0.9}],sens:[{time:'00:00',value:2.0}],carbratio:[{time:'00:00',value:10}]}}}];
+const inR=(a,g,l)=>a.filter(r=>r.date>=g&&r.date<l),inC=(a,g,l)=>a.filter(r=>{const v=Date.parse(r.created_at);return v>=g&&v<l;});
+const browser=await chromium.launch({executablePath:EXE});
+const page=await browser.newPage({viewport:{width:390,height:900},isMobile:true,hasTouch:true,deviceScaleFactor:2});
+const errors=[];page.on('pageerror',e=>errors.push(e.message));
+await page.route('https://mock.nightscout.test/**',route=>{const u=new URL(route.request().url()),p=u.pathname;const g=Number(u.searchParams.get('find[date][$gte]')),l=Number(u.searchParams.get('find[date][$lt]'));const gc=Date.parse(u.searchParams.get('find[created_at][$gte]')),lc=Date.parse(u.searchParams.get('find[created_at][$lt]'));if(p==='/api/v1/status.json')return route.fulfill({json:{status:'ok'}});if(p==='/api/v1/profile.json')return route.fulfill({json:profile});if(p==='/api/v1/entries.json')return route.fulfill({json:inR(entries,g,l)});if(p==='/api/v1/treatments.json')return route.fulfill({json:inC(treatments,gc,lc)});return route.fulfill({json:[]});});
+await page.goto(FILE,{waitUntil:'load'});
+await page.fill('#inUrl','https://mock.nightscout.test');await page.fill('#inTok','x');await page.fill('#inDays','45');
+await page.click('#btnSave');
+await page.waitForFunction(()=>!document.getElementById('secDeep').hidden,{timeout:40000}).catch(()=>{});
+await page.waitForTimeout(300);
+// open wat-als en meet rekentijd
+const t0=Date.now();
+await page.click('#tabbar .tab[data-tab="instellen"]'); await page.waitForTimeout(100);
+await page.$eval('details[data-an="watif"]', d=>{d.open=true;});
+await page.waitForFunction(()=>{const b=document.querySelector('details[data-an="watif"] .body');return b&&!b.querySelector('.loading');},{timeout:15000}).catch(()=>{});
+const elapsed=Date.now()-t0;
+const r=await page.evaluate(()=>({
+  rows:[...document.querySelectorAll('details[data-an="watif"] .warow')].map(x=>x.textContent.replace(/\s+/g,' ').trim()),
+  obs:document.querySelector('details[data-an="watif"] .obs')?.textContent,
+}));
+console.log('rekentijd (incl. render):',elapsed,'ms');
+r.rows.forEach(x=>console.log(' ',x));
+console.log('OBS:',r.obs);
+console.log('errors:',errors.length?errors:'geen');
+await page.evaluate(()=>document.querySelector('details[data-an="watif"]').scrollIntoView());
+await page.waitForTimeout(200);
+await page.screenshot({path:'/tmp/diametric-tests/watif.png'});
+await browser.close();

@@ -1,0 +1,21 @@
+import { chromium } from 'playwright-core';
+const EXE='/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
+const FILE = new URL('../index.html', import.meta.url).href;
+const browser=await chromium.launch({executablePath:EXE});
+const ctx=await browser.newContext({viewport:{width:390,height:900},colorScheme:'dark'});
+const page=await ctx.newPage();
+const errors=[];page.on('pageerror',e=>errors.push(e.message));
+await page.goto(FILE,{waitUntil:'load'});
+// dialoog opent vanzelf (geen config); thema-select zit erin
+const bg=()=>page.evaluate(()=>({theme:document.documentElement.dataset.theme||'auto',bg:getComputedStyle(document.body).backgroundColor,sel:document.getElementById('inTheme').value}));
+console.log('start (systeem=donker):',JSON.stringify(await bg()));
+await page.selectOption('#inTheme','light');
+console.log('na keuze licht:',JSON.stringify(await bg()));
+await page.selectOption('#inTheme','dark');
+console.log('na keuze donker:',JSON.stringify(await bg()));
+await page.selectOption('#inTheme','light');
+await page.reload({waitUntil:'load'});
+await page.waitForTimeout(150);
+console.log('na reload (moet licht blijven):',JSON.stringify(await bg()));
+console.log('errors:',errors.length?errors:'geen');
+await browser.close();
