@@ -302,6 +302,9 @@ details.fold>.foldbody{padding:0 1.05rem 1.05rem}
 .pctitle{font-weight:650;font-size:.95rem;color:var(--ink)}
 .pcunit{margin-left:auto;font-size:.66rem;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
 .pcwhy{font-size:.83rem;color:var(--muted);line-height:1.5;margin:.35rem 0 .6rem} .pcwhy b{color:var(--ink);font-weight:600}
+.pdrow{margin-bottom:.7rem} .pdrow:last-child{margin-bottom:0}
+.pdlabel{display:flex;align-items:baseline;gap:.5rem;font-weight:650;font-size:.82rem;color:var(--ink);text-transform:capitalize;margin-bottom:.35rem}
+.pdmeta{margin-left:auto;font-size:.66rem;color:var(--muted);font-weight:400;text-transform:none;font-variant-numeric:tabular-nums}
 .pcands{display:grid;grid-template-columns:1fr 1fr;gap:.5rem}
 .pcands .pcand:only-child{grid-column:1 / -1}
 .pcand{border:1px solid var(--line);border-radius:.55rem;padding:.55rem .6rem;background:var(--card)}
@@ -606,7 +609,7 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
   Alles blijft op dit apparaat: cache in IndexedDB, token in localStorage. Er gaat niets naar een
   server behalve leesverzoeken aan je eigen Nightscout.<br>
   Observaties, geen instelwaarden. Wat je met een patroon doet is een gesprek met je behandelteam.<br>
-  <span style="opacity:.8">DiaMetric · versie <b>5.3 · 20 jul 2026</b> — bespreekwaarden: concrete getallen (behoudend + gemeten) met dóórgerekend effect, om met je team te bespreken</span>
+  <span style="opacity:.8">DiaMetric · versie <b>5.4 · 20 jul 2026</b> — bespreekwaarden per dagdeel: ISF, basaal en KH-ratio apart voor ochtend/middag/avond/nacht</span>
 </footer>
 
 <dialog id="cfgDlg">
@@ -924,6 +927,15 @@ function profileInfo(timeline, ts){
   return { name, dia, pct, shift, basal, isf, ic, basalDaily,
     source: sw&&sw.profileJson?"switch":"profiel", switchTs: sw?sw.ts:null };
 }
+// Dagdelen — je gevoeligheid verschilt over de dag (dawn-fenomeen: 's ochtends
+// vaak minder gevoelig). Gebruikt om ISF/basaal per venster te bespreken.
+const DAYPARTS=[
+  {key:"nacht",  lo:0,   hi:360,  label:"nacht 00–06",   mid:180},
+  {key:"ochtend",lo:360, hi:720,  label:"ochtend 06–12", mid:540},
+  {key:"middag", lo:720, hi:1080, label:"middag 12–18",  mid:900},
+  {key:"avond",  lo:1080,hi:1440, label:"avond 18–24",   mid:1260},
+];
+const daypartOf=min=>DAYPARTS.find(d=>min>=d.lo&&min<d.hi)||DAYPARTS[0];
 // Waargenomen ISF uit geïsoleerde correctiebolussen: hoeveel liet 1 E je glucose
 // werkelijk dalen? Streng gefilterd (geen koolhydraten, nauwelijks andere insuline,
 // verhoogde start) en uitdrukkelijk indicatief — basaaldrift en resterend eten storen.
@@ -953,13 +965,20 @@ function observedISF(glucose, treatments, timeline){
     if(frac<0.4) continue;
     ratios.push(drop/((c.insulin+otherU)*frac));
     if(p&&p.isf) isfProf.push(p.isf);
-    evRaw.push({ ts:c.ts, u:c.insulin+otherU, dia, win });   // ruwe data voor de correctie-simulatie
+    evRaw.push({ ts:c.ts, u:c.insulin+otherU, dia, win, isfP:(p&&p.isf)?p.isf:null });   // ruwe data voor de correctie-simulatie
   }
   if(ratios.length<MIN_EV) return { n:ratios.length };
   const s=[...ratios].sort((x,y)=>x-y), qf=p=>s[Math.min(s.length-1,Math.floor(p*s.length))];
   const med=a=>{const t=[...a].sort((x,y)=>x-y);return t[Math.floor(t.length/2)];};
+  // Per dagdeel: dezelfde ratio's, gesplitst op tijd-van-de-dag.
+  const byDP={};
+  for(const d of DAYPARTS){ const idx=[]; for(let i=0;i<ratios.length;i++){ if(daypartOf(todMin(evRaw[i].ts)).key===d.key) idx.push(i); }
+    if(idx.length<5){ byDP[d.key]={n:idx.length}; continue; }
+    const rr=idx.map(i=>ratios[i]).sort((x,y)=>x-y), q=p=>rr[Math.min(rr.length-1,Math.floor(p*rr.length))];
+    const pr=idx.map(i=>evRaw[i].isfP).filter(v=>v!=null);
+    byDP[d.key]={ n:idx.length, obs:q(.5), q25:q(.25), q75:q(.75), prof:pr.length?med(pr):null, evRaw:idx.map(i=>evRaw[i]) }; }
   return { n:ratios.length, obs:qf(.5), q25:qf(.25), q75:qf(.75),
-    prof:isfProf.length?med(isfProf):null, evRaw };
+    prof:isfProf.length?med(isfProf):null, evRaw, byDP };
 }
 // De "Profiel"-sectie: het actieve basaal/ISF/KH-schema plus een koppeling naar
 // wat de data laat zien (basaalaandeel, waargenomen ISF, koolhydraatschatting).
@@ -1879,9 +1898,9 @@ function anWatIf(glucose, treatments, q, timeline){
 // "Wat-als" maaltijdinsuline: schaal je maaltijdbolus (≈ je KH-ratio-hefboom) en
 // reken de contrafeitelijke maaltijdpiek door. Zelfde eerste-orde model: extra
 // insuline × ISF via de activiteitscurve, timing constant gehouden.
-function mealSim(MR, oi, MULT=[0.9,0.95,1.0,1.05,1.1]){
+function mealSim(MR, oi, MULT=[0.9,0.95,1.0,1.05,1.1], minN=MEAL_MIN){
   const rs=(MR.results||[]).filter(r=>r.win&&r.wB&&r.wB.length&&r.isf&&r.dia);
-  if(rs.length<MEAL_MIN) return { few:rs.length };
+  if(rs.length<minN) return { few:rs.length };
   const useObs = !!(oi && oi.obs>0.5);
   const med=a=>{const s=[...a].sort((x,y)=>x-y);return s.length?s[Math.floor(s.length/2)]:null;};
   const res=MULT.map(k=>{ const rises=[]; let lows=0;
@@ -1909,8 +1928,8 @@ function anWatIfMeal(glucose, treatments, q, timeline){
 // "Wat-als" correctie-insuline (≈ je ISF-hefboom): schaal je koolhydraatvrije
 // correcties en reken door waar ze zouden uitkomen. Gebruikt je gemeten daling
 // per E (waargenomen ISF) als sensitiviteit — die verandert niet met de instelling.
-function correctionSim(oi, MULT=[0.9,0.95,1.0,1.05,1.1]){
-  if(!oi || !oi.evRaw || oi.evRaw.length<8 || oi.obs==null || oi.obs<=0.5) return { few: oi?oi.n:0 };
+function correctionSim(oi, MULT=[0.9,0.95,1.0,1.05,1.1], minN=8){
+  if(!oi || !oi.evRaw || oi.evRaw.length<minN || oi.obs==null || oi.obs<=0.5) return { few: oi?oi.n:0 };
   const realISF=oi.obs;
   const med=a=>{const s=[...a].sort((x,y)=>x-y);return s.length?s[Math.floor(s.length/2)]:null;};
   const res=MULT.map(k=>{ const ends=[]; let lows=0;
@@ -1941,70 +1960,76 @@ function anWatIfISF(glucose, treatments, q, timeline){
 // niets hiervan is een instel- of pompopdracht. De veiligheidsregel: een
 // kandidaat die méér insuline betekent (hoger basaal, sterkere KH-ratio, lagere
 // ISF) krijgt een waarschuwing zodra de simulatie meer laagtes laat zien.
+const _pR1=x=>Math.round(x*10)/10, _pR05=x=>Math.round(x*20)/20, _pR5g=x=>Math.round(x*2)/2;
+const _pClamp=(x,a,b)=>Math.min(Math.max(a,x),Math.min(b,Math.max(a,b)));
+const _pMed=a=>{const s=[...a].sort((x,y)=>x-y);return s.length?s[Math.floor(s.length/2)]:null;};
+const _pSd=v=>(v>0?"+":v<0?"−":"")+nl1(Math.abs(v));       // getekende drift
+const P_RISK=0.03;                                          // 3 procentpunt extra laag = risicovlag
+
+// ISF-kandidaten voor één set correcties (hele dag of één dagdeel).
+function isfCands(sub){
+  const P=sub.prof, M=sub.obs; if(P==null||M==null||M<=0.5) return null;
+  const ratio=M/P; if(ratio<=1.25 && ratio>=0.8) return null;
+  const beh=_pR1(_pClamp(P+0.5*(M-P), P*0.8, P*1.2)), vol=_pR1(M);
+  const seen=new Set(), cands=[];
+  for(const [tag,C] of [["behoudend",beh],["gemeten",vol]]){
+    if(C===P || seen.has(C)) continue; seen.add(C);
+    const k=P/C, sim=correctionSim({obs:M,evRaw:sub.evRaw,n:sub.n},[1,k],5); let eff="niet apart doorgerekend", risky=false;
+    if(!sim.few){ const cur=sim.res.find(x=>x.k===1), c=sim.res.find(x=>x.k!==1);
+      eff=`correcties eindigen ${nl1(cur.endMed)} → ${nl1(c.endMed)} · te laag ${pct0(cur.lowFrac)} → ${pct0(c.lowFrac)}`;
+      risky = k>1 && c.lowFrac>cur.lowFrac+P_RISK; }
+    cands.push({tag, from:nl1(P), to:nl1(C), eff, risky, dir:C>P?"loop spuit iets minder bij":"loop spuit iets meer bij"}); }
+  return cands.length?{cands, meta:`n=${sub.n} · IQR ${nl1(sub.q25)}–${nl1(sub.q75)}`}:null;
+}
 function proposalEngine(drift, oi, MR, pi, glucose, treatments, q, timeline){
   const items=[];
-  const r1=x=>Math.round(x*10)/10, r05=x=>Math.round(x*20)/20, r5g=x=>Math.round(x*2)/2;
-  const clamp=(x,a,b)=>Math.min(Math.max(a,x),Math.min(b,Math.max(a,b)));
-  const med=a=>{const s=[...a].sort((x,y)=>x-y);return s.length?s[Math.floor(s.length/2)]:null;};
-  const RISK=0.03; // 3 procentpunt extra laag = risicovlag
+  const isfRef = (oi&&oi.obs>0.5)?oi.obs : (pi.isf&&pi.isf.length?_pMed(pi.isf.map(b=>b.value)):null);
 
-  // 1 — ISF (correctiefactor). Gemeten daling per E naast profiel-ISF.
-  if(oi && oi.obs>0.5 && oi.prof!=null && oi.n>=8){
-    const P=oi.prof, M=oi.obs, ratio=M/P;
-    if(ratio>1.25 || ratio<0.8){
-      const beh=r1(clamp(P+0.5*(M-P), P*0.8, P*1.2)), vol=r1(M);
-      const seen=new Set(); const cands=[];
-      for(const [tag,C] of [["behoudend",beh],["gemeten",vol]]){
-        if(C===P || seen.has(C)) continue; seen.add(C);
-        const k=P/C;                                   // insuline-multiplier: hogere ISF → minder insuline
-        const sim=correctionSim(oi,[1,k]); let eff="—", risky=false;
-        if(!sim.few){ const cur=sim.res.find(x=>x.k===1), c=sim.res.find(x=>x.k!==1);
-          eff=`correctie-einde ${nl1(cur.endMed)} → ${nl1(c.endMed)} mmol/L · laag ${pct0(cur.lowFrac)} → ${pct0(c.lowFrac)}`;
-          risky = k>1 && c.lowFrac>cur.lowFrac+RISK; }
-        cands.push({tag, from:nl1(P), to:nl1(C), eff, risky, dir:C>P?"zwakker (minder insuline per correctie)":"sterker (meer insuline per correctie)"}); }
-      if(cands.length) items.push({ key:"isf", title:"ISF · correctiefactor", unit:"mmol/L per E", cands,
-        why:`Gemeten daling mediaan <b>${nl1(M)}</b> mmol/L per E (IQR ${nl1(oi.q25)}–${nl1(oi.q75)}, n=${oi.n}) naast ingesteld <b>${nl1(P)}</b>.` }); }
-  }
+  // 1 — ISF · correctiefactor, per dagdeel (val terug op de hele dag als geen enkel dagdeel genoeg heeft).
+  { const rows=[];
+    for(const d of DAYPARTS){ const sub=oi&&oi.byDP&&oi.byDP[d.key]; if(!sub||sub.obs==null) continue;
+      const r=isfCands(sub); if(r) rows.push({label:d.label, meta:r.meta, cands:r.cands}); }
+    if(!rows.length && oi && oi.n>=8){ const r=isfCands(oi); if(r) rows.push({label:"hele dag", meta:r.meta, cands:r.cands}); }
+    if(rows.length) items.push({ key:"isf", title:"ISF · correctiefactor", unit:"mmol/L per E", rows,
+      why:`Hoeveel 1 eenheid je écht liet dalen, naast wat je profiel aanneemt. Verschilt per dagdeel: 's ochtends ben je vaak minder gevoelig.` }); }
 
-  // 2 — Nachtbasaal. Alleen bij structurele drift tussen 00–06 u, want alleen die
-  // periode kan de nacht-simulatie doorrekenen.
-  if(drift && drift.stat){
-    const nightUp=drift.up.filter(s=>s.h<6), nightDown=drift.down.filter(s=>s.h<6);
-    const up=nightUp.length>0, down=nightDown.length>0;
-    if(up!==down){ // eenduidige richting
-      const blk=(pi.basal||[]).find(b=>180>=b.from&&180<b.to)||(pi.basal||[])[0];
-      if(blk){ const nb=blk.value, behM=up?1.05:0.95, volM=up?1.10:0.90;
-        const sim=nightSim(glucose,treatments,q,timeline,oi,[1.0,behM,volM]);
-        const seen=new Set(); const cands=[];
-        for(const [tag,m] of [["behoudend",behM],["gemeten",volM]]){
-          const C=r05(nb*m); if(C===r05(nb)||seen.has(C)) continue; seen.add(C);
-          let eff="niet doorgerekend", risky=false;
-          if(!sim.few && !sim.noprof){ const cur=sim.res.find(x=>x.m===1.0), c=sim.res.find(x=>x.m===m);
-            if(cur&&c){ eff=`ontwaakwaarde ${nl1(cur.endMed)} → ${nl1(c.endMed)} mmol/L · hypo-nachten ${cur.lowNights}/${cur.nights} → ${c.lowNights}/${c.nights}`;
-              risky = m>1 && c.lowNights>cur.lowNights; } }
-          cands.push({tag, from:nl2(nb), to:nl2(C), eff, risky, dir:up?"hoger basaal (meer insuline)":"lager basaal (minder insuline)"}); }
-        if(cands.length){ const hrs=joinHrs((up?nightUp:nightDown).map(s=>s.h)).join(", ");
-          items.push({ key:"basaal", title:"Nachtbasaal", unit:"E/u · blok 00–06 u", cands,
-            why:`In stille nachtvensters ${up?"stíjg":"zák"} je rond <b>${hrs}</b> tot ${nl1(Math.abs(up?drift.peakUp:drift.peakDown))} mmol/L per uur${sim.few?"":` (${sim.nights} schone nachten doorgerekend)`}.` }); } }
-    }
-  }
+  // 2 — Basaal per dagdeel, uit de nuchtere drift (eerste-orde: extra basaal × ISF
+  // neutraliseert de drift). Alleen waar je in stille vensters structureel wegdrijft.
+  if(drift && drift.stat && isfRef){ const rows=[];
+    for(const d of DAYPARTS){ const hrs=drift.stat.filter(s=>s.h>=d.lo/60 && s.h<d.hi/60 && s.med!=null);
+      if(hrs.length<2) continue; const agg=_pMed(hrs.map(s=>s.med)); if(Math.abs(agg)<drift.TH) continue;
+      const blk=(pi.basal||[]).find(b=>d.mid>=b.from&&d.mid<b.to)||(pi.basal||[])[0]; if(!blk) continue;
+      const cb=blk.value, up=agg>0, sign=up?1:-1, dB=Math.abs(agg)/isfRef, seen=new Set(), cands=[];
+      for(const [tag,frac] of [["behoudend",0.5],["gemeten",1.0]]){
+        const C=_pR05(cb+sign*dB*frac); if(C===_pR05(cb)||C<0||seen.has(C)) continue; seen.add(C);
+        const proj=agg*(1-frac);
+        cands.push({tag, from:nl2(cb), to:nl2(C), risky:false,
+          eff:`nuchtere drift ${_pSd(agg)} → ${_pSd(proj)} mmol/L/u`,
+          dir:up?"hoger basaal (meer insuline)":"lager basaal (minder insuline)"}); }
+      if(cands.length) rows.push({label:d.label, meta:`stille vensters · drift ${_pSd(agg)} mmol/L/u`, cands}); }
+    if(rows.length) items.push({ key:"basaal", title:"Basaal", unit:"E/u", rows,
+      why:`In maaltijd- en bolusvrije uren hoort je glucose vlak te lopen. Waar je toch wegdrijft, wijst dat op te veel of te weinig basaal — per dagdeel.` }); }
 
-  // 3 — KH-ratio. Alleen bij een structureel te hoge maaltijdpiek (onderdekking);
-  // een lager getal g/E = sterkere ratio = meer maaltijdinsuline.
-  if(MR && MR.results && MR.results.length>=MEAL_MIN && MR.mrise>=2.5 && pi.ic && pi.ic.length){
-    const curIC=med(pi.ic.map(b=>b.value));
-    const behM=1.05, volM=1.10, seen=new Set(), cands=[];
-    const sim=mealSim(MR,oi,[1.0,behM,volM]);
-    for(const [tag,m] of [["behoudend",behM],["gemeten",volM]]){
-      const C=r5g(curIC/m); if(C===r5g(curIC)||seen.has(C)) continue; seen.add(C);
-      let eff="niet doorgerekend", risky=false;
-      if(!sim.few){ const cur=sim.res.find(x=>x.k===1), c=sim.res.find(x=>x.k===m);
-        if(cur&&c){ eff=`maaltijdpiek +${nl1(cur.riseMed)} → +${nl1(c.riseMed)} mmol/L · eindigt laag ${pct0(cur.lowFrac)} → ${pct0(c.lowFrac)}`;
-          risky = c.lowFrac>cur.lowFrac+RISK; } }
-      cands.push({tag, from:nl1(curIC), to:nl1(C), eff, risky, dir:"sterker (meer maaltijdinsuline)"}); }
-    if(cands.length){ const timingNote = (MR.moffset!=null && MR.moffset>-5) ? " Kanttekening: je bolust laat — timing (prebolus) eerst, die dempt de piek zónder meer insuline." : "";
-      items.push({ key:"ic", title:"KH-ratio", unit:"g per E (mediaan)", cands,
-        why:`Maaltijdpiek mediaan +<b>${nl1(MR.mrise)}</b> mmol/L (n=${MR.results.length}) — de dekking schiet tekort.${timingNote}` }); }
+  // 3 — KH-ratio per maaltijdmoment (ontbijt/lunch/diner). Te hoge piek = onderdekking;
+  // lager getal g/E = sterkere ratio = meer maaltijdinsuline.
+  if(MR && MR.results && MR.results.length>=MEAL_MIN && pi.ic && pi.ic.length){
+    const parts=[{id:"ontbijt",lo:240,hi:660,mid:450},{id:"lunch",lo:660,hi:900,mid:780},{id:"diner",lo:900,hi:1320,mid:1110}];
+    const rows=[];
+    for(const p of parts){ const rs=MR.results.filter(r=>r.ts!=null && todMin(r.ts)>=p.lo && todMin(r.ts)<p.hi);
+      if(rs.length<MEAL_MIN) continue; const rise=_pMed(rs.map(r=>r.peakRise)); if(rise==null||rise<2.5) continue;
+      const blk=(pi.ic||[]).find(b=>p.mid>=b.from&&p.mid<b.to)||(pi.ic||[])[0]; if(!blk) continue;
+      const cic=blk.value, sim=mealSim({results:rs},oi,[1.0,1.05,1.10],MEAL_MIN), seen=new Set(), cands=[];
+      for(const [tag,m] of [["behoudend",1.05],["gemeten",1.10]]){
+        const C=_pR5g(cic/m); if(C===_pR5g(cic)||seen.has(C)) continue; seen.add(C);
+        let eff="niet apart doorgerekend", risky=false;
+        if(!sim.few){ const cur=sim.res.find(x=>x.k===1), c=sim.res.find(x=>x.k===m);
+          if(cur&&c){ eff=`piek +${nl1(cur.riseMed)} → +${nl1(c.riseMed)} · eindigt laag ${pct0(cur.lowFrac)} → ${pct0(c.lowFrac)}`;
+            risky = c.lowFrac>cur.lowFrac+P_RISK; } }
+        cands.push({tag, from:nl1(cic), to:nl1(C), eff, risky, dir:"sterker (meer maaltijdinsuline)"}); }
+      if(cands.length) rows.push({label:p.id, meta:`n=${rs.length} maaltijden · piek +${nl1(rise)}`, cands}); }
+    if(rows.length){ const timingNote = (MR.moffset!=null && MR.moffset>-5) ? " Let op: je bolust laat — een vroegere prebolus dempt de piek zónder meer insuline (zie Maaltijdrespons)." : "";
+      items.push({ key:"ic", title:"KH-ratio", unit:"g per E", rows,
+        why:`Waar je maaltijdpiek structureel te hoog is, schiet de dekking tekort — vaak juist bij het ontbijt.${timingNote}` }); }
   }
 
   return items;
@@ -2012,21 +2037,21 @@ function proposalEngine(drift, oi, MR, pi, glucose, treatments, q, timeline){
 function proposalsHtml(drift, oi, MR, pi, glucose, treatments, q, timeline){
   if(!timeline) return `<div class="muted">Geen profiel met basaal/ISF/KH-ratio in Nightscout gevonden — nodig om bespreekwaarden naast je instellingen te leggen.</div>`;
   const items=proposalEngine(drift, oi, MR, pi, glucose, treatments, q, timeline);
-  if(!items.length) return `<div class="pgood">Niets te bespreken. Op de hefbomen die genoeg data hebben, sluiten je instellingen aan bij wat je glucose laat zien — of er is nog te weinig schone data om een concreet getal te onderbouwen.</div>`;
-  const card=it=>{
-    const cand=c=>`<div class="pcand${c.risky?" risk":""}">
-        <div class="pctag">${c.tag}${c.risky?` <span class="prisk">hypo-risico ↑</span>`:""}</div>
-        <div class="pcval">${c.from} <span class="parr">→</span> <b>${c.to}</b></div>
-        <div class="pcdir">${c.dir}</div>
-        <div class="pceff">${c.eff}</div>
-      </div>`;
-    return `<div class="pcard">
+  if(!items.length) return `<div class="pgood">Niets te bespreken. Op de hefbomen die genoeg data hebben, sluiten je instellingen aan bij wat je glucose laat zien — of er is nog te weinig schone data per dagdeel om een concreet getal te onderbouwen.</div>`;
+  const cand=c=>`<div class="pcand${c.risky?" risk":""}">
+      <div class="pctag">${c.tag}${c.risky?` <span class="prisk">hypo-risico ↑</span>`:""}</div>
+      <div class="pcval">${c.from} <span class="parr">→</span> <b>${c.to}</b></div>
+      <div class="pcdir">${c.dir}</div>
+      <div class="pceff">${c.eff}</div>
+    </div>`;
+  const row=r=>`<div class="pdrow"><div class="pdlabel">${r.label}<span class="pdmeta">${r.meta}</span></div><div class="pcands">${r.cands.map(cand).join("")}</div></div>`;
+  const card=it=>`<div class="pcard">
       <div class="pchead"><span class="pctitle">${it.title}</span><span class="pcunit">${it.unit}</span></div>
       <div class="pcwhy">${it.why}</div>
-      <div class="pcands">${it.cands.map(cand).join("")}</div>
-    </div>`; };
+      ${it.rows.map(row).join("")}
+    </div>`;
   return items.map(card).join("")+
-    `<div class="muted" style="margin-top:.6rem">Elk getal is dóórgerekend met je eigen data (dezelfde eerste-orde simulaties als de wat-als; gevoeligheid uit je gemeten daling waar betrouwbaar). Tegenregulatie zit er níét in — "hypo-risico" en "eindigt laag" zijn risico-indicaties, geen exacte tellingen. <b>Bespreekpunten voor je behandelteam — geen instel- of pompopdracht.</b> Reken zelf niets om op je pomp.</div>`;
+    `<div class="muted" style="margin-top:.6rem">Elk getal is dóórgerekend met je eigen data (dezelfde eerste-orde simulaties als de wat-als; gevoeligheid uit je gemeten daling waar betrouwbaar). Per dagdeel is de dataset kleiner — lees kleine n met voorzichtigheid. Tegenregulatie zit er níét in — "hypo-risico" en "te laag" zijn risico-indicaties, geen exacte tellingen. <b>Bespreekpunten voor je behandelteam — geen instel- of pompopdracht.</b> Reken zelf niets om op je pomp.</div>`;
 }
 
 // ── Logboek & voor/na-vergelijker ──────────────────────────────────────────
