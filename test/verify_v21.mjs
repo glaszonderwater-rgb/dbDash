@@ -58,9 +58,7 @@ const s=await page.evaluate(()=>({
 }));
 // verdieping + stapeling openklappen
 const deep={};
-const _tabOf={stacking:'veiligheid',dagpatroon:'instellen',meals:'instellen'};
 for(const an of ['stacking','dagpatroon','meals']){
-  await page.click(`#tabbar .tab[data-tab="${_tabOf[an]}"]`); await page.waitForTimeout(80);
   await page.$eval(`details[data-an="${an}"]`, d=>{d.open=true;});
   await page.waitForFunction(a=>{const b=document.querySelector(`details[data-an="${a}"] .body`);return b&&!b.querySelector('.loading');},an,{timeout:15000}).catch(()=>{});
   await page.waitForTimeout(120);

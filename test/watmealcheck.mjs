@@ -21,7 +21,6 @@ await page.fill('#inUrl','https://mock.nightscout.test');await page.fill('#inTok
 await page.click('#btnSave');
 await page.waitForFunction(()=>!document.getElementById('secDeep').hidden,{timeout:40000}).catch(()=>{});
 await page.waitForTimeout(300);
-await page.click('#tabbar .tab[data-tab="instellen"]'); await page.waitForTimeout(100);
 await page.$eval('details[data-an="watifmeal"]', d=>{d.open=true;});
 await page.waitForFunction(()=>{const b=document.querySelector('details[data-an="watifmeal"] .body');return b&&!b.querySelector('.loading');},{timeout:15000}).catch(()=>{});
 const r=await page.evaluate(()=>({

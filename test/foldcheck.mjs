@@ -12,11 +12,11 @@ await page.route('https://mock.nightscout.test/**',route=>{const u=new URL(route
 await page.goto(FILE,{waitUntil:'load'});
 await page.fill('#inUrl','https://mock.nightscout.test');await page.fill('#inTok','x');await page.fill('#inDays','30');
 await page.click('#btnSave');
-await page.waitForFunction(()=>!document.getElementById('secSummary').hidden,{timeout:40000}).catch(()=>{});
+await page.waitForFunction(()=>!document.getElementById('secInsulin').hidden,{timeout:40000}).catch(()=>{});
 await page.waitForTimeout(300);
 // volgorde-check + fold open/dicht
 const r=await page.evaluate(()=>{
-  const order=[...document.querySelectorAll('main section[data-group="overzicht"]')].map(s=>s.id);
+  const order=[...document.querySelectorAll('main .epoch')].map(s=>s.id);
   const fold=document.getElementById('bandCard');
   const closed=!fold.open, hasRows=!!fold.querySelector('.trow');
   fold.open=true;

@@ -24,7 +24,6 @@ await page.fill('#inUrl','https://mock.nightscout.test');await page.fill('#inTok
 await page.click('#btnSave');
 await page.waitForFunction(()=>!document.getElementById('secDeep').hidden,{timeout:40000}).catch(()=>{});
 await page.waitForTimeout(300);
-await page.click('#tabbar .tab[data-tab="instellen"]'); await page.waitForTimeout(100);
 await page.$eval('details[data-an="watifisf"]', d=>{d.open=true;});
 await page.waitForFunction(()=>{const b=document.querySelector('details[data-an="watifisf"] .body');return b&&!b.querySelector('.loading');},{timeout:15000}).catch(()=>{});
 const r=await page.evaluate(()=>({rows:[...document.querySelectorAll('details[data-an="watifisf"] .warow')].map(x=>x.textContent.replace(/\s+/g,' ').trim()),obs:document.querySelector('details[data-an="watifisf"] .obs')?.textContent,muted:document.querySelector('details[data-an="watifisf"] .muted')?.textContent}));

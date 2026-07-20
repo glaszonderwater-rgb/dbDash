@@ -20,7 +20,6 @@ await page.waitForFunction(()=>!document.getElementById('secDeep').hidden,{timeo
 await page.waitForTimeout(300);
 // open wat-als en meet rekentijd
 const t0=Date.now();
-await page.click('#tabbar .tab[data-tab="instellen"]'); await page.waitForTimeout(100);
 await page.$eval('details[data-an="watif"]', d=>{d.open=true;});
 await page.waitForFunction(()=>{const b=document.querySelector('details[data-an="watif"] .body');return b&&!b.querySelector('.loading');},{timeout:15000}).catch(()=>{});
 const elapsed=Date.now()-t0;

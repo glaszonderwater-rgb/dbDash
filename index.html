@@ -27,6 +27,7 @@
   --warn:#B0781A; --risk-bg:#FCF3F1; --risk-line:#F0D9D4;
   --sans:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",sans-serif;
   --mono:ui-monospace,"SF Mono","Roboto Mono","DejaVu Sans Mono",Menlo,monospace;
+  --serif:Charter,Georgia,"Times New Roman",serif;
   --radius:16px;
   --shadow:0 1px 2px rgba(16,32,26,.05), 0 10px 26px -14px rgba(16,32,26,.14);
   --shadow-sm:0 1px 2px rgba(16,32,26,.05);
@@ -93,17 +94,15 @@ button.ghost:hover:not(:disabled){color:var(--ink);opacity:1}
 .scope .warn b{color:var(--warn)}
 
 /* Onderbalk-navigatie — duim-bereikbaar, vast onderaan */
-.nav{position:fixed;left:0;right:0;bottom:0;z-index:30;display:flex;
+.nav{position:fixed;left:0;right:0;bottom:0;z-index:30;display:flex;justify-content:center;gap:.25rem;
   background:color-mix(in srgb,var(--surface) 90%,transparent);backdrop-filter:blur(16px) saturate(1.4);
   border-top:1px solid var(--line);padding:.35rem .3rem calc(.35rem + env(safe-area-inset-bottom,0px))}
-.nav .tab{flex:1 1 0;display:flex;flex-direction:column;align-items:center;gap:.16rem;
-  background:transparent;border:0;box-shadow:none;color:var(--dim);font-size:.62rem;font-weight:600;
-  letter-spacing:.01em;padding:.3rem .2rem;border-radius:12px;cursor:pointer;transition:color .14s}
-.nav .tab svg{width:23px;height:23px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
-.nav .tab.on{color:var(--accent)}
+.nav .tab{flex:0 1 auto;background:transparent;border:0;box-shadow:none;color:var(--dim);
+  font-size:.72rem;font-weight:650;letter-spacing:.01em;padding:.44rem .85rem;border-radius:999px;
+  cursor:pointer;transition:color .14s,background .14s}
+.nav .tab.on{color:var(--accent);background:var(--accent-soft)}
 .nav .tab:active{transform:translateY(.5px)}
 @media (hover:hover){ .nav .tab:hover:not(.on){color:var(--muted)} }
-.tabhide{display:none!important}
 
 main{padding-top:1.4rem}
 section{margin-bottom:1.6rem}
@@ -112,37 +111,99 @@ h2.sect{font-size:.66rem;font-weight:700;letter-spacing:.16em;text-transform:upp
 h2.sect::after{content:"";flex:1;height:1px;background:var(--line)}
 
 /* ── Nu (focuspunt, geen kaart — open en luchtig) ──────────────────────────── */
-.now{display:flex;align-items:baseline;gap:.55rem;flex-wrap:wrap}
-.now .val{font-family:var(--mono);font-size:3.6rem;line-height:.88;font-weight:600;
-  color:var(--inRange);font-variant-numeric:tabular-nums;letter-spacing:-.03em}
-.now .unit{font-size:.8rem;color:var(--muted)}
-.now .arrow{font-size:1.3rem;color:var(--muted);align-self:center}
-.statuschip{font-size:.7rem;font-weight:700;padding:.16rem .55rem;border-radius:999px;align-self:center}
-.now .age{margin-left:auto;font-size:.7rem;color:var(--dim);align-self:center}
-.now .age.stale{color:var(--warn)}
+/* NU-strip — sticky pil, 5-seconden-blik */
+.nu{position:sticky;top:calc(var(--headh,86px) + .4rem);z-index:15;display:flex;align-items:baseline;gap:.6rem;
+  background:color-mix(in srgb,var(--surface) 92%,transparent);backdrop-filter:blur(12px) saturate(1.2);
+  border:1px solid var(--line);border-radius:999px;box-shadow:var(--shadow);
+  padding:.55rem 1.05rem;margin-bottom:1.5rem}
+.nu .val{font-family:var(--mono);font-size:1.35rem;line-height:1;font-weight:650;
+  color:var(--inRange);font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.nu .arrow{font-size:1rem;color:var(--muted)}
+.nu .age{font-size:.7rem;color:var(--muted)}
+.nu .age.stale{color:var(--warn)}
+.nu .onb{margin-left:auto;font-family:var(--mono);font-size:.68rem;color:var(--dim);text-align:right}
+.nu .onb b{color:var(--ink);font-weight:600}
+.nu .ob-hint{color:var(--warn);font-weight:700}
+
+/* tijdlijn-ruggengraat */
+.tl{position:relative;padding-left:1.5rem}
+.tl::before{content:"";position:absolute;left:.45rem;top:.3rem;bottom:.3rem;width:2px;background:var(--line)}
+.epoch{position:relative;margin-bottom:2.1rem;scroll-margin-top:7.5rem}
+.epoch::before{content:"";position:absolute;left:-1.38rem;top:.24rem;width:11px;height:11px;
+  border-radius:50%;background:var(--bg);border:2.5px solid var(--accent)}
+.epoch.warned::before{border-color:var(--warn)}
+.eh{display:flex;align-items:baseline;gap:.6rem;margin-bottom:.7rem}
+.eh h2{font-size:.68rem;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--accent)}
+.epoch.warned .eh h2{color:var(--warn)}
+.eh .sub{font-size:.72rem;color:var(--dim)}
+.h3{font-size:.62rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--dim);margin:.9rem .1rem .5rem}
+
+/* bevinding-kaarten (inbox-stijl) */
+.f{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+  box-shadow:var(--shadow);padding:.95rem 1.05rem;margin-bottom:.6rem;position:relative;overflow:hidden}
+.f.unread::before{content:"";position:absolute;left:0;top:.9rem;bottom:.9rem;width:3px;
+  border-radius:0 3px 3px 0;background:var(--warn)}
+.f.unread.pos::before{background:var(--inRange)}
+.fh{display:flex;gap:.6rem;align-items:baseline}
+.fdot{width:9px;height:9px;border-radius:50%;flex:none;transform:translateY(-1px)}
+.fdot.w{background:var(--warn)} .fdot.g{background:var(--inRange)} .fdot.n{background:var(--dim);opacity:.4}
+.ftxt{font-family:var(--serif);font-size:1rem;line-height:1.5}
+.ftxt b{font-weight:650}
+.fwhen{margin-left:auto;flex:none;font-size:.64rem;color:var(--dim);font-family:var(--mono)}
+.f.read{opacity:.62}
+.f.read .ftxt{font-family:inherit;font-size:.88rem}
+/* bewijsketen 1→2→3 */
+.f details{margin:.45rem 0 0 1.5rem}
+.f summary{list-style:none;cursor:pointer;user-select:none;font-size:.74rem;font-weight:650;color:var(--accent)}
+.f summary::-webkit-details-marker{display:none}
+.f summary::after{content:" ↓"} .f details[open] summary::after{content:" ↑"}
+.chain{margin-top:.5rem}
+.step{display:flex;gap:.6rem;padding:.26rem 0;font-size:.82rem;color:var(--muted);line-height:1.55}
+.step .no{flex:none;width:1.1rem;height:1.1rem;border-radius:50%;background:var(--surface-2);
+  border:1px solid var(--line);font-size:.6rem;font-weight:700;color:var(--accent);
+  display:flex;align-items:center;justify-content:center;transform:translateY(.15rem)}
+.step b{color:var(--ink)}
+.ffine{font-family:var(--mono);font-size:.64rem;color:var(--dim);margin:.4rem 0 0 1.7rem}
+.facts-row{margin-left:1.5rem}
+.acts{display:flex;gap:.45rem;margin:.65rem 0 0 1.5rem;flex-wrap:wrap}
+.act{font-size:.72rem;font-weight:650;border-radius:999px;padding:.34rem .7rem;cursor:pointer;
+  color:var(--accent);background:var(--accent-soft);border:0}
+.act.ghost{background:transparent;border:1px solid var(--line-2);color:var(--muted)}
+.act.done{background:transparent;border:1px dashed var(--line-2);color:var(--dim);cursor:default}
+
+/* gemeten-vs-ingesteld */
+.mvshead{display:flex;font-size:.6rem;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);margin-bottom:.2rem}
+.mvshead span:last-child{margin-left:auto}
+.mvs{width:100%;border-collapse:collapse;font-size:.86rem;font-variant-numeric:tabular-nums}
+.mvs td{padding:.38rem 0;border-top:1px solid var(--line)}
+.mvs tr:first-child td{border-top:0}
+.mvs td:nth-child(2),.mvs td:nth-child(3){text-align:right;font-family:var(--mono);font-size:.8rem}
+.mvs td:nth-child(2){color:var(--ink);font-weight:600}
+.mvs td:nth-child(3){color:var(--dim)}
+.mvs .st{width:1.5rem;text-align:right}
+.mvs .okd{color:var(--inRange)} .mvs .wad{color:var(--warn);font-weight:700}
+
+/* consultlijst */
+.citem{display:flex;gap:.6rem;align-items:baseline;background:var(--surface);border:1px solid var(--line);
+  border-radius:14px;padding:.7rem .9rem;margin-bottom:.5rem;font-size:.86rem}
+.citem .del{margin-left:auto;background:none;border:0;color:var(--dim);cursor:pointer;font-size:.9rem;padding:0 .2rem}
+.cbadge{background:var(--warn);color:#fff;font-family:var(--mono);font-size:.58rem;
+  border-radius:999px;padding:.06rem .38rem;margin-left:.3rem;transform:translateY(-1px);display:inline-block}
+.cbadge[hidden]{display:none}
+
 .spark{width:100%;height:56px;display:block;margin-top:.7rem}
 .onboard{display:flex;gap:1.1rem;margin-top:.5rem;font-size:.8rem;color:var(--muted);flex-wrap:wrap}
 .onboard b{color:var(--ink);font-weight:650;font-family:var(--mono)}
 .onboard .ob-hint{color:var(--warn);font-weight:600}
 
-/* ── Overzicht-bento (hero-tegels) ─────────────────────────────────────────── */
-details.fold{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);margin-top:.8rem}
+/* inklapbare kaart (fold) */
+details.fold{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);margin-top:.6rem}
 details.fold>summary{list-style:none;cursor:pointer;padding:.85rem 1.05rem;font-size:.88rem;font-weight:650;color:var(--ink);display:flex;align-items:baseline;gap:.6rem}
 details.fold>summary::-webkit-details-marker{display:none}
 details.fold>summary::after{content:"▾";margin-left:auto;color:var(--dim);transition:transform .15s}
 details.fold[open]>summary::after{transform:rotate(180deg)}
-details.fold .foldhint{font-size:.72rem;font-weight:400;color:var(--muted)}
+details.fold .foldhint{font-size:.7rem;font-weight:400;color:var(--muted)}
 details.fold>.foldbody{padding:0 1.05rem 1.05rem}
-.glance{display:flex;flex-direction:column;gap:.5rem}
-.gtile{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:.85rem .9rem;box-shadow:var(--shadow-sm)}
-.gfeat{display:flex;align-items:center;gap:1rem}
-.ring{width:64px;height:64px;flex:none}
-.gfeatx{display:flex;flex-direction:column;gap:.15rem}
-.gk{font-size:.64rem;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);font-weight:700}
-.gfeat .gk{font-size:.9rem;letter-spacing:0;text-transform:none;color:var(--ink);font-weight:650}
-.gs{font-size:.72rem;color:var(--muted);line-height:1.35}
-.grow{display:grid;grid-template-columns:1fr 1fr;gap:.5rem}
-.grow .gv{font-family:var(--mono);font-size:1.5rem;font-weight:600;letter-spacing:-.01em;margin:.12rem 0 .1rem;color:var(--ink);font-variant-numeric:tabular-nums}
 
 /* ── Kaart ───────────────────────────────────────────────────────────────── */
 .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
@@ -193,25 +254,12 @@ details.fold>.foldbody{padding:0 1.05rem 1.05rem}
 
 .obs{font-size:.88rem;margin-top:.7rem;line-height:1.5;color:var(--muted)} .obs b{color:var(--ink);font-weight:600}
 .muted{color:var(--muted);font-size:.76rem;line-height:1.5}
-.qa{padding:.7rem 0;border-top:1px solid var(--line)} .qa:first-child{border-top:0;padding-top:0}
-.qa .q{font-weight:650;font-size:.92rem;color:var(--ink)} .qa .a{font-size:.86rem;color:var(--muted);margin-top:.2rem;line-height:1.5} .qa .a b{color:var(--ink);font-weight:600}
 .prof3{display:grid;grid-template-columns:repeat(3,1fr);gap:.5rem;margin-top:.8rem}
 .pcol{border:1px solid var(--line);border-radius:.6rem;padding:.55rem .5rem;background:var(--bg)}
 .pcol .ph{font-size:.64rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:.35rem}
 .prow{display:flex;justify-content:space-between;align-items:baseline;font-size:.82rem;padding:.12rem 0}
 .prow span{color:var(--muted);font-family:var(--mono);font-size:.72rem} .prow b{color:var(--ink);font-weight:650}
 .pcol .pu{font-size:.64rem;color:var(--muted);margin-top:.35rem;text-align:right}
-.tune{padding:.8rem 0;border-top:1px solid var(--line)} .tune:first-child{border-top:0;padding-top:.2rem}
-.tune .th{display:flex;align-items:center;gap:.5rem}
-.tn{width:1.4rem;height:1.4rem;flex:0 0 auto;border-radius:50%;background:var(--accent);color:var(--on-accent);font-size:.74rem;font-weight:700;display:grid;place-items:center;font-family:var(--mono)}
-.tt{font-weight:650;font-size:.95rem;color:var(--ink);flex:1}
-.tg{font-size:.64rem;font-weight:700;letter-spacing:.02em;padding:.14rem .45rem;border-radius:.4rem;white-space:nowrap}
-.tg.ok{color:var(--inRange);background:color-mix(in srgb,var(--inRange) 16%,transparent)}
-.tg.warn{color:var(--high);background:color-mix(in srgb,var(--high) 20%,transparent)}
-.tg.na{color:var(--muted);background:var(--surface-2)}
-.ta{font-size:.86rem;color:var(--muted);line-height:1.5;margin-top:.4rem} .ta b{color:var(--ink);font-weight:600}
-.td{font-size:.85rem;color:var(--ink);margin-top:.4rem;font-weight:550;padding-left:.6rem;border-left:2px solid var(--accent)}
-.te{font-size:.7rem;color:var(--dim);margin-top:.35rem;font-family:var(--mono)}
 .logform{padding-bottom:.7rem;border-bottom:1px solid var(--line);margin-bottom:.5rem}
 .chips{display:flex;flex-wrap:wrap;gap:.35rem;margin-bottom:.55rem}
 .chip{font-size:.76rem;padding:.3rem .55rem;border-radius:.5rem;border:1px solid var(--line-2);background:var(--bg);color:var(--muted);cursor:pointer;white-space:nowrap}
@@ -318,7 +366,6 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:-1px;bor
   /* Directe Ctrl+P zonder rapport → de oude hele-app-weergave. */
   body:not(.reporting) header, body:not(.reporting) #shareRow, body:not(.reporting) #secDeep,
   body:not(.reporting) footer, body:not(.reporting) dialog, body:not(.reporting) #report{display:none!important}
-  body:not(.reporting) section.tabhide:not([hidden]){display:block!important}
   body:not(.reporting){font-size:12px}
   body:not(.reporting) .card, body:not(.reporting) .kpis, body:not(.reporting) details.deep{box-shadow:none;border:1px solid #ccc;break-inside:avoid}
   body:not(.reporting) .kpi{background:#fff}
@@ -358,126 +405,20 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
 <main class="wrap">
   <div class="empty" id="empty">Nog geen data.<br>Stel je Nightscout in en synchroniseer om te beginnen.</div>
 
-  <section id="secNow" data-group="overzicht" hidden>
-    <div class="now">
-      <span class="val" id="nowVal">—</span><span class="unit">mmol/L</span>
-      <span class="arrow" id="nowArrow"></span>
-      <span class="statuschip" id="nowStatus"></span>
-      <span class="age" id="nowAge"></span>
-    </div>
-    <div id="spark"></div>
-    <div class="onboard" id="onboard" hidden></div>
-  </section>
+  <!-- NU — altijd zichtbaar, 5-seconden-blik -->
+  <div class="nu" id="secNow" hidden>
+    <span class="val" id="nowVal">—</span><span class="arrow" id="nowArrow"></span>
+    <span class="age" id="nowAge"></span>
+    <span class="onb" id="onboard" hidden></span>
+  </div>
 
-  <section id="secGlance" data-group="overzicht" hidden>
-    <div class="glance">
-      <div class="gtile gfeat">
-        <div id="tirRing"></div>
-        <div class="gfeatx"><div class="gk">tijd in bereik</div><div class="gs" id="tirSub"></div></div>
-      </div>
-      <div class="grow">
-        <div class="gtile"><div class="gk">hypo</div><div class="gv" id="gHypo">—</div><div class="gs">&lt;3,9</div></div>
-        <div class="gtile"><div class="gk">variatie</div><div class="gv" id="gCv">—</div><div class="gs">CV · streef ≤36%</div></div>
-        <div class="gtile"><div class="gk">GMI</div><div class="gv" id="gGmi">—</div><div class="gs">geschat HbA1c</div></div>
-        <div class="gtile"><div class="gk">gemiddeld</div><div class="gv" id="gMean">—</div><div class="gs">mmol/L</div></div>
-      </div>
-    </div>
-  </section>
+  <div id="tl" class="tl" hidden>
 
-  <section id="secWatch" data-group="overzicht" hidden>
-    <h2 class="sect">Signalen — wat verandert?</h2>
-    <div class="card" id="watch"></div>
-  </section>
-
-  <section id="secSummary" data-group="overzicht" hidden>
-    <h2 class="sect">Deze periode</h2>
-    <div class="card opp" id="opp"></div>
-    <details class="fold" id="bandCard">
-      <summary>Verdeling per band <span class="foldhint">alle 5 banden + streefwaarden</span></summary>
-      <div class="foldbody"><div id="bandBar"></div></div>
-    </details>
-    <div id="shareRow" style="margin-top:.8rem;display:flex;gap:.5rem;flex-wrap:wrap">
-      <button class="ghost" id="btnShare" style="font-size:.78rem">📋 Samenvatting delen</button>
-      <button class="ghost" id="btnReport" style="font-size:.78rem">📄 Consultrapport</button>
-    </div>
-  </section>
-
-  <section id="secQuestions" data-group="overzicht" hidden>
-    <h2 class="sect">Jouw vragen beantwoord</h2>
-    <div class="card" id="questions"></div>
-  </section>
-
-  <section id="secAgp" data-group="overzicht" hidden>
-    <h2 class="sect">Dagprofiel (AGP)</h2>
-    <div class="card">
-      <div id="agp"></div>
-      <div class="legend">
-        <span><i style="background:var(--inRange)"></i>mediaan</span>
-        <span><i style="background:#bfe6d6"></i>middelste 50%</span>
-        <span><i style="background:#e5f2ec"></i>10–90%</span>
-        <span><i style="background:#eaf6f0;border:1px solid #cfe9dd"></i>streefzone 3,9–10,0</span>
-      </div>
-      <div class="obs" id="agpObs"></div>
-    </div>
-  </section>
-
-  <section id="secSafety" data-group="veiligheid" hidden>
-    <h2 class="sect">Veiligheid — hypo's</h2>
-    <div class="card">
-      <div class="kpis" id="hypoKpis" style="margin-bottom:.8rem"></div>
-      <div id="hypoBars"></div>
-      <div class="obs" id="safetyObs"></div>
-      <div class="muted" id="safetyEv" style="margin-top:.4rem"></div>
-      <details class="deep" data-an="stacking" style="margin-top:.8rem"><summary>Wat gaat vaak vooraf aan je hypo's? <span>— gestapelde correcties</span></summary><div class="body"><div class="loading">Openklappen om te berekenen…</div></div></details>
-    </div>
-  </section>
-
-  <section id="secAware" data-group="veiligheid" hidden>
-    <h2 class="sect">Hypo-gevoel &amp; bewustzijn</h2>
-    <div class="card">
-      <div class="logform">
-        <div class="chips" id="awChips"></div>
-        <div class="logrow">
-          <input type="datetime-local" id="awTime" aria-label="moment">
-          <input type="text" id="awBg" inputmode="decimal" maxlength="4" placeholder="meting (mmol, optioneel)">
-          <button class="ghost" id="awAdd">Vastleggen</button>
-        </div>
-      </div>
-      <div id="awareOut"></div>
-      <div id="awareList"></div>
-    </div>
-  </section>
-
-  <section id="secInsulin" data-group="instellen" hidden>
-    <h2 class="sect">Insuline &amp; koolhydraten</h2>
-    <div class="card">
-      <div class="kpis" id="insKpis"></div>
-      <div class="muted" id="insObs" style="margin-top:.5rem"></div>
-    </div>
-  </section>
-
-  <section id="secProfile" data-group="instellen" hidden>
-    <h2 class="sect">Profiel — je instellingen</h2>
-    <div class="card" id="profile"></div>
-  </section>
-
-  <section id="secTune" data-group="instellen" hidden>
-    <h2 class="sect">Fine-tunen — waar instelling en data uiteenlopen</h2>
-    <div class="card" id="tune"></div>
-  </section>
-
-  <section id="secTrend" data-group="voortgang" hidden>
-    <h2 class="sect">Trend — word je beter?</h2>
-    <div class="card">
-      <div id="trend"></div>
-      <div class="obs" id="trendObs"></div>
-      <div class="muted" id="trendTable" style="margin-top:.5rem"></div>
-    </div>
-  </section>
-
-  <section id="secDay" data-group="voortgang" hidden>
-    <h2 class="sect">Dag inzoomen</h2>
-    <div class="card">
+  <!-- VANDAAG -->
+  <section class="epoch" id="epVandaag" data-epoch="vandaag">
+    <div class="eh"><h2>Vandaag</h2><span class="sub" id="todaySub"></span></div>
+    <div id="findToday"></div>
+    <div class="card" id="secDay" hidden>
       <div class="chips" id="dayJump" style="margin-bottom:.55rem"></div>
       <div class="daynav">
         <button class="ghost" id="dayPrev" aria-label="vorige dag">◀</button>
@@ -492,55 +433,135 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
       </div>
       <div class="obs" id="dayNarr"></div>
     </div>
+    <details class="fold" id="secAware" hidden>
+      <summary>Hypo-gevoel <span class="foldhint">voelde je iets? leg het vast</span></summary>
+      <div class="foldbody">
+        <div class="logform">
+          <div class="chips" id="awChips"></div>
+          <div class="logrow">
+            <input type="datetime-local" id="awTime" aria-label="moment">
+            <input type="text" id="awBg" inputmode="decimal" maxlength="4" placeholder="meting (mmol, optioneel)">
+            <button class="ghost" id="awAdd">Vastleggen</button>
+          </div>
+        </div>
+        <div id="awareOut"></div>
+        <div id="awareList"></div>
+      </div>
+    </details>
   </section>
 
-  <section id="secLog" data-group="voortgang" hidden>
-    <h2 class="sect">Logboek — markeer &amp; vergelijk</h2>
-    <div class="card">
-      <div class="logform">
-        <div class="chips" id="logChips"></div>
-        <div class="logrow">
-          <input type="date" id="logDate" aria-label="datum">
-          <input type="text" id="logNote" maxlength="80" placeholder="wat veranderde er? (optioneel)">
-          <button class="ghost" id="logAdd">Toevoegen</button>
-        </div>
+  <!-- DEZE WEEK -->
+  <section class="epoch" id="epWeek" data-epoch="week">
+    <div class="eh"><h2>Deze week</h2><span class="sub" id="weekSub"></span></div>
+    <div id="findWeek"></div>
+    <details class="fold" id="secTrend" hidden>
+      <summary>Weektrend <span class="foldhint">tijd in bereik per week</span></summary>
+      <div class="foldbody">
+        <div id="trend"></div>
+        <div class="obs" id="trendObs"></div>
+        <div class="muted" id="trendTable" style="margin-top:.5rem"></div>
       </div>
-      <div id="logList"></div>
+    </details>
+    <details class="fold" id="secLog" hidden>
+      <summary>Logboek <span class="foldhint">markeer een wijziging of gebeurtenis</span></summary>
+      <div class="foldbody">
+        <div class="logform">
+          <div class="chips" id="logChips"></div>
+          <div class="logrow">
+            <input type="date" id="logDate" aria-label="datum">
+            <input type="text" id="logNote" maxlength="80" placeholder="wat veranderde er? (optioneel)">
+            <button class="ghost" id="logAdd">Toevoegen</button>
+          </div>
+        </div>
+        <div id="logList"></div>
+      </div>
+    </details>
+  </section>
+
+  <!-- DEZE MAAND -->
+  <section class="epoch" id="epMaand" data-epoch="maand">
+    <div class="eh"><h2>Deze maand</h2><span class="sub" id="monthSub"></span></div>
+    <div class="kpis" id="kpis"></div>
+    <div id="secWatch" hidden><div id="watch" style="margin-top:.6rem"></div></div>
+    <div class="card" id="mvsCard" style="margin-top:.6rem" hidden>
+      <div class="mvshead"><span>instelling</span><span>gemeten · ingesteld</span></div>
+      <div id="tune"></div>
+    </div>
+    <details class="fold" id="bandCard">
+      <summary>Verdeling per band <span class="foldhint">alle 5 banden + streefwaarden</span></summary>
+      <div class="foldbody"><div id="bandBar"></div></div>
+    </details>
+    <details class="fold" id="secAgp" hidden>
+      <summary>Dagprofiel (AGP) <span class="foldhint">je typische dag als band</span></summary>
+      <div class="foldbody">
+        <div id="agp"></div>
+        <div class="legend">
+          <span><i style="background:var(--inRange)"></i>mediaan</span>
+          <span><i style="background:#bfe6d6"></i>middelste 50%</span>
+          <span><i style="background:#e5f2ec"></i>10–90%</span>
+        </div>
+        <div class="obs" id="agpObs"></div>
+      </div>
+    </details>
+    <details class="fold" id="secSafety" hidden>
+      <summary>Veiligheid — hypo's <span class="foldhint">episodes, dips, patronen</span></summary>
+      <div class="foldbody">
+        <div class="kpis" id="hypoKpis" style="margin-bottom:.8rem"></div>
+        <div id="hypoBars"></div>
+        <div class="obs" id="safetyObs"></div>
+        <div class="muted" id="safetyEv" style="margin-top:.4rem"></div>
+        <details class="deep" data-an="stacking" style="margin-top:.8rem"><summary>Wat gaat vooraf aan je hypo's? <span>— gestapelde correcties</span></summary><div class="body"><div class="loading">Openklappen om te berekenen…</div></div></details>
+      </div>
+    </details>
+    <details class="fold" id="secInsulin" hidden>
+      <summary>Insuline &amp; koolhydraten <span class="foldhint">dagdosis en verhouding</span></summary>
+      <div class="foldbody">
+        <div class="kpis" id="insKpis"></div>
+        <div class="muted" id="insObs" style="margin-top:.5rem"></div>
+      </div>
+    </details>
+    <details class="fold" id="secProfile" hidden>
+      <summary>Profiel <span class="foldhint">je ingestelde schema's</span></summary>
+      <div class="foldbody"><div id="profile"></div></div>
+    </details>
+    <div id="secDeep" hidden>
+      <div class="h3">Verdieping — voor wie wil sleutelen</div>
+      <details class="deep" data-an="dagpatroon"><summary>Dagpatroon <span>— vaste uren waarop je wegdrijft (basaal)</span></summary><div class="body"><div class="loading">Openklappen om te berekenen…</div></div></details>
+      <details class="deep" data-an="meals"><summary>Maaltijdrespons <span>— hoe snel koolhydraten opnemen</span></summary><div class="body"><div class="loading">Openklappen om te berekenen…</div></div></details>
+      <details class="deep" data-an="watif"><summary>Wat-als: nachtbasaal <span>— doorgerekend op je eigen nachten</span></summary><div class="body"><div class="loading">Openklappen om te berekenen…</div></div></details>
+      <details class="deep" data-an="watifmeal"><summary>Wat-als: maaltijdinsuline <span>— doorgerekend op je maaltijdpieken</span></summary><div class="body"><div class="loading">Openklappen om te berekenen…</div></div></details>
+      <details class="deep" data-an="watifisf"><summary>Wat-als: correctie-insuline <span>— doorgerekend op je correcties</span></summary><div class="body"><div class="loading">Openklappen om te berekenen…</div></div></details>
     </div>
   </section>
 
-  <section id="secDeep" data-group="instellen" hidden>
-    <h2 class="sect">Verdieping — voor wie wil sleutelen</h2>
-    <details class="deep" data-an="dagpatroon"><summary>Dagpatroon <span>— vaste uren waarop je wegdrijft (basaal)</span></summary><div class="body"><div class="loading">Openklappen om te berekenen…</div></div></details>
-    <details class="deep" data-an="meals"><summary>Maaltijdrespons <span>— hoe snel koolhydraten opnemen</span></summary><div class="body"><div class="loading">Openklappen om te berekenen…</div></div></details>
-    <details class="deep" data-an="watif"><summary>Wat-als: nachtbasaal <span>— een andere basaal doorgerekend op je eigen nachten</span></summary><div class="body"><div class="loading">Openklappen om te berekenen…</div></div></details>
-    <details class="deep" data-an="watifmeal"><summary>Wat-als: maaltijdinsuline <span>— een andere KH-ratio doorgerekend op je maaltijdpieken</span></summary><div class="body"><div class="loading">Openklappen om te berekenen…</div></div></details>
-    <details class="deep" data-an="watifisf"><summary>Wat-als: correctie-insuline <span>— een andere ISF doorgerekend op je correcties</span></summary><div class="body"><div class="loading">Openklappen om te berekenen…</div></div></details>
+  <!-- CONSULT -->
+  <section class="epoch" id="epConsult" data-epoch="consult">
+    <div class="eh"><h2>Richting je consult</h2><span class="sub" id="consultSub"></span></div>
+    <div id="consultList"></div>
+    <div id="shareRow" style="margin-top:.7rem;display:flex;gap:.5rem;flex-wrap:wrap">
+      <button id="btnReport" style="font-size:.8rem">📄 Consultrapport samenstellen</button>
+      <button class="ghost" id="btnShare" style="font-size:.78rem">📋 Samenvatting delen</button>
+    </div>
   </section>
+
+  </div>
 
   <div id="report" hidden></div>
 </main>
 
-<nav id="tabbar" class="nav" hidden aria-label="Hoofdnavigatie">
-  <button class="tab on" data-tab="overzicht">
-    <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7.5" height="7.5" rx="1.5"/><rect x="13.5" y="3" width="7.5" height="7.5" rx="1.5"/><rect x="3" y="13.5" width="7.5" height="7.5" rx="1.5"/><rect x="13.5" y="13.5" width="7.5" height="7.5" rx="1.5"/></svg>
-    <span>Overzicht</span></button>
-  <button class="tab" data-tab="veiligheid">
-    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l7 2.5v5.5c0 4.5-3 7.7-7 9-4-1.3-7-4.5-7-9V5.5z"/></svg>
-    <span>Veiligheid</span></button>
-  <button class="tab" data-tab="instellen">
-    <svg viewBox="0 0 24 24" aria-hidden="true"><line x1="4" y1="8" x2="20" y2="8"/><line x1="4" y1="16" x2="20" y2="16"/><circle cx="9" cy="8" r="2.4"/><circle cx="15" cy="16" r="2.4"/></svg>
-    <span>Instellen</span></button>
-  <button class="tab" data-tab="voortgang">
-    <svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="4 15 9 10 13 13 20 5"/><polyline points="15 5 20 5 20 10"/></svg>
-    <span>Voortgang</span></button>
+<nav id="tabbar" class="nav" hidden aria-label="Tijdschaal">
+  <button class="tab on" data-tab="nu">Nu</button>
+  <button class="tab" data-tab="vandaag">Vandaag</button>
+  <button class="tab" data-tab="week">Week</button>
+  <button class="tab" data-tab="maand">Maand</button>
+  <button class="tab" data-tab="consult">Consult<span class="cbadge" id="consultBadge" hidden></span></button>
 </nav>
 
 <footer class="wrap">
   Alles blijft op dit apparaat: cache in IndexedDB, token in localStorage. Er gaat niets naar een
   server behalve leesverzoeken aan je eigen Nightscout.<br>
   Observaties, geen instelwaarden. Wat je met een patroon doet is een gesprek met je behandelteam.<br>
-  <span style="opacity:.8">DiaMetric · versie <b>4.0 · 20 jul 2026</b> — meetwaarden naast instellingen · eerlijke statistiek (episodes ≥15 min, sensordruk, RTM-caveat) · vernieuwde indeling</span>
+  <span style="opacity:.8">DiaMetric · versie <b>5.0 · 20 jul 2026</b> — de synthese: tijdlijn · bevindingen · bewijsketens · consultlijst</span>
 </footer>
 
 <dialog id="cfgDlg">
@@ -992,15 +1013,23 @@ function fineTuneData(drift, oi, MR, stack, pi){
 }
 function fineTune(drift, oi, MR, stack, pi){
   const rows=fineTuneData(drift, oi, MR, stack, pi);
-  const badge={ok:'<span class="tg ok">klopt</span>',warn:'<span class="tg warn">mogelijk bijstellen</span>',na:'<span class="tg na">te weinig data</span>'};
-  const html = rows.map(r=>`<div class="tune"><div class="th"><span class="tn">${r.n}</span><span class="tt">${r.title}</span>${badge[r.st]}</div>`+
-    `<div class="ta">${r.read}</div>`+(r.dir?`<div class="td">→ ${r.dir}</div>`:``)+`<div class="te">${r.ev}</div></div>`).join("");
-  const warns = rows.filter(r=>r.st==="warn").length;
-  const lead = warns
-    ? `Verander <b>één ding tegelijk</b>, van boven naar beneden in deze lijst, en geef het 1–2 weken. Er ${warns===1?"is 1 punt":`zijn ${warns} punten`} waar je instelling en je data uiteenlopen.`
-    : `Op de getoetste punten sluiten je instellingen aan bij wat je data laat zien. Blijf per wijziging één ding tegelijk aanpassen en 1–2 weken toetsen.`;
-  return `<div class="obs" style="margin:0 0 .4rem">${lead}</div>`+html+
-    `<div class="muted" style="margin-top:.6rem">Richtingen zijn hypotheses uit je eigen data, geen doses. De volgorde (basaal → ISF → KH-ratio → timing) is bewust: een laag erboven klopt pas als de laag eronder klopt. Zet een aanpassing met je behandelteam.</div>`;
+  const mealsOk=MR&&MR.results.length>=MEAL_MIN;
+  const stTd=r=> r.st==="ok"?'<td class="st okd">✓</td>' : r.st==="warn"?'<td class="st wad">▲</td>' : '<td class="st" style="color:var(--dim)">·</td>';
+  const driftPeak = drift&&drift.stat&&(drift.up.length||drift.down.length)
+    ? nl1(Math.max(drift.peakUp||0,Math.abs(drift.peakDown||0)))+" /u" : (drift&&drift.stat?"0,0 /u":"—");
+  const line=(label,gem,set2,r)=>`<tr><td>${label}</td><td>${gem}</td><td>${set2}</td>${stTd(r)}</tr>`;
+  const table=`<table class="mvs">`+
+    line("ISF", oi&&oi.obs!=null?nl1(oi.obs):"—", oi&&oi.prof!=null?nl1(oi.prof):"—", rows[1])+
+    line("Basaaldrift", driftPeak, "—", rows[0])+
+    line("Maaltijdpiek", mealsOk?"+"+nl1(MR.mrise):"—", "&lt;2,5", rows[2])+
+    line("Prebolus", mealsOk&&MR.moffset!=null?Math.round(MR.moffset)+" m":"—", "—", rows[3])+
+    `</table>`;
+  const chains=rows.map((r,i)=>`<div class="step"><span class="no">${i+1}</span><span><b>${r.title}.</b> ${r.read}${r.dir?`<br><span style="color:var(--ink)">→ ${r.dir}.</span>`:""}<br><span class="ffine" style="margin:0">${r.ev}</span></span></div>`).join("");
+  const warns=rows.filter(r=>r.st==="warn").length;
+  return table+
+    `<details style="margin-top:.6rem"><summary style="list-style:none;cursor:pointer;font-size:.76rem;font-weight:650;color:var(--accent)">${warns?`wat betekent ▲ (${warns})`:"uitleg per regel"} ↓</summary>`+
+    `<div class="chain" style="margin-top:.5rem">${chains}</div>`+
+    `<div class="ffine" style="margin-left:0">meetwaarden, geen voorschriften · één ding tegelijk aanpassen, met je team</div></details>`;
 }
 
 /* ── Dekking ────────────────────────────────────────────────────────────── */
@@ -1207,28 +1236,6 @@ function opportunity(m, ag, hy, trend){
 }
 
 /* ══ SVG-GRAFIEKEN (schaalbaar, geen bibliotheek) ══════════════════════════ */
-function sparkline(g){
-  if (!g.length) return "";
-  const W=320, H=52, since=Date.now()-6*36e5;
-  const pts = g.filter(x=>x.ts>=since); if (pts.length<2) return "";
-  const t0=pts[0].ts, t1=pts[pts.length-1].ts, span=Math.max(1,t1-t0);
-  const lo=Math.min(3, ...pts.map(p=>p.bg))-.5, hi=Math.max(11, ...pts.map(p=>p.bg))+.5;
-  const X=t=>(t-t0)/span*W, Y=b=>H-(b-lo)/(hi-lo)*H;
-  const y39=Y(3.9), y10=Y(10);
-  let d=""; pts.forEach((p,i)=>{ d+=(i?"L":"M")+X(p.ts).toFixed(1)+" "+Y(p.bg).toFixed(1); });
-  return `<svg class="spark" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">`+
-    `<rect x="0" y="${y10.toFixed(1)}" width="${W}" height="${(y39-y10).toFixed(1)}" fill="var(--inRange)" opacity=".10"/>`+
-    `<path d="${d}" fill="none" stroke="var(--inRange)" stroke-width="1.5" vector-effect="non-scaling-stroke"/></svg>`;
-}
-// Donut-ring voor de kern-tegel (tijd in bereik) op het Overzicht.
-function ringSvg(frac, ok){
-  const R=26, C=2*Math.PI*R, f=Math.max(0,Math.min(1,frac)), off=C*(1-f);
-  const col = ok ? "var(--inRange)" : (f>=0.5 ? "var(--high)" : "var(--low)");
-  return `<svg viewBox="0 0 64 64" class="ring" aria-hidden="true">`+
-    `<circle cx="32" cy="32" r="${R}" fill="none" stroke="var(--line)" stroke-width="7"/>`+
-    `<circle cx="32" cy="32" r="${R}" fill="none" stroke="${col}" stroke-width="7" stroke-linecap="round" stroke-dasharray="${C.toFixed(1)}" stroke-dashoffset="${off.toFixed(1)}" transform="rotate(-90 32 32)"/>`+
-    `<text x="32" y="37" text-anchor="middle" font-size="15" font-weight="700" fill="var(--ink)" font-family="var(--mono)">${pct0(frac)}</text></svg>`;
-}
 function agpSvg(ag){
   if (ag.length<12) return `<div class="muted">Nog te weinig gespreide data voor een dagprofiel.</div>`;
   const W=320, H=170, PB=18, PL=22;                 // padding onder/links voor labels
@@ -1310,39 +1317,33 @@ function render(glucose, treatments, timeline){
   treatments = treatments||[]; timeline = timeline||null;
   const has = glucose.length>0;
   document.getElementById("empty").hidden = has;
+  document.getElementById("secNow").hidden = !has;
+  document.getElementById("tl").hidden = !has;
   document.getElementById("tabbar").hidden = !has;
-  for (const id of ["secNow","secGlance","secSummary","secWatch","secQuestions","secAgp","secSafety","secAware","secInsulin","secProfile","secTune","secTrend","secDay","secLog","secDeep"]) document.getElementById(id).hidden = !has;
   if (!has) return;
 
-  // Nu
+  // ── NU-strip ──
   const last = glucose[glucose.length-1];
   const ageMin = Math.round((Date.now()-last.ts)/6e4);
   const nv=document.getElementById("nowVal"); nv.textContent=nl1(last.bg); nv.style.color=colorOf(last.bg);
   document.getElementById("nowArrow").textContent = ARROWS[last.dir]||"";
-  const stLabel={veryLow:"zeer laag",low:"laag",inRange:"in bereik",high:"hoog",veryHigh:"zeer hoog"}[bandOf(last.bg).id];
-  const ns=document.getElementById("nowStatus"); ns.textContent=stLabel;
-  ns.style.color=colorOf(last.bg); ns.style.background=colorOf(last.bg)+"22";
-  const age=document.getElementById("nowAge"); age.textContent = ageMin<90?`${ageMin} min geleden`:`${Math.round(ageMin/60)} uur geleden`;
+  const age=document.getElementById("nowAge"); age.textContent = ageMin<90?`${ageMin} min`:`${Math.round(ageMin/60)} u`;
   age.classList.toggle("stale", ageMin>20);
-  document.getElementById("spark").innerHTML = sparkline(glucose);
-
-  // Actieve insuline & koolhydraten (nu) — context voor de dagelijkse blik
   const ob = document.getElementById("onboard");
   if (treatments.length || _dsRecent.length){
     const dsLast = _dsRecent.length ? _dsRecent[_dsRecent.length-1] : null;
-    const dsFresh = dsLast && (Date.now()-dsLast.ts) < 15*60e3;   // loop-data van < 15 min
+    const dsFresh = dsLast && (Date.now()-dsLast.ts) < 15*60e3;
     const iobNow = (dsFresh && dsLast.iob!=null) ? dsLast.iob : reconstructIOB(treatments, Date.now(), PEAK_MIN, timeline);
     const cobNow = (dsFresh && dsLast.cob!=null) ? dsLast.cob : carbsOnBoard(treatments, Date.now());
     const viaLoop = dsFresh && dsLast.iob!=null;
-    const fresh = ageMin<=20;                       // hint alleen bij verse sensordata
+    const fresh = ageMin<=20;
     const hint = fresh && iobNow>=1 && last.dir && /Down/i.test(last.dir) && last.bg<8
-      ? ` <span class="ob-hint">· let op verder dalen</span>` : "";
-    ob.innerHTML = `<span>IOB <b>${nl1(iobNow)}</b> E</span><span>COB <b>${Math.round(cobNow)}</b> g</span>`+
-      (viaLoop?`<span style="color:var(--dim)">· via loop</span>`:`<span style="color:var(--dim)">· geschat</span>`)+hint;
+      ? ` <span class="ob-hint">· let op dalen</span>` : "";
+    ob.innerHTML = `IOB <b>${nl1(iobNow)}</b> · COB <b>${Math.round(cobNow)}</b> g <span style="opacity:.7">${viaLoop?"· via loop":"· geschat"}</span>${hint}`;
     ob.hidden = false;
   } else ob.hidden = true;
 
-  // alleen bruikbare dagen voor de statistiek
+  // ── kwaliteit / periode ──
   const q = quality(glucose);
   const g = glucose.filter(x=>q.usableKeys.has(localDayKey(x.ts)));
   const lowCov = q.coverage>0 && q.coverage<MIN_COVERAGE+.05;
@@ -1350,42 +1351,75 @@ function render(glucose, treatments, timeline){
     `<span><i>periode</i> <b>${q.from?new Date(q.from).toLocaleDateString("nl-NL",{day:"2-digit",month:"short"}):"—"} – ${q.to?new Date(q.to).toLocaleDateString("nl-NL",{day:"2-digit",month:"short"}):"—"}</b></span>`+
     `<span class="${lowCov?"warn":""}"><i>dekking</i> <b>${q.days.length?pct0(q.coverage):"—"}</b></span>`+
     `<span><i>dagen</i> <b>${q.usable.length}/${q.days.length}</b></span>`;
+  document.getElementById("monthSub").textContent = `${q.usable.length} dagen · ${pct0(q.coverage)} dekking`;
 
   if (!g.length){
-    document.getElementById("opp").innerHTML = `<div class="lead">Deze periode</div><div class="msg">Nog te weinig dagen met voldoende sensordekking (≥70%) voor betrouwbare cijfers. Synchroniseer meer historie of wacht op meer sensordagen.</div>`;
-    for (const id of ["secGlance","secWatch","secQuestions","secAgp","secSafety","secAware","secInsulin","secProfile","secTune","secTrend","secDay","secLog","secDeep"]) document.getElementById(id).hidden = true;
+    document.getElementById("findToday").innerHTML =
+      `<div class="f"><div class="fh"><span class="fdot n"></span><span class="ftxt">Nog te weinig dagen met voldoende sensordekking (≥70%) voor betrouwbare cijfers. Synchroniseer meer historie.</span></div></div>`;
+    for (const id of ["secDay","secAware","secTrend","secLog","secWatch","mvsCard","secAgp","secSafety","secInsulin","secProfile","secDeep"]) document.getElementById(id).hidden = true;
+    document.getElementById("kpis").innerHTML = "";
     return;
   }
 
-  // Data voor de (lui geladen) verdieping bewaren; open details resetten bij verse data.
   _ctx = { glucose, q, treatments, timeline };
   document.querySelectorAll("details.deep").forEach(d=>{ d.open=false; delete d.dataset.done;
     d.querySelector(".body").innerHTML = '<div class="loading">Openklappen om te berekenen…</div>'; });
 
   const m = metrics(g), ag = agp(g), hy = hypoStats(g), tr = weeklyTrend(glucose, q);
-  _ctx.hy = hy;   // hypo-episodes voor de bewustzijnssectie
+  _ctx.hy = hy;
 
-  // Grootste kans
-  const opp = opportunity(m, ag, hy, tr);
-  const oc = document.getElementById("opp");
-  oc.className = "card opp" + (opp.risk?" risk":"");
-  oc.innerHTML = `<div class="lead">${opp.risk?"⚠ Grootste aandachtspunt":"Grootste kans"}</div><div class="msg">${opp.msg}</div>`;
+  // ── VANDAAG ──
+  const dayStats=new Map();
+  for(const x of glucose){ const k=localDayKey(x.ts); let s=dayStats.get(k);
+    if(!s){ s={min:Infinity,max:-Infinity,inr:0,n:0}; dayStats.set(k,s); }
+    s.n++; if(x.bg<s.min)s.min=x.bg; if(x.bg>s.max)s.max=x.bg; if(x.bg>=3.9&&x.bg<10)s.inr++; }
+  _dayKeys = [...dayStats.keys()].sort();
+  let worst=null, high=null, best=null;
+  for(const [k,s2] of dayStats){ if(s2.n<50) continue;
+    if(s2.min<3.9 && (!worst||s2.min<worst.v)) worst={k,v:s2.min};
+    if(s2.max>10 && (!high ||s2.max>high.v )) high ={k,v:s2.max};
+    const tir=s2.inr/s2.n; if(!best||tir>best.v) best={k,v:tir}; }
+  _notable = {worst,high,best};
+  _dayIdx = _dayKeys.length-1;
+  document.getElementById("secDay").hidden = !_dayKeys.length;
+  renderDay();
+  const tk=_dayKeys[_dayKeys.length-1], ts2=dayStats.get(tk);
+  document.getElementById("todaySub").textContent = ts2 ? `${pct0(ts2.inr/ts2.n)} in bereik tot nu` : "";
+  document.getElementById("secAware").hidden = false;
 
-  // Volledige 5-banden-balk (de standaard doelbalk)
+  // ── WEEK ──
+  document.getElementById("weekSub").textContent = "afgelopen 7 dagen";
+  if (tr.length<2){ document.getElementById("secTrend").hidden = true; }
+  else {
+    document.getElementById("secTrend").hidden = false;
+    document.getElementById("trend").innerHTML = trendSvg(tr);
+    const f=tr[0], l=tr[tr.length-1], dTir=l.tir-f.tir, dTbr=l.tbr-f.tbr;
+    const dir = dTir>0.05 ? "<b>omhoog</b>" : dTir<-0.05 ? "<b>omlaag</b>" : "<b>stabiel</b>";
+    document.getElementById("trendObs").innerHTML =
+      `Over ${tr.length} weken beweegt je tijd in bereik ${dir} (${pct0(f.tir)} → ${pct0(l.tir)}).`+
+      (Math.abs(dTbr)>=0.01?` Hypo-tijd: ${pct0(f.tbr)} → ${pct0(l.tbr)}.`:"");
+    document.getElementById("trendTable").innerHTML =
+      `<div style="display:grid;grid-template-columns:auto 1fr 1fr 1fr;gap:.15rem .8rem;font-variant-numeric:tabular-nums">`+
+      `<b style="color:var(--muted)">week</b><b style="color:var(--muted)">TIR</b><b style="color:var(--muted)">hypo</b><b style="color:var(--muted)">CV</b>`+
+      tr.map(w=>`<span>${new Date(w.end).toLocaleDateString("nl-NL",{day:"2-digit",month:"2-digit"})}</span><span>${pct0(w.tir)}</span><span>${pct0(w.tbr)}</span><span>${pct0(w.cv)}</span>`).join("")+`</div>`;
+  }
+  document.getElementById("secLog").hidden = false;
+
+  // ── MAAND ──
+  const enough = q.usable.length>=14;
+  document.getElementById("kpis").innerHTML = [
+    ["In bereik", pct0(m.tir), "streef >70%", tick(m.tir>=0.70)],
+    ["Hypo", pct0(m.tbr), "streef <4%", tick(m.tbr<0.04)],
+    ["Variatie (CV)", pct0(m.cv), "streef ≤36%", tick(m.cv<=0.36)],
+    ["GMI", nl1(m.gmi)+"%", "geschat HbA1c", ""],
+  ].map(([k,v,s3,b])=>`<div class="kpi"><div class="k">${k} ${b}</div><div class="v">${v}</div><div class="s">${s3}</div></div>`).join("");
   document.getElementById("bandBar").innerHTML = bandBarHtml(m);
 
-  // Bento — kern-tegels op het Overzicht (in één oogopslag)
-  const enough = q.usable.length>=14;
-  document.getElementById("tirRing").innerHTML = ringSvg(m.tir, m.tir>=0.70);
-  document.getElementById("tirSub").innerHTML = m.tir>=0.70
-    ? "streef &gt;70% ✓ — je zit goed"
-    : "streef &gt;70% — nog niet gehaald";
-  document.getElementById("gHypo").textContent = pct0(m.tbr);
-  document.getElementById("gCv").textContent   = pct0(m.cv);
-  document.getElementById("gGmi").textContent  = nl1(m.gmi)+"%";
-  document.getElementById("gMean").textContent = nl1(m.mean);
+  const watch = watchList(glucose, q);
+  if (watch.few){ document.getElementById("secWatch").hidden = true; }
+  else { document.getElementById("secWatch").hidden = false; document.getElementById("watch").innerHTML = watchHtml(watch); }
 
-  // AGP
+  document.getElementById("secAgp").hidden = false;
   document.getElementById("agp").innerHTML = agpSvg(ag);
   const highWin = joinBins(ag.filter(x=>x.p50>=10).map(x=>x.b));
   const lowWin  = joinBins(ag.filter(x=>x.p10<3.9).map(x=>x.b));
@@ -1394,35 +1428,62 @@ function render(glucose, treatments, timeline){
   if (lowWin.length)  parts.push(`zakt de onderste band onder 3,9 rond <b>${lowWin.join(", ")}</b>`);
   document.getElementById("agpObs").innerHTML = parts.length
     ? "Over de dag "+parts.join("; en ")+"."
-    : "Je mediaan blijft de hele dag binnen bereik en de onderste band raakt 3,9 niet structureel — een voorspelbaar dagprofiel.";
+    : "Je mediaan blijft de hele dag binnen bereik — een voorspelbaar dagprofiel.";
 
-  // Jouw vragen beantwoord — interpretatielaag over de metrieken
+  document.getElementById("secSafety").hidden = false;
+  document.getElementById("hypoKpis").innerHTML = [
+    ["Hypo-episodes", String(hy.episodes), "≥15 min onder 3,9", false],
+    ["Ernstig (<3,0)", String(hy.level2), "niveau-2", true],
+    ["Korte dips", String(hy.dips), "< 15 min", false],
+    ["'s Nachts", String(hy.nocturnal), "00–06 u", hy.nocturnal>0],
+  ].map(([k,v,s3,warn])=>`<div class="kpi${warn?" safety":""}"><div class="k">${k}</div><div class="v">${v}</div><div class="s">${s3}</div></div>`).join("");
+  document.getElementById("hypoBars").innerHTML = hypoBarsSvg(hy);
+  document.getElementById("safetyObs").innerHTML = (hy.episodes===0 && hy.dips===0
+    ? "Geen waarden onder 3,9 in deze periode — mooi."
+    : hy.episodes===0
+    ? `Geen hypo-episodes van ≥15 min; wel <b>${hy.dips}</b> korte dip${hy.dips===1?"":"s"} onder 3,9 (${pct0(m.tbr)} van je tijd).`
+    : `<b>${hy.episodes}</b> hypo-episode${hy.episodes===1?"":"s"} van ≥15 min onder 3,9 (${pct0(m.tbr)} van je tijd, streef &lt;4%)`+
+      `${hy.level2?`, waarvan <b>${hy.level2}</b> ernstig (<3,0)`:""}`+
+      `${hy.nocturnal?`; <b>${hy.nocturnal}</b> 's nachts (00–06 u)`:hy.worst?`, het vaakst in de ${hy.worst}`:""}`+
+      `${hy.dips?`; plus ${hy.dips} korte dip${hy.dips===1?"":"s"}`:""}.`)
+    + (hy.suspect?` <span class="muted">Bij ${hy.suspect} low${hy.suspect===1?"":"s"} past het patroon van <b>sensordruk</b> — mogelijk niet echt.</span>`:"");
+  document.getElementById("safetyEv").textContent =
+    `n = ${m.n.toLocaleString("nl")} metingen over ${q.usable.length} dagen` + (enough?"":" · ≥14 dagen aanbevolen");
+
+  const ins = insulinCarbs(treatments, timeline, q);
+  if (!treatments.length){ document.getElementById("secInsulin").hidden = true; }
+  else {
+    document.getElementById("secInsulin").hidden = false;
+    document.getElementById("insKpis").innerHTML = [
+      ins.tdd!=null ? ["Totale dagdosis", nl1(ins.tdd), "E/dag (schatting)"] : null,
+      ins.basalPct!=null ? ["Basaal / bolus", `${Math.round(ins.basalPct*100)}/${Math.round(ins.bolusPct*100)}`, "% verhouding"] : null,
+      ["Bolus + SMB", nl1(ins.bolusDay), "E/dag"],
+      ["Koolhydraten", Math.round(ins.carbsDay)+" g", "per dag"],
+      ["Bolussen", nl1(ins.nBolusDay), "handmatig/dag"],
+      ins.nSmbDay>0 ? ["SMB's", Math.round(ins.nSmbDay), "auto/dag"] : null,
+    ].filter(Boolean).map(([k,v,s3])=>`<div class="kpi"><div class="k">${k}</div><div class="v">${v}</div><div class="s">${s3}</div></div>`).join("");
+    document.getElementById("insObs").innerHTML = ins.tdd!=null
+      ? `Basaal is een schatting uit je profielschema (temp-basaal niet meegerekend). Bolus en koolhydraten zijn exact.`
+      : `Bolus en koolhydraten zijn exact. Basaal/bolus-verhouding ontbreekt (geen profiel met basaalschema gevonden).`;
+  }
+
+  const pi = timeline ? profileInfo(timeline, q.to || Date.now()) : null;
+  const oi = observedISF(glucose, treatments, timeline);
+  const MR = mealResults(glucose, treatments, timeline);
+  const drift = basalDrift(glucose, treatments, q);
   const stack = hypoStacking(glucose, treatments, q);
-  const MR    = mealResults(glucose, treatments, timeline);
-  const ex    = exerciseEffect(glucose, treatments);
-  document.getElementById("questions").innerHTML = answerQuestions(m, ag, hy, stack, MR, tr, ex);
+  if (!pi){ document.getElementById("secProfile").hidden = true; }
+  else { document.getElementById("secProfile").hidden = false;
+    document.getElementById("profile").innerHTML = profileHtml(pi, oi, ins, MR); }
+  if (!treatments.length){ document.getElementById("mvsCard").hidden = true; }
+  else { document.getElementById("mvsCard").hidden = false;
+    document.getElementById("tune").innerHTML = fineTune(drift, oi, MR, stack, pi); }
+  document.getElementById("epMaand").classList.toggle("warned",
+    (!watch.few && watch.alerts.length>0) || !!document.querySelector("#tune .wad"));
+  document.getElementById("secDeep").hidden = false;
 
-  // Dag-detail — lijst van dagen met data + de opvallendste dagen bepalen
-  const dayStats=new Map();
-  for(const x of glucose){ const k=localDayKey(x.ts); let s=dayStats.get(k);
-    if(!s){ s={min:Infinity,max:-Infinity,inr:0,n:0}; dayStats.set(k,s); }
-    s.n++; if(x.bg<s.min)s.min=x.bg; if(x.bg>s.max)s.max=x.bg; if(x.bg>=3.9&&x.bg<10)s.inr++; }
-  _dayKeys = [...dayStats.keys()].sort();
-  let worst=null, high=null, best=null;
-  for(const [k,s] of dayStats){ if(s.n<50) continue;                 // genoeg metingen voor een oordeel
-    if(s.min<3.9 && (!worst||s.min<worst.v)) worst={k,v:s.min};
-    if(s.max>10 && (!high ||s.max>high.v )) high ={k,v:s.max};
-    const tir=s.inr/s.n; if(!best||tir>best.v) best={k,v:tir}; }
-  _notable = {worst,high,best};
-  _dayIdx = _dayKeys.length-1;
-  renderDay();
-
-  // Signalen — proactieve watch-list (laatste 14 dagen vs de 14 daarvoor)
-  const watch = watchList(glucose, q);
-  if (watch.few){ document.getElementById("secWatch").hidden = true; }
-  else { document.getElementById("secWatch").hidden = false; document.getElementById("watch").innerHTML = watchHtml(watch); }
-
-  // Samenvatting-tekst voor het behandelteam (delen/kopiëren)
+  // ── samenvatting (delen) ──
+  const opp = opportunity(m, ag, hy, tr);
   const fd = t => t?new Date(t).toLocaleDateString("nl-NL",{day:"2-digit",month:"short",year:"numeric"}):"—";
   const yn = ok => ok?"✓":"✗";
   _summary =
@@ -1437,96 +1498,138 @@ function render(glucose, treatments, timeline){
     `GMI (gesch. HbA1c)      : ${nl1(m.gmi)}%\n`+
     `Gemiddelde glucose      : ${nl1(m.mean)} mmol/L\n`+
     `Hypo-episodes (≥15 min): ${hy.episodes} (waarvan ${hy.level2} ernstig <3,0, ${hy.nocturnal} 's nachts) · korte dips: ${hy.dips}\n\n`+
-    `Aandachtspunt: ${opp.msg.replace(/<[^>]+>/g,"")}\n`;
+    `Aandachtspunt: ${opp.msg.replace(/<[^>]+>/g,"")}\n`+
+    (ins.tdd!=null?`Totale dagdosis: ~${nl1(ins.tdd)} E/dag (basaal/bolus ${Math.round(ins.basalPct*100)}/${Math.round(ins.bolusPct*100)}%)\n`:``)+
+    (pi?`Profiel: basaal ~${pi.basalDaily.toFixed(2).replace(".",",")} E/dag`+(oi.obs!=null?`, gemeten ISF ~${nl1(oi.obs)} mmol/L per E (meetwaarde)`:``)+`\n`:``);
 
-  // Veiligheid — telling, ernst en duur
-  document.getElementById("hypoKpis").innerHTML = [
-    ["Hypo-episodes", String(hy.episodes), "≥15 min onder 3,9", false],
-    ["Ernstig (<3,0)", String(hy.level2), "niveau-2", true],
-    ["Korte dips", String(hy.dips), "< 15 min", false],
-    ["'s Nachts", String(hy.nocturnal), "00–06 u", hy.nocturnal>0],
-  ].map(([k,v,s,warn])=>`<div class="kpi${warn?" safety":""}"><div class="k">${k}</div><div class="v">${v}</div><div class="s">${s}</div></div>`).join("");
-  document.getElementById("hypoBars").innerHTML = hypoBarsSvg(hy);
-  document.getElementById("safetyObs").innerHTML = (hy.episodes===0 && hy.dips===0
-    ? "Geen waarden onder 3,9 in deze periode — mooi."
-    : hy.episodes===0
-    ? `Geen hypo-episodes van ≥15 min; wel <b>${hy.dips}</b> korte dip${hy.dips===1?"":"s"} onder 3,9 (${pct0(m.tbr)} van je tijd).`
-    : `<b>${hy.episodes}</b> hypo-episode${hy.episodes===1?"":"s"} van ≥15 min onder 3,9 (${pct0(m.tbr)} van je tijd, streef &lt;4%)`+
-      `${hy.level2?`, waarvan <b>${hy.level2}</b> ernstig (<3,0)`:""}`+
-      `${hy.nocturnal?`; <b>${hy.nocturnal}</b> 's nachts (00–06 u) — het gevaarlijkst omdat je slaapt`:hy.worst?`, het vaakst in de ${hy.worst}`:""}`+
-      `${hy.dips?`; plus ${hy.dips} korte dip${hy.dips===1?"":"s"}`:""}.`)
-    + (hy.suspect?` <span class="muted">Bij ${hy.suspect} low${hy.suspect===1?"":"s"} past het patroon van <b>sensordruk</b> (snelle duik én snel herstel, bijv. door op de sensor te liggen) — mogelijk niet echt.</span>`:"");
-  document.getElementById("safetyEv").textContent =
-    `n = ${m.n.toLocaleString("nl")} metingen over ${q.usable.length} dagen` + (enough?"":" · ≥14 dagen aanbevolen voor een stabiel beeld");
+  // ── bevindingen + consultlijst (async, buiten de renderflow) ──
+  renderFindings({ glucose, q, m, hy, tr, drift, oi, MR, stack });
+  renderLog(); renderAware(); renderConsult();
+}
 
-  // Hypo-gevoel & bewustzijn (leest gelogde gevoelens; async, buiten de renderflow)
-  renderAware();
+/* ── Bevindingen-engine — de app vertelt wat er toe doet ─────────────────── */
+function fmtHM(ts){ return fmtMin(todMin(ts)); }
+function findingCard(f, st){
+  const seen = st && st.seen && f.seenable;
+  const cls = "f"+(seen?" read":(f.sev==="w"?" unread":f.pos?" unread pos":""));
+  const dot = f.sev==="w"?"w":(f.pos?"g":"n");
+  let html = `<div class="${cls}" data-fid="${f.id}"><div class="fh"><span class="fdot ${dot}"></span>`+
+    `<span class="ftxt">${f.title}</span>${f.when?`<span class="fwhen">${f.when}</span>`:""}</div>`;
+  if (!seen && f.steps && f.steps.length){
+    html += `<details><summary>bewijs</summary><div class="chain">`+
+      f.steps.map((sTxt,i)=>`<div class="step"><span class="no">${i+1}</span><span>${sTxt}</span></div>`).join("")+
+      `</div>${f.fine?`<div class="ffine">${f.fine}</div>`:""}</details>`;
+  }
+  const acts=[];
+  if (!seen && f.dayKey) acts.push(`<button class="act" data-goday="${f.dayKey}">Bekijk de dag</button>`);
+  if (f.consultable){ acts.push(st&&st.onList
+    ? `<button class="act done">✓ op consultlijst</button>`
+    : `<button class="act ghost" data-consult="${f.id}">→ consultlijst</button>`); }
+  if (f.seenable && !seen) acts.push(`<button class="act ghost" data-seen="${f.id}">✓ gezien</button>`);
+  if (acts.length) html += `<div class="acts">${acts.join("")}</div>`;
+  return html+`</div>`;
+}
+let _fctx=null;
+async function renderFindings(ctx){
+  _fctx=ctx;
+  const { MR, drift, q, glucose } = ctx;
+  let fs={}, cl=[];
+  try{ fs=(await DB.meta("fstate"))||{}; cl=(await DB.meta("consultlist"))||[]; }catch(_){}
+  const onList=id=>cl.some(x=>x.id===id);
+  const today=[], week=[];
+  const lastKey=_dayKeys[_dayKeys.length-1];
 
-  // Insuline & koolhydraten
-  const ins = insulinCarbs(treatments, timeline, q);
-  if (!treatments.length){
-    document.getElementById("secInsulin").hidden = true;
+  // vannacht — lows uit de rúwe data van de laatste dag (ook als die dag nog
+  // te weinig dekking heeft voor de maandstatistiek)
+  const dayG=glucose.filter(x=>localDayKey(x.ts)===lastKey);
+  const hyDay=hypoStats(dayG);
+  const nacht=(hyDay.allLows||[]).filter(e=>todMin(e.start)<360);
+  if (nacht.length){
+    const e=nacht[0], sus=nacht.filter(x=>x.suspect).length, isEp=e.dur>=15;
+    today.push({ id:`nacht-${lastKey}`, sev:"w", when:"vannacht", seenable:true, consultable:true, dayKey:lastKey,
+      title:`<b>${isEp?"Hypo":"Dip"} om ${fmtHM(e.start)}</b>${sus?` — past bij sensordruk${nacht.length>1?`, ${nacht.length}× vannacht`:""}`:` — laagste ${nl1(e.min)}`}.`,
+      steps:[ `${nacht.length}× onder 3,9 tussen 00–06 u; laagste <b>${nl1(Math.min(...nacht.map(x=>x.min)))}</b>.`,
+        sus?`Bij ${sus}: snelle duik én snel herstel — <b>te snel voor insuline</b>, het patroon van liggen op de sensor.`:`Duur ${Math.round(e.dur)} min.`,
+        isEp?`Consensus-episode (≥15 min) — telt mee in je maandcijfers.`:`Korte dip (&lt;15 min) — geen consensus-episode.` ],
+      fine:"vroeg signaal, geen alarm" });
   } else {
-    document.getElementById("secInsulin").hidden = false;
-    document.getElementById("insKpis").innerHTML = [
-      ins.tdd!=null ? ["Totale dagdosis", nl1(ins.tdd), "E/dag (schatting)"] : null,
-      ins.basalPct!=null ? ["Basaal / bolus", `${Math.round(ins.basalPct*100)}/${Math.round(ins.bolusPct*100)}`, "% verhouding"] : null,
-      ["Bolus + SMB", nl1(ins.bolusDay), "E/dag"],
-      ["Koolhydraten", Math.round(ins.carbsDay)+" g", "per dag"],
-      ["Bolussen", nl1(ins.nBolusDay), "handmatig/dag"],
-      ins.nSmbDay>0 ? ["SMB's", Math.round(ins.nSmbDay), "auto/dag"] : null,
-    ].filter(Boolean).map(([k,v,s])=>`<div class="kpi"><div class="k">${k}</div><div class="v">${v}</div><div class="s">${s}</div></div>`).join("");
-    document.getElementById("insObs").innerHTML = ins.tdd!=null
-      ? `Basaal is een schatting uit je profielschema (loop-aanpassingen met temp-basaal zijn niet meegerekend). Bolus en koolhydraten zijn exact uit je behandelingen.`
-      : `Bolus en koolhydraten zijn exact. De basaal/bolus-verhouding ontbreekt omdat er geen profiel met basaalschema in Nightscout gevonden is.`;
-    _summary += (ins.tdd!=null?`Totale dagdosis: ~${nl1(ins.tdd)} E/dag (basaal/bolus ${Math.round(ins.basalPct*100)}/${Math.round(ins.bolusPct*100)}%, basaal geschat)\n`:``)
-      + `Bolus+SMB: ${nl1(ins.bolusDay)} E/dag · Koolhydraten: ${Math.round(ins.carbsDay)} g/dag\n`;
+    today.push({ id:`nacht-${lastKey}`, sev:"g", pos:true, when:"vannacht", seenable:false,
+      title:`<b>Rustige nacht</b> — geen waarden onder 3,9.` });
   }
 
-  // Profiel — ingestelde basaal/ISF/KH-ratio, gekoppeld aan wat de data laat zien
-  const pi = profileInfo(timeline, q.to || Date.now());
-  const oi = observedISF(glucose, treatments, timeline);
-  if (!pi){
-    document.getElementById("secProfile").hidden = true;
-  } else {
-    document.getElementById("secProfile").hidden = false;
-    document.getElementById("profile").innerHTML = profileHtml(pi, oi, ins, MR);
-    _summary += `\nProfiel: basaal ~${pi.basalDaily.toFixed(2).replace(".",",")} E/dag`+
-      (oi.obs!=null?`, gemeten ISF ~${nl1(oi.obs)} mmol/L per E (meetwaarde, indicatief)`:``)+`\n`;
+  // week — drie zinnen
+  const med=a=>{const s2=[...a].sort((x,y)=>x-y);return s2.length?s2[Math.floor(s2.length/2)]:null;};
+  if (MR && MR.results.length>=MEAL_MIN){
+    const dp=[["ontbijt",240,660],["lunch",660,900],["diner",900,1320]]
+      .map(([id,lo,hi])=>{const rs=MR.results.filter(r=>r.ts!=null&&todMin(r.ts)>=lo&&todMin(r.ts)<hi);
+        return {id,n:rs.length,rise:med(rs.map(r=>r.peakRise))};}).filter(r=>r.n>=3&&r.rise!=null);
+    if (dp.length>=2){ const top=[...dp].sort((a,b)=>b.rise-a.rise)[0], lo2=[...dp].sort((a,b)=>a.rise-b.rise)[0];
+      if (top.rise-lo2.rise>=1.0)
+        week.push({ id:"dagdeel", sev:"n", seenable:false, consultable:true,
+          title:`Je <b>${top.id}</b> piekt het hoogst: +${nl1(top.rise)} tegen +${nl1(lo2.rise)} bij ${lo2.id}.`,
+          steps:[`Mediaan over ${top.n} ${top.id}en vs ${lo2.n} ${lo2.id}s.`,
+            top.id==="ontbijt"?`Klassiek voor ochtendresistentie.`:`Patroon per dagdeel.`,
+            MR.moffset!=null&&MR.moffset<0?`Prebolus mediaan ${Math.round(-MR.moffset)} min vóór het eten — timing is het niet.`:`Bekijk ook je bolus-timing.`],
+          fine:`n = ${MR.results.length} maaltijden` }); }
   }
-
-  // Fine-tunen — per hefboom: klopt de instelling met de data, en zo niet, welke kant op
-  const drift = basalDrift(glucose, treatments, q);
-  if (!treatments.length){
-    document.getElementById("secTune").hidden = true;
-  } else {
-    document.getElementById("secTune").hidden = false;
-    document.getElementById("tune").innerHTML = fineTune(drift, oi, MR, stack, pi);
+  if (drift && drift.stat){
+    if (!drift.up.length && !drift.down.length)
+      week.push({ id:"drift-ok", sev:"g", pos:true, seenable:false,
+        title:`Je <b>basaal</b> hield je nuchtere uren vlak — geen drift.`,
+        steps:[`Geen enkel uur met structurele stijging of daling in maaltijd- en bolusvrije vensters.`],
+        fine:`n = ${drift.total.toLocaleString("nl")} driftmetingen` });
+    else week.push({ id:"drift", sev:"w", seenable:false, consultable:true,
+        title:`Nuchter ${drift.up.length?`stijg je rond <b>${joinHrs(drift.up.map(x=>x.h)).join(", ")}</b>`:""}${drift.up.length&&drift.down.length?" en ":""}${drift.down.length?`zak je rond <b>${joinHrs(drift.down.map(x=>x.h)).join(", ")}</b>`:""}.`,
+        steps:[`Drift tot ${nl1(Math.max(drift.peakUp||0,Math.abs(drift.peakDown||0)))} mmol/L per uur in stille vensters.`,
+          `In AAPS pas je een basaalblok ~1–2 u vóór het effect aan — bespreek met je team.`],
+        fine:`n = ${drift.total.toLocaleString("nl")} driftmetingen` });
   }
+  try{
+    const anns=(await DB.all("annotations")).filter(a=>a.type==="wijziging" && a.ts>Date.now()-21*DAY).sort((a,b)=>b.ts-a.ts);
+    if (anns.length){ const c=anns[0]; const ba=beforeAfter(glucose,q,c.ts,14);
+      if (ba.before.ok && ba.after.ok){ const b=ba.before.m, a2=ba.after.m; const up=a2.tir-b.tir>=0.03 && a2.tbr-b.tbr<=0.01;
+        week.push({ id:`wijz-${c.ts}`, sev: up?"g":"n", pos:up, seenable:true, consultable:true,
+          title:`Je wijziging van <b>${new Date(c.ts).toLocaleDateString("nl-NL",{day:"numeric",month:"long"})}</b>${up?" hield stand":""}: ${pct0(b.tir)} → ${pct0(a2.tir)} in bereik.`,
+          steps:[`Hypo-tijd ${pct0(b.tbr)} → ${pct0(a2.tbr)}.`,
+            ba.dip?`⚠ De periode vóór de wijziging was zelf een dip — winst kan deels terugveer zijn.`:`Kanttekening: winst na een mindere periode kan deels terugveer zijn.`,
+            `De komende weken maken het beeld hard.`],
+          fine:`14 d vóór vs ná · ≥70% dekking${c.note?` · "${esc(c.note)}"`:""}` }); } }
+  }catch(_){}
 
-  // Trend over de weken
-  if (tr.length<2){
-    document.getElementById("secTrend").hidden = true;
-  } else {
-    document.getElementById("secTrend").hidden = false;
-    document.getElementById("trend").innerHTML = trendSvg(tr);
-    const f=tr[0], l=tr[tr.length-1], dTir=l.tir-f.tir, dTbr=l.tbr-f.tbr;
-    const dir = dTir>0.05 ? "<b>omhoog</b> — je tijd in bereik verbetert"
-      : dTir<-0.05 ? "<b>omlaag</b> — je tijd in bereik zakt" : "<b>stabiel</b>";
-    const hypoNote = Math.abs(dTbr)>=0.01
-      ? ` Je hypo-tijd ging van ${pct0(f.tbr)} naar ${pct0(l.tbr)}${dTbr>0?" — houd dat in de gaten":""}.`
-      : "";
-    document.getElementById("trendObs").innerHTML =
-      `Over ${tr.length} weken beweegt je tijd in bereik ${dir} (van ${pct0(f.tir)} naar ${pct0(l.tir)}).${hypoNote}`;
-    document.getElementById("trendTable").innerHTML =
-      `<div style="display:grid;grid-template-columns:auto 1fr 1fr 1fr;gap:.15rem .8rem;font-variant-numeric:tabular-nums">`+
-      `<b style="color:var(--muted)">week</b><b style="color:var(--muted)">TIR</b><b style="color:var(--muted)">hypo</b><b style="color:var(--muted)">CV</b>`+
-      tr.map(w=>`<span>${new Date(w.end).toLocaleDateString("nl-NL",{day:"2-digit",month:"2-digit"})}</span><span>${pct0(w.tir)}</span><span>${pct0(w.tbr)}</span><span>${pct0(w.cv)}</span>`).join("")+
-      `</div>`;
-  }
+  const paint=(el,list)=>{ el.innerHTML=list.map(f2=>findingCard(f2,{seen:fs[f2.id]&&fs[f2.id].seen,onList:onList(f2.id)})).join(""); };
+  paint(document.getElementById("findToday"), today);
+  paint(document.getElementById("findWeek"), week);
+  const warned=list=>list.some(f2=>f2.sev==="w" && !(fs[f2.id]&&fs[f2.id].seen));
+  document.getElementById("epVandaag").classList.toggle("warned", warned(today));
+  document.getElementById("epWeek").classList.toggle("warned", warned(week));
+  const all=[...today,...week];
+  document.querySelectorAll("[data-seen]").forEach(b2=>b2.onclick=async()=>{
+    const st2=(await DB.meta("fstate"))||{}; st2[b2.dataset.seen]={...(st2[b2.dataset.seen]||{}),seen:1};
+    await DB.meta("fstate",st2); renderFindings(ctx); });
+  document.querySelectorAll("[data-consult]").forEach(b2=>b2.onclick=async()=>{
+    const f2=all.find(x=>x.id===b2.dataset.consult); if(!f2) return;
+    const l2=(await DB.meta("consultlist"))||[];
+    if(!l2.some(x=>x.id===f2.id)) l2.push({id:f2.id, title:f2.title.replace(/<[^>]+>/g,""), ts:Date.now()});
+    await DB.meta("consultlist",l2); toast("Op je consultlijst gezet."); renderFindings(ctx); renderConsult(); });
+  document.querySelectorAll("[data-goday]").forEach(b2=>b2.onclick=()=>{
+    const i=_dayKeys.indexOf(b2.dataset.goday); if(i>=0){ _dayIdx=i; renderDay(); }
+    document.getElementById("secDay").scrollIntoView({behavior:"smooth",block:"center"}); });
+}
 
-  // Logboek + voor/na-vergelijking (leest annotaties uit IndexedDB; async, buiten de renderflow)
-  renderLog();
+/* ── Consultlijst — verzamelt bespreekpunten richting je afspraak ────────── */
+async function renderConsult(){
+  const el=document.getElementById("consultList"); if(!el) return;
+  let cl=[]; try{ cl=(await DB.meta("consultlist"))||[]; }catch(_){}
+  document.getElementById("consultSub").textContent = cl.length?`${cl.length} punt${cl.length===1?"":"en"} verzameld`:"";
+  const badge=document.getElementById("consultBadge");
+  if (badge){ badge.textContent=cl.length; badge.hidden=!cl.length; }
+  el.innerHTML = cl.length
+    ? cl.map(c=>`<div class="citem"><span>${esc(c.title)}</span><button class="del" data-cid="${esc(c.id)}" aria-label="verwijderen">✕</button></div>`).join("")
+    : `<div class="muted" style="padding:.2rem .1rem .4rem">Nog niets verzameld. Zet bevindingen met <b>→ consultlijst</b> hierop — ze komen automatisch in je rapport.</div>`;
+  el.querySelectorAll("[data-cid]").forEach(b2=>b2.onclick=async()=>{
+    let l2=(await DB.meta("consultlist"))||[]; l2=l2.filter(x=>x.id!==b2.dataset.cid);
+    await DB.meta("consultlist",l2); renderConsult();
+    if(_fctx) renderFindings(_fctx); });
 }
 
 /* ══ VERDIEPING — geavanceerde analyses (lui: pas bij openklappen) ═════════ */
@@ -1783,79 +1886,7 @@ function anWatIfISF(glucose, treatments, q, timeline){
     `<div class="muted" style="margin-top:.4rem">Eerste-orde benadering over ${r.n} schone correcties, met je gemeten daling van ~${nl1(r.realISF)} mmol/L per E als sensitiviteit. Tegenregulatie zit er níét in, dus "eindigt laag" is een risico-indicatie. Meer correctie-insuline (sterkere ISF) landt lager maar verhoogt het hypo-risico. Ter lering, geen instelwaarde.</div>`;
 }
 
-// Beweging: geregistreerde exercise-/activiteit-events koppelen aan glucosedalingen.
-function exerciseEffect(glucose, treatments){
-  const ev=treatments.filter(t=>
-    /exercis|activ|training|sport|beweg/i.test(t.type||"") ||
-    /sport|hardloop|fiets|wandel|training|gym|beweg|workout|run|ride/i.test(t.notes||""));
-  const T=glucose.map(g=>g.ts); const lb=ts=>{let lo=0,hi=T.length;while(lo<hi){const m=(lo+hi)>>1;if(T[m]<ts)lo=m+1;else hi=m;}return lo;};
-  const drops=[]; let lows=0;
-  for(const e of ev){
-    const dur=(e.duration||30)*60e3, from=e.ts, to=e.ts+dur+2*3600e3;
-    const win=[]; for(let i=lb(from);i<T.length&&T[i]<=to;i++)win.push(glucose[i]);
-    if(win.length<6) continue;
-    const bg0=win[0].bg, minBg=Math.min(...win.map(x=>x.bg));
-    drops.push(bg0-minBg); if(minBg<3.9) lows++;
-  }
-  if(drops.length<3) return { n:drops.length, events:ev.length };
-  const s=[...drops].sort((a,b)=>a-b);
-  return { n:drops.length, events:ev.length, medDrop:s[Math.floor(s.length/2)], lowFrac:lows/drops.length };
-}
 
-// ── "Jouw vragen beantwoord" — de interpretatielaag ────────────────────────
-function answerQuestions(m, ag, hy, stack, MR, tr, ex){
-  const highWin=joinBins(ag.filter(x=>x.p50>=10).map(x=>x.b));
-  const mealsOk = MR.results.length>=MEAL_MIN;
-  const qa=[];
-
-  // 1 — lows
-  let a1;
-  if(hy.episodes===0 && hy.dips===0) a1="Je hebt geen waarden onder 3,9 in deze periode — er is geen laag-patroon om te verklaren.";
-  else if(hy.episodes===0) a1=`Alleen ${hy.dips} korte dip${hy.dips===1?"":"s"} (<15 min) onder 3,9 — geen echte episodes. ${hy.suspect?`Bij ${hy.suspect} past het sensordruk-patroon.`:""}`;
-  else { let p=`Je had <b>${hy.episodes}</b> hypo-episode${hy.episodes===1?"":"s"} (≥15 min)${hy.nocturnal?`, waarvan <b>${hy.nocturnal}</b> 's nachts`:""}.`;
-    if(stack.elevated) p+=` De duidelijkste oorzaak: <b>gestapelde correcties</b> gingen ${pct0(stack.caseRate)} van je lows vooraf (tegen ${pct0(stack.ctrlRate)} normaal).`;
-    else if(stack.cases) p+=` Gestapelde correcties springen er niet uit als oorzaak.`;
-    if(ex&&ex.lowFrac>=0.3) p+=` Ook rond beweging eindig je vaker laag.`;
-    a1=p; }
-  qa.push(["Wat veroorzaakt mijn lows?", a1]);
-
-  // 2 — highs
-  let a2;
-  if(highWin.length){ a2=`Je zit het vaakst hoog rond <b>${highWin.join(", ")}</b>.`;
-    if(mealsOk && MR.mrise>=3.5) a2+=` Na maaltijden piek je mediaan +${nl1(MR.mrise)} mmol/L, dus een deel is post-maaltijd.`; }
-  else a2="Je mediaan blijft de hele dag binnen bereik — geen vast hoog-venster.";
-  qa.push(["Wanneer ga ik het vaakst hoog?", a2]);
-
-  // 3 — meals vs insulin
-  let a3;
-  if(!mealsOk) a3="Nog te weinig geïsoleerde maaltijden (met profieldata) voor een oordeel.";
-  else {
-    const rise=MR.mrise, off=MR.moffset;
-    const timing = off==null ? "" : off>5 ? ` Je bolust nu gemiddeld ${Math.round(off)} min ná het eten — eerder bolussen dempt de piek.` :
-      off<-5 ? ` Je bolust gemiddeld ${Math.round(-off)} min vóór het eten (goede prebolus).` : ` Je bolust rond het moment van eten; een paar minuten prebolus helpt vaak.`;
-    if(rise>=4) a3=`Niet helemaal: je piekt na maaltijden mediaan <b>+${nl1(rise)} mmol/L</b> (tot ~${nl1(MR.mpeak)}). Dat wijst op te late of te weinig maaltijdinsuline.${timing}`;
-    else if(rise>=2.5) a3=`Redelijk: je maaltijdpiek is mediaan +${nl1(rise)} mmol/L.${timing}`;
-    else a3=`Ja: je maaltijdpieken blijven beperkt (+${nl1(rise)} mmol/L) — eten en insuline zijn goed op elkaar afgestemd.`;
-  }
-  qa.push(["Zijn mijn maaltijden goed afgestemd op insuline?", a3]);
-
-  // 4 — exercise (+ sleep/stress niet beschikbaar)
-  let a4;
-  if(!ex || ex.n<3) a4=`Ik zie ${ex&&ex.events?`${ex.events} beweeg-event(s), te weinig`:"geen beweeg-events"} in je Nightscout. Log je beweging in AAPS (Exercise/Activity), dan analyseer ik of het je glucose laat dalen. Slaap en stress zitten meestal niet in de data.`;
-  else { a4=`Rond je <b>${ex.n}</b> geregistreerde beweegmomenten daalt je glucose mediaan <b>${nl1(ex.medDrop)} mmol/L</b>${ex.lowFrac>0?`, en ${pct0(ex.lowFrac)} eindigt in een low`:""}.`;
-    if(ex.lowFrac>=0.3) a4+=` Rond inspanning eindig je opvallend vaak laag — een concreet bespreekpunt voor je behandelteam.`; }
-  qa.push(["Beïnvloedt beweging (of slaap) mijn cijfers?", a4]);
-
-  // 5 — trend
-  let a5;
-  if(tr.length<2) a5="Nog te weinig weken met genoeg data voor een trend — kom hier over een paar weken op terug.";
-  else { const f=tr[0], l=tr[tr.length-1], d=l.tir-f.tir;
-    const dir=d>0.05?"<b>je wordt beter</b>":d<-0.05?"<b>het zakt iets</b>":"<b>het is stabiel</b>";
-    a5=`Over ${tr.length} weken ging je tijd in bereik van ${pct0(f.tir)} naar ${pct0(l.tir)} — ${dir}.${Math.abs(l.tbr-f.tbr)>=0.01?` Je hypo-tijd ging van ${pct0(f.tbr)} naar ${pct0(l.tbr)}.`:""}`; }
-  qa.push(["Word ik beter over de weken, niet alleen vandaag?", a5]);
-
-  return qa.map(([q,a])=>`<div class="qa"><div class="q">${q}</div><div class="a">${a}</div></div>`).join("");
-}
 
 // ── Logboek & voor/na-vergelijker ──────────────────────────────────────────
 // Jouw eigen gebeurtenissen als geheugenlaag. Een "wijziging" dient tegelijk als
@@ -2125,6 +2156,10 @@ async function buildReport(){
   if(aw.n>=6 && aw.trend && aw.trend.delta<=-0.5) vragen.push(`Mijn hypo-voelgrens lijkt te zakken (${nl1(aw.trend.early)}→${nl1(aw.trend.late)}) — moeten we mijn hypo-bewustzijn bespreken?`);
   const vragenHtml = vragen.length ? `<ul class="rlist">`+vragen.slice(0,6).map(v=>`<li>${v}</li>`).join("")+`</ul>` : `<p class="rnone">—</p>`;
 
+  let clist=[]; try{ clist=(await DB.meta("consultlist"))||[]; }catch(_){}
+  const clHtml = clist.length
+    ? `<h2>Door de patiënt aangevinkt</h2><ul class="rlist">${clist.map(c=>`<li>${esc(c.title)}</li>`).join("")}</ul>` : "";
+
   return `<div class="rtoolbar"><button class="ghost" id="btnRepPrint">🖨 Opslaan als PDF</button><button class="ghost" id="btnRepClose">✕ Sluiten</button></div>`+
     `<div class="rep"><h1>Consultrapport — DiaMetric</h1>`+
     `<div class="rmeta">Periode ${fd(q.from)} – ${fd(q.to)} · ${q.usable.length}/${q.days.length} dagen · ${pct0(q.coverage)} dekking · opgesteld ${fd(Date.now())}</div>`+
@@ -2132,7 +2167,7 @@ async function buildReport(){
     `<h2>Veiligheid</h2>${veil}`+
     (sig?`<h2>Wat verandert (laatste 2 weken)</h2>${sig}`:``)+
     `<h2>Insuline &amp; profiel</h2>${insP||'<p class="rnone">Geen behandel-/profieldata beschikbaar.</p>'}`+
-    `<h2>Bespreekpunten</h2>${besp}`+
+    `<h2>Bespreekpunten</h2>${besp}`+clHtml+
     `<h2>Wijzigingen &amp; effect</h2>${wijz}`+
     `<h2>Vragen voor het gesprek</h2>${vragenHtml}`+
     `<div class="rfoot">Observaties uit eigen CGM- en pompdata (Nightscout / AndroidAPS), automatisch samengevat door DiaMetric. Geen insteladviezen; richtingen zijn hypotheses ter bespreking. Glucose in mmol/L.</div></div>`;
@@ -2247,18 +2282,25 @@ function applyTheme(t){
 document.getElementById("inTheme").onchange=e=>applyTheme(e.target.value);   // direct effect, geen "Bewaren" nodig
 applyTheme(document.documentElement.dataset.theme||"auto");
 
-// Tabbladen — verdeelt de secties over Overzicht / Veiligheid / Instellen / Voortgang
-let _tab = (()=>{ try{ return sessionStorage.getItem("tab")||"overzicht"; }catch(_){ return "overzicht"; } })();
-function applyTab(tab){
-  _tab = tab;
-  try{ sessionStorage.setItem("tab",tab); }catch(_){}
+// Tijdschaal-scrubber — springt naar een epoch; scrollspy houdt de actieve bij
+const _epochOf={nu:"secNow",vandaag:"epVandaag",week:"epWeek",maand:"epMaand",consult:"epConsult"};
+function setScrub(tab){
   document.querySelectorAll("#tabbar .tab").forEach(b=>{ const on=b.dataset.tab===tab;
     b.classList.toggle("on",on); if(on) b.setAttribute("aria-current","page"); else b.removeAttribute("aria-current"); });
-  document.querySelectorAll("main section[data-group]").forEach(s=>s.classList.toggle("tabhide", s.dataset.group!==tab));
-  window.scrollTo({top:0});
 }
-document.querySelectorAll("#tabbar .tab").forEach(b=>b.onclick=()=>applyTab(b.dataset.tab));
-applyTab(_tab);
+document.querySelectorAll("#tabbar .tab").forEach(b=>b.onclick=()=>{
+  setScrub(b.dataset.tab);
+  if (b.dataset.tab==="nu"){ window.scrollTo({top:0,behavior:"smooth"}); return; }
+  const el=document.getElementById(_epochOf[b.dataset.tab]); if(el) el.scrollIntoView({behavior:"smooth",block:"start"});
+});
+try{
+  const _io=new IntersectionObserver(es=>{ for(const e of es) if(e.isIntersecting) setScrub(e.target.dataset.epoch); },
+    {rootMargin:"-35% 0px -55% 0px"});
+  document.querySelectorAll(".epoch").forEach(el=>_io.observe(el));
+  window.addEventListener("scroll",()=>{ if(window.scrollY<80) setScrub("nu"); },{passive:true});
+}catch(_){}
+// stickyhoogte van de kop voor de Nu-strip
+try{ document.documentElement.style.setProperty("--headh", document.querySelector("header").offsetHeight+"px"); }catch(_){}
 
 // Hypo-gevoel
 buildAwChips();

@@ -19,7 +19,7 @@ await page.waitForFunction(()=>!document.getElementById('secAware').hidden,{time
 await page.waitForTimeout(300);
 // log 8 hypo-gevoelens: eerste helft merkt bij ~3,7; tweede helft pas bij ~3,0 (dalende voelgrens)
 const feltVals=[3.8,3.7,3.6,3.9,3.7, 3.1,3.0,2.9,3.2,3.0];
-await page.evaluate(()=>{applyTab('veiligheid'); const n=document.getElementById('tabbar'); if(n) n.style.display='none';}); await page.waitForTimeout(120);
+await page.evaluate(()=>{document.getElementById('secAware').open=true; const n=document.getElementById('tabbar'); if(n) n.style.display='none';}); await page.waitForTimeout(120);
 for(let i=0;i<feltVals.length;i++){
   const ts=now-(feltVals.length-i)*2.5*DAY; // verspreid over de periode, oud→nieuw
   const d=new Date(ts),p=n=>String(n).padStart(2,'0');

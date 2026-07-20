@@ -19,11 +19,12 @@ await page.route('https://mock.nightscout.test/**',route=>{const u=new URL(route
 await page.goto(FILE,{waitUntil:'load'});
 await page.fill('#inUrl','https://mock.nightscout.test');await page.fill('#inTok','x');await page.fill('#inDays','40');
 await page.click('#btnSave');
-await page.waitForFunction(()=>!document.getElementById('secSummary').hidden,{timeout:40000}).catch(()=>{});
+await page.waitForFunction(()=>!document.getElementById('secInsulin').hidden,{timeout:40000}).catch(()=>{});
 await page.waitForTimeout(300);
 // voeg een wijziging + hypogevoel toe zodat die secties gevuld zijn
 await page.evaluate(async()=>{ await DB.putMany("annotations",[{id:"c1",ts:Date.now()-16*864e5,type:"wijziging",note:"nachtbasaal 03u +0,05",created:Date.now()}]);
   for(let i=0;i<7;i++) await DB.putMany("annotations",[{id:"h"+i,ts:Date.now()-(20-i*2)*864e5,type:"hypogevoel",measured:3.6-i*0.08,intensity:"duidelijk",created:Date.now()}]); });
+await page.evaluate(()=>{const n=document.getElementById('tabbar'); if(n) n.style.display='none';});
 await page.click('#btnReport');
 await page.waitForFunction(()=>{const r=document.getElementById('report');return r&&!r.hidden&&r.querySelector('.rep h1');},{timeout:15000}).catch(()=>{});
 await page.waitForTimeout(300);
@@ -41,7 +42,7 @@ console.log('kernwaarde-rijen:',r.kern,'| lijsten:',r.besp);
 console.log('meta:',r.meta);
 console.log('errors:',errors.length?errors:'geen');
 await page.click('#btnRepClose'); await page.waitForTimeout(200);
-const closed=await page.evaluate(()=>({reporting:document.body.classList.contains('reporting'),reportHidden:document.getElementById('report').hidden,ovVisible:!!document.getElementById('secSummary').offsetParent}));
+const closed=await page.evaluate(()=>({reporting:document.body.classList.contains('reporting'),reportHidden:document.getElementById('report').hidden,ovVisible:!!document.getElementById('epMaand').offsetParent}));
 console.log('na sluiten:',JSON.stringify(closed));
 await page.screenshot({path:'/tmp/diametric-tests/report.png',fullPage:true});
 await browser.close();
