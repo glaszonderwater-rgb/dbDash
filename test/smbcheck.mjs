@@ -7,10 +7,10 @@ const entries=[],treatments=[];
 for(let t=start;t<now;t+=STEP){const d=new Date(t);entries.push({_id:'e'+t,date:t,dateString:d.toISOString(),sgv:Math.round(6.5*MG),type:'sgv',direction:'Flat'});}
 for(let day=start;day<now;day+=DAY){
   const mt=day+8*3600e3;
-  treatments.push({_id:'m'+mt,created_at:new Date(mt).toISOString(),eventType:'Meal Bolus',carbs:50,insulin:5});           // handmatig
-  treatments.push({_id:'c'+mt,created_at:new Date(day+15*3600e3).toISOString(),eventType:'Correction Bolus',insulin:1.5}); // handmatig
-  // SMB-variant zónder isSMB-veld: alleen eventType 'SMB' (detectSMB moet dit vangen)
-  for(let k=1;k<=3;k++) treatments.push({_id:'s'+mt+k,created_at:new Date(mt+k*12*60e3).toISOString(),eventType:'SMB',insulin:0.4});
+  treatments.push({_id:'m'+mt,created_at:new Date(mt).toISOString(),eventType:'Meal Bolus',type:'NORMAL',carbs:50,insulin:5});           // handmatig
+  treatments.push({_id:'c'+mt,created_at:new Date(day+15*3600e3).toISOString(),eventType:'Correction Bolus',type:'NORMAL',insulin:1.5}); // handmatig
+  // Echte AAPS-vorm: eventType 'Correction Bolus' + type 'SMB', géén isSMB-veld
+  for(let k=1;k<=3;k++) treatments.push({_id:'s'+mt+k,created_at:new Date(mt+k*12*60e3).toISOString(),eventType:'Correction Bolus',type:'SMB',insulin:0.4});
 }
 const profile=[{_id:'p1',mills:start,defaultProfile:'Default',units:'mmol',store:{Default:{dia:6,units:'mmol',basal:[{time:'00:00',value:0.9}],sens:[{time:'00:00',value:2.0}],carbratio:[{time:'00:00',value:10}]}}}];
 const inR=(a,g,l)=>a.filter(r=>r.date>=g&&r.date<l),inC=(a,g,l)=>a.filter(r=>{const v=Date.parse(r.created_at);return v>=g&&v<l;});

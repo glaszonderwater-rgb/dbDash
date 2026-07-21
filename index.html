@@ -855,8 +855,9 @@ async function loadTreatments(days){
 // notes/enteredBy die "SMB" zegt). Ontbreekt élk signaal, dan valt een SMB terug op
 // "handmatig" — de diagnose in de Insuline-sectie laat zien wat jouw data meestuurt.
 function detectSMB(t){
+  if(t.type==="SMB") return true;                              // AAPS: bolus-type NORMAL vs SMB
   if(t.isSMB===true||t.isSMB==="true"||t.isSMB===1) return true;
-  if(t.eventType==="SMB") return true;
+  if(t.eventType==="SMB"||t.eventType==="SMB Bolus") return true;
   const s=`${t.enteredBy||""} ${t.notes||""}`;
   return /\bSMB\b/i.test(s);
 }
@@ -1228,7 +1229,8 @@ function smbDiagnostic(treatments){
     : "—";
   return `<div class="muted" style="line-height:1.7">`+
     `<b>${smb}</b> van ${bol.length} bolussen worden nu als SMB herkend.<br>`+
-    `eventType: ${hist(t=>(t.raw&&t.raw.eventType)||t.type)}<br>`+
+    `eventType: ${hist(t=>(t.raw&&t.raw.eventType))}<br>`+
+    `type: ${hist(t=>t.raw&&t.raw.type)}<br>`+
     `enteredBy: ${hist(t=>t.raw&&t.raw.enteredBy)}<br>`+
     `kleine (&lt;1 E) koolhydraatvrije bolussen: <b>${small.length}</b><br>`+
     `velden op zo'n bolus: <code>${rawKeys.map(esc).join(", ")||"—"}</code></div>`+
