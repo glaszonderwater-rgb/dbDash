@@ -1081,7 +1081,7 @@ function fineTuneData(drift, oi, MR, stack, pi){
   // 4 — Prebolus / timing
   { let st="na", read, dir=null, ev=`n = ${nMeals} maaltijden`;
     if(!mealsOk || MR.moffset==null){ read="Nog te weinig maaltijden met bolus-timing om je prebolus te beoordelen."; }
-    else { const off=MR.moffset, rise=MR.mrise; const nT=MR.results.filter(r=>r.bolusOffset!=null).length; ev=`n = ${nT} maaltijden met timing`;
+    else { const off=MR.moffset, rise=MR.mrise; const nT=MR.results.filter(r=>r.bolusOffset!=null).length; ev=`n = ${nT} maaltijden · handmatige bolus t.o.v. je koolhydraat-invoer (= je bolusmoment als je met de wizard logt), SMB's tellen niet mee`;
       if(off<-5){ st="ok"; read=`Je bolust gemiddeld ${Math.round(-off)} min vóór het eten — een goede prebolus.`; }
       else if(rise>=3){ st="warn"; read=`Je bolust ${off>5?`gemiddeld ${Math.round(off)} min ná`:"rond het moment van"} eten en piekt +${nl1(rise)} mmol/L.`; dir="bolus 10–15 min eerder — dat dempt de piek zónder meer insuline"; }
       else { st="ok"; read=`Je bolust ${off>5?`${Math.round(off)} min ná`:"rond"} het eten, maar je piek blijft beperkt — timing is hier geen knelpunt.`; } }
@@ -1822,8 +1822,11 @@ function mealResults(glucose, treatments, timeline){
     if(mealBolus<0.5) continue;
     const win=[]; for(let i=lb(m.ts);i<T.length&&T[i]<=m.ts+WIN;i++)win.push(glucose[i]);
     if(win.length<MIN_READ)continue; if(win[0].ts-m.ts>15*60e3)continue;
-    // timing van de bolus t.o.v. de maaltijd (negatief = prebolus)
-    const nb=wB.filter(b=>b.ts>=m.ts-30*60e3 && b.ts<=m.ts+30*60e3).sort((a,b)=>a.ts-b.ts)[0];
+    // Timing van de HANDMATIGE bolus t.o.v. de koolhydraat-invoer (negatief = prebolus).
+    // SMB's tellen niet mee: een loop-SMB vlak vóór de maaltijd zou anders als een
+    // valse prebolus meetellen. Kanttekening: de invoertijd is het bolusmoment, niet
+    // per se wanneer je begon te eten — wie tijdens/na het eten logt, meet ~0.
+    const nb=wB.filter(b=>!b.isSMB && b.ts>=m.ts-30*60e3 && b.ts<=m.ts+30*60e3).sort((a,b)=>a.ts-b.ts)[0];
     const bolusOffset = nb ? (nb.ts-m.ts)/60000 : null;
     const bg0=win[0].bg; let cum=0,peak=bg0,tPeak=0; const curve=[{min:0,cum:0}];
     for(let i=1;i<win.length;i++){ const dt=(win[i].ts-win[i-1].ts)/60000; if(dt<=0||dt>20)continue;
