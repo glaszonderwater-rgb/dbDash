@@ -1528,9 +1528,12 @@ function render(glucose, treatments, timeline){
       ["Bolussen", nl1(ins.nBolusDay), "handmatig/dag"],
       ins.nSmbDay>0 ? ["SMB's", Math.round(ins.nSmbDay), "auto/dag"] : null,
     ].filter(Boolean).map(([k,v,s3])=>`<div class="kpi"><div class="k">${k}</div><div class="v">${v}</div><div class="s">${s3}</div></div>`).join("");
-    document.getElementById("insObs").innerHTML = ins.tdd!=null
+    document.getElementById("insObs").innerHTML = (ins.tdd!=null
       ? `Basaal is een schatting uit je profielschema (temp-basaal niet meegerekend). Bolus en koolhydraten zijn exact.`
-      : `Bolus en koolhydraten zijn exact. Basaal/bolus-verhouding ontbreekt (geen profiel met basaalschema gevonden).`;
+      : `Bolus en koolhydraten zijn exact. Basaal/bolus-verhouding ontbreekt (geen profiel met basaalschema gevonden).`)
+      + (ins.nSmbDay>0
+        ? ` SMB's (automatische micro-bolus) worden apart geteld en tellen níét mee als handmatige correctie — zo blijven gemeten ISF en de patronen op jóuw bolussen gebaseerd.`
+        : ` Geen SMB's herkend. Loop je closed-loop, controleer dan of je Nightscout het <code>isSMB</code>-veld meestuurt; anders tellen SMB's mee als handmatige bolus.`);
   }
 
   const pi = timeline ? profileInfo(timeline, q.to || Date.now()) : null;
@@ -1882,7 +1885,9 @@ function nightSim(glucose, treatments, q, timeline, oi, MULT=[0.9,0.95,1.0,1.05,
 }
 // Maaltijdinsuline-simulatie (≈ je KH-ratio-hefboom): schaal je maaltijdbolus en
 // reken de contrafeitelijke maaltijdpiek door. Eerste-orde model: extra insuline ×
-// ISF via de activiteitscurve, timing constant gehouden. Gebruikt door Bespreekwaarden.
+// ISF via de activiteitscurve, timing constant gehouden. Alleen je HANDMATIGE bolus
+// wordt geschaald — SMB's zijn de loop die reageert, geen KH-ratio-hefboom. Gebruikt
+// door Bespreekwaarden.
 function mealSim(MR, oi, MULT=[0.9,0.95,1.0,1.05,1.1], minN=MEAL_MIN){
   const rs=(MR.results||[]).filter(r=>r.win&&r.wB&&r.wB.length&&r.isf&&r.dia);
   if(rs.length<minN) return { few:rs.length };
@@ -1891,7 +1896,7 @@ function mealSim(MR, oi, MULT=[0.9,0.95,1.0,1.05,1.1], minN=MEAL_MIN){
   const res=MULT.map(k=>{ const rises=[]; let lows=0;
     for(const r of rs){ const mdl=insulinModel(PEAK_MIN,r.dia); let peak=-Infinity, minb=Infinity;
       for(const p of r.win){ let extra=0;
-        for(const b of r.wB){ const dm=(p.ts-b.ts)/60000; if(dm<=0||dm>=r.dia)continue; extra += b.insulin*(k-1)*(1-mdl.iob(dm)); }
+        for(const b of r.wB){ if(b.isSMB)continue; const dm=(p.ts-b.ts)/60000; if(dm<=0||dm>=r.dia)continue; extra += b.insulin*(k-1)*(1-mdl.iob(dm)); }
         const cf=p.bg - (useObs?oi.obs:r.isf)*extra; if(cf>peak)peak=cf; if(cf<minb)minb=cf; }
       rises.push(peak-r.bg0); if(minb<3.9)lows++; }
     return { k, riseMed:med(rises), lowFrac:lows/rs.length, n:rs.length }; });
