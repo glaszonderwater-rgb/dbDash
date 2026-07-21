@@ -18,6 +18,7 @@ Playwright-browserinstallatie.
 - `propcheck` — bespreekwaarden per dagdeel (behoudend + gemeten, effect, hypo-risicovlag, celtoestanden ✓/—/→, ISF+basaal)
 - `smbcheck` — SMB-herkenning via type:"SMB" (AAPS/Omnipod)
 - `mealrescuecheck` — koolhydraten zónder bolus (hypo-redding) tellen niet als maaltijd
+- `weekcheck` — "Deze week" valt nooit leeg terug (fallback bij een closed loop zonder patronen)
 - `logcheck` / `exportcheck` — logboek, voor/na, back-up round-trip
 - `awcheck` / `hypodef` — hypo-gevoel; episode/dip/sensordruk-classificatie
 - `pcheck` / `insulincheck` / `iobcheck` / `dscheck` — profiel, insulinetype, IOB/COB, devicestatus

@@ -1681,6 +1681,24 @@ async function renderFindings(ctx){
           fine:`14 d vóór vs ná · ≥70% dekking${c.note?` · "${esc(c.note)}"`:""}` }); } }
   }catch(_){}
 
+  // Val nooit leeg terug: als geen enkel week-patroon vuurt (vaak bij een closed
+  // loop — SMB's breken de schone nuchtere vensters), toon dan je week-beeld.
+  if (week.length===0){
+    const to=q.to||Date.now(), wk=glucose.filter(x=>x.ts>to-7*DAY);
+    if (wk.length>=100){
+      const inR=wk.filter(x=>x.bg>=3.9&&x.bg<=10).length/wk.length, lo=wk.filter(x=>x.bg<3.9).length/wk.length;
+      week.push({ id:"week-sum", sev:"n", seenable:false,
+        title:`Deze week <b>${pct0(inR)}</b> in bereik${lo>=0.005?`, ${pct0(lo)} onder 3,9`:", nauwelijks hypo's"}.`,
+        steps:[`Nog geen uitgesproken week-patroon om apart te melden.`,
+          `Bij een closed loop maskeren SMB's en temp-basaal vaak de basaaldrift; maaltijdpatronen komen pas met genoeg geïsoleerde, geboluste maaltijden.`],
+        fine:`laatste 7 dagen · n = ${wk.length.toLocaleString("nl")}` });
+    } else {
+      week.push({ id:"week-none", sev:"n", seenable:false,
+        title:`Nog te weinig data deze week voor patronen.`,
+        steps:[`Met meer synchronisatie of historie verschijnt hier je week-beeld.`] });
+    }
+  }
+
   const paint=(el,list)=>{ el.innerHTML=list.map(f2=>findingCard(f2,{seen:fs[f2.id]&&fs[f2.id].seen,onList:onList(f2.id)})).join(""); };
   paint(document.getElementById("findToday"), today);
   paint(document.getElementById("findWeek"), week);
