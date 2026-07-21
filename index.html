@@ -316,6 +316,23 @@ details.fold>.foldbody{padding:0 1.05rem 1.05rem}
 .pceff{font-size:.76rem;color:var(--ink);margin-top:.35rem;line-height:1.45;font-variant-numeric:tabular-nums}
 .pgood{font-size:.88rem;color:var(--ink);line-height:1.5;padding:.6rem .75rem;border-radius:.55rem;background:var(--accent-soft)}
 @media (max-width:360px){.pcands{grid-template-columns:1fr}}
+/* het ene overzicht: dagdelen × hefbomen */
+.bwm{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+.bwm th{font-size:.66rem;color:var(--muted);font-weight:600;text-align:right;padding:.2rem .3rem .45rem;vertical-align:bottom}
+.bwm th:first-child{text-align:left;text-transform:uppercase;letter-spacing:.05em}
+.bwu{display:block;font-size:.56rem;color:var(--dim);font-weight:400;text-transform:none;letter-spacing:0}
+.bwm td{border-top:1px solid var(--line);padding:.5rem .3rem}
+.bwd{font-weight:650;font-size:.84rem;text-transform:capitalize}
+.bwc{text-align:right;font-size:.82rem;color:var(--muted)}
+.bwc.none{color:var(--dim);text-align:center}
+.bwc.chg{color:var(--ink)} .bwc.chg .parr{color:var(--dim);margin:0 .12rem} .bwc.chg b{font-weight:700}
+.bwc.risk b{color:var(--low)}
+.bwall{font-size:.82rem;color:var(--ink);margin-top:.5rem} .bwall .pdmeta{margin-left:.3rem}
+.bwdetail{margin-top:.7rem;border-top:1px solid var(--line);padding-top:.5rem}
+.bwdetail>summary{list-style:none;cursor:pointer;font-size:.78rem;font-weight:650;color:var(--accent)}
+.bwdetail>summary::-webkit-details-marker{display:none}
+.bwdetail>summary::after{content:" ↓"} .bwdetail[open]>summary::after{content:" ↑"}
+.bwbody{margin-top:.7rem}
 .watch{padding:.55rem .7rem;border-radius:.55rem;background:var(--surface-2);border-left:3px solid var(--high);margin-bottom:.45rem}
 .watch:last-of-type{margin-bottom:0}
 .watch.info{border-left-color:var(--line-2)}
@@ -609,7 +626,7 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
   Alles blijft op dit apparaat: cache in IndexedDB, token in localStorage. Er gaat niets naar een
   server behalve leesverzoeken aan je eigen Nightscout.<br>
   Observaties, geen instelwaarden. Wat je met een patroon doet is een gesprek met je behandelteam.<br>
-  <span style="opacity:.8">DiaMetric · versie <b>5.4 · 20 jul 2026</b> — bespreekwaarden per dagdeel: ISF, basaal en KH-ratio apart voor ochtend/middag/avond/nacht</span>
+  <span style="opacity:.8">DiaMetric · versie <b>5.5 · 20 jul 2026</b> — één overzicht: ISF, basaal en KH-ratio per dagdeel in één matrix (huidig → bespreekwaarde), onderbouwing op tik</span>
 </footer>
 
 <dialog id="cfgDlg">
@@ -1988,8 +2005,8 @@ function proposalEngine(drift, oi, MR, pi, glucose, treatments, q, timeline){
   // 1 — ISF · correctiefactor, per dagdeel (val terug op de hele dag als geen enkel dagdeel genoeg heeft).
   { const rows=[];
     for(const d of DAYPARTS){ const sub=oi&&oi.byDP&&oi.byDP[d.key]; if(!sub||sub.obs==null) continue;
-      const r=isfCands(sub); if(r) rows.push({label:d.label, meta:r.meta, cands:r.cands}); }
-    if(!rows.length && oi && oi.n>=8){ const r=isfCands(oi); if(r) rows.push({label:"hele dag", meta:r.meta, cands:r.cands}); }
+      const r=isfCands(sub); if(r) rows.push({label:d.label, dpKey:d.key, meta:r.meta, cands:r.cands}); }
+    if(!rows.length && oi && oi.n>=8){ const r=isfCands(oi); if(r) rows.push({label:"hele dag", dpKey:"alle", meta:r.meta, cands:r.cands}); }
     if(rows.length) items.push({ key:"isf", title:"ISF · correctiefactor", unit:"mmol/L per E", rows,
       why:`Hoeveel 1 eenheid je écht liet dalen, naast wat je profiel aanneemt. Verschilt per dagdeel: 's ochtends ben je vaak minder gevoelig.` }); }
 
@@ -2006,14 +2023,14 @@ function proposalEngine(drift, oi, MR, pi, glucose, treatments, q, timeline){
         cands.push({tag, from:nl2(cb), to:nl2(C), risky:false,
           eff:`nuchtere drift ${_pSd(agg)} → ${_pSd(proj)} mmol/L/u`,
           dir:up?"hoger basaal (meer insuline)":"lager basaal (minder insuline)"}); }
-      if(cands.length) rows.push({label:d.label, meta:`stille vensters · drift ${_pSd(agg)} mmol/L/u`, cands}); }
+      if(cands.length) rows.push({label:d.label, dpKey:d.key, meta:`stille vensters · drift ${_pSd(agg)} mmol/L/u`, cands}); }
     if(rows.length) items.push({ key:"basaal", title:"Basaal", unit:"E/u", rows,
       why:`In maaltijd- en bolusvrije uren hoort je glucose vlak te lopen. Waar je toch wegdrijft, wijst dat op te veel of te weinig basaal — per dagdeel.` }); }
 
   // 3 — KH-ratio per maaltijdmoment (ontbijt/lunch/diner). Te hoge piek = onderdekking;
   // lager getal g/E = sterkere ratio = meer maaltijdinsuline.
   if(MR && MR.results && MR.results.length>=MEAL_MIN && pi.ic && pi.ic.length){
-    const parts=[{id:"ontbijt",lo:240,hi:660,mid:450},{id:"lunch",lo:660,hi:900,mid:780},{id:"diner",lo:900,hi:1320,mid:1110}];
+    const parts=[{id:"ontbijt",lo:240,hi:660,mid:450,dp:"ochtend"},{id:"lunch",lo:660,hi:900,mid:780,dp:"middag"},{id:"diner",lo:900,hi:1320,mid:1110,dp:"avond"}];
     const rows=[];
     for(const p of parts){ const rs=MR.results.filter(r=>r.ts!=null && todMin(r.ts)>=p.lo && todMin(r.ts)<p.hi);
       if(rs.length<MEAL_MIN) continue; const rise=_pMed(rs.map(r=>r.peakRise)); if(rise==null||rise<2.5) continue;
@@ -2026,7 +2043,7 @@ function proposalEngine(drift, oi, MR, pi, glucose, treatments, q, timeline){
           if(cur&&c){ eff=`piek +${nl1(cur.riseMed)} → +${nl1(c.riseMed)} · eindigt laag ${pct0(cur.lowFrac)} → ${pct0(c.lowFrac)}`;
             risky = c.lowFrac>cur.lowFrac+P_RISK; } }
         cands.push({tag, from:nl1(cic), to:nl1(C), eff, risky, dir:"sterker (meer maaltijdinsuline)"}); }
-      if(cands.length) rows.push({label:p.id, meta:`n=${rs.length} maaltijden · piek +${nl1(rise)}`, cands}); }
+      if(cands.length) rows.push({label:p.id, dpKey:p.dp, meta:`n=${rs.length} maaltijden · piek +${nl1(rise)}`, cands}); }
     if(rows.length){ const timingNote = (MR.moffset!=null && MR.moffset>-5) ? " Let op: je bolust laat — een vroegere prebolus dempt de piek zónder meer insuline (zie Maaltijdrespons)." : "";
       items.push({ key:"ic", title:"KH-ratio", unit:"g per E", rows,
         why:`Waar je maaltijdpiek structureel te hoog is, schiet de dekking tekort — vaak juist bij het ontbijt.${timingNote}` }); }
@@ -2050,8 +2067,26 @@ function proposalsHtml(drift, oi, MR, pi, glucose, treatments, q, timeline){
       <div class="pcwhy">${it.why}</div>
       ${it.rows.map(row).join("")}
     </div>`;
-  return items.map(card).join("")+
-    `<div class="muted" style="margin-top:.6rem">Elk getal is dóórgerekend met je eigen data (dezelfde eerste-orde simulaties als de wat-als; gevoeligheid uit je gemeten daling waar betrouwbaar). Per dagdeel is de dataset kleiner — lees kleine n met voorzichtigheid. Tegenregulatie zit er níét in — "hypo-risico" en "te laag" zijn risico-indicaties, geen exacte tellingen. <b>Bespreekpunten voor je behandelteam — geen instel- of pompopdracht.</b> Reken zelf niets om op je pomp.</div>`;
+  // ── Het ene overzicht: dagdelen × hefbomen, huidig → bespreekwaarde ──
+  const byKey=Object.fromEntries(items.map(it=>[it.key,it]));
+  const LEV=[["isf","ISF","mmol/E"],["basaal","Basaal","E/u"],["ic","KH","g/E"]];
+  const cellOf=(k,dpKey)=>{ const it=byKey[k]; if(!it) return null;
+    const r=it.rows.find(x=>x.dpKey===dpKey); if(!r) return null;
+    const beh=r.cands.find(c=>c.tag==="behoudend"), gem=r.cands.find(c=>c.tag==="gemeten"), any=beh||gem;
+    const to=(beh&&gem&&beh.to!==gem.to)?`${beh.to}–${gem.to}`:(gem?gem.to:beh.to);
+    return { from:any.from, to, risky:(beh&&beh.risky)||(gem&&gem.risky) }; };
+  const dpsShown=DAYPARTS.filter(d=>LEV.some(([k])=>cellOf(k,d.key)));
+  const cellHtml=c=>c?`<td class="bwc chg${c.risky?" risk":""}">${c.from}<span class="parr">→</span><b>${c.to}</b></td>`:`<td class="bwc none">·</td>`;
+  const matrix = dpsShown.length ? `<table class="bwm">
+    <thead><tr><th>dagdeel</th>${LEV.map(([,l,u])=>`<th>${l}<span class="bwu">${u}</span></th>`).join("")}</tr></thead>
+    <tbody>${dpsShown.map(d=>`<tr><td class="bwd">${d.label.split(" ")[0]}</td>${LEV.map(([k])=>cellHtml(cellOf(k,d.key))).join("")}</tr>`).join("")}</tbody>
+  </table>` : "";
+  // ISF-terugval op de hele dag (geen dagdeel gehaald) — los eronder tonen.
+  const allRow = byKey.isf && byKey.isf.rows.find(r=>r.dpKey==="alle");
+  const allNote = allRow ? `<div class="bwall">ISF over de hele dag: <b>${allRow.cands[0].from} → ${allRow.cands.map(c=>c.to).join("–")}</b> <span class="pdmeta">${allRow.meta}</span></div>` : "";
+  const caveat = `<div class="muted" style="margin-top:.6rem">Elk getal is dóórgerekend met je eigen data (dezelfde eerste-orde simulaties als de wat-als; gevoeligheid uit je gemeten daling waar betrouwbaar). De pijl toont huidig → bespreekwaarde (behoudende stap–gemeten waarde); <span class="prisk">rood</span> = de simulatie ziet meer laagtes. Per dagdeel is de dataset kleiner — lees kleine n met voorzichtigheid. <b>Bespreekpunten voor je behandelteam — geen instel- of pompopdracht.</b></div>`;
+  return matrix + allNote + caveat +
+    `<details class="bwdetail"><summary>Onderbouwing per dagdeel — bewijs & effect</summary><div class="bwbody">${items.map(card).join("")}</div></details>`;
 }
 
 // ── Logboek & voor/na-vergelijker ──────────────────────────────────────────

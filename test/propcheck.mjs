@@ -1,7 +1,8 @@
 import { chromium } from 'playwright-core';
 const EXE='/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
 const FILE = new URL('../index.html', import.meta.url).href;
-const MG=18.0182,DAY=864e5,STEP=5*60e3,NDAYS=45,now=Date.now(),start=now-NDAYS*DAY;
+const MG=18.0182,DAY=864e5,STEP=5*60e3,NDAYS=45,now=Date.now();
+const _s=new Date(now-NDAYS*DAY);_s.setHours(0,0,0,0);const start=_s.getTime(); // lokale middernacht → 08:00/15:00 vallen op het raster en in vaste dagdelen
 function model(peak,dia){const td=Math.max(300,dia),tp=peak,tau=tp*(1-tp/td)/(1-2*tp/td),a=2*tau/td,S=1/(1-a+(1+a)*Math.exp(-td/tau));return {iob(t){if(t<=0)return 1;if(t>=td)return 0;return 1-S*(1-a)*((t*t/(tau*td*(1-a))-t/tau-1)*Math.exp(-t/tau)+1);}};}
 const DIA=360,mdl=model(75,DIA);
 // Twee dagdelen met een verschíllende echte gevoeligheid:
@@ -31,6 +32,8 @@ await page.evaluate(()=>{showTab('analyses'); const n=document.getElementById('t
 await page.waitForTimeout(150);
 const r=await page.evaluate(()=>({
   hidden:document.getElementById('secProposals').hidden,
+  matrix:{ cols:[...document.querySelectorAll('#proposals .bwm thead th')].map(t=>t.childNodes[0]?.textContent.trim()),
+    rows:[...document.querySelectorAll('#proposals .bwm tbody tr')].map(tr=>[...tr.children].map(td=>td.textContent.replace(/\s+/g,' ').trim())) },
   cards:[...document.querySelectorAll('#proposals .pcard')].map(c=>({
     title:c.querySelector('.pctitle')?.textContent,
     rows:[...c.querySelectorAll('.pdrow')].map(rw=>({
@@ -44,7 +47,11 @@ const r=await page.evaluate(()=>({
         risk:x.classList.contains('risk')}))}))})),
   good:document.querySelector('#proposals .pgood')?.textContent}));
 console.log('secProposals hidden:',r.hidden);
-for(const c of r.cards){ console.log('\n['+c.title+']');
+console.log('\n=== OVERZICHT (matrix) ===');
+console.log('  ', r.matrix.cols.join(' | '));
+for(const row of r.matrix.rows) console.log('  ', row.join(' | '));
+console.log('\n=== ONDERBOUWING ===');
+for(const c of r.cards){ console.log('['+c.title+']');
   for(const rw of c.rows){ console.log('  •',rw.label,'—',rw.meta);
     for(const cd of rw.cands) console.log('      ',cd.tag,'|',cd.val,'|',cd.dir,'|',cd.eff, cd.risk?'[RISK]':''); } }
 if(r.good) console.log('geen-voorstellen:',r.good);
