@@ -20,6 +20,7 @@ Playwright-browserinstallatie.
 - `mealrescuecheck` — koolhydraten zónder bolus (hypo-redding) tellen niet als maaltijd
 - `weekcheck` — "Deze week" valt nooit leeg terug (fallback bij een closed loop zonder patronen)
 - `prebocheck` — prebolus-timing telt alleen je handmatige bolus, geen SMB vóór de maaltijd
+- `peakcheck` — gemeten piektijd (steilste daling) ligt binnen band van het model
 - `logcheck` / `exportcheck` — logboek, voor/na, back-up round-trip
 - `awcheck` / `hypodef` — hypo-gevoel; episode/dip/sensordruk-classificatie
 - `pcheck` / `insulincheck` / `iobcheck` / `dscheck` — profiel, insulinetype, IOB/COB, devicestatus

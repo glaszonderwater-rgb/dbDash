@@ -626,7 +626,8 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
       <p>Een <b>consensus-episode</b> = ≥ 15 aaneengesloten minuten onder 3,9 (telt mee in je cijfers). Korter = een <b>dip</b> (vroeg signaal, geen alarm). Een <b>sensordruk-patroon</b>: een snelle duik én snel herstel (te snel voor insuline) — vaak liggen op de sensor, waarschijnlijk geen echte hypo.</p>
 
       <h4 class="mh">5 · Insulinemodel (oref)</h4>
-      <p>De exponentiële oref-curve met een instelbare <b>piektijd</b> (75 min Novorapid/Humalog/Apidra · 55 Fiasp · 45 Lyumjev) en je <b>DIA</b> uit het profiel. Hieruit volgen <b>IOB</b> (nog werkzame insuline) en de <b>activiteit</b> per moment — de basis onder alle insuline-berekeningen. IOB komt bij voorkeur live uit devicestatus; anders reconstrueert de app het uit je bolussen.</p>
+      <p>De exponentiële oref-curve met een instelbare <b>piektijd</b> (75 min Novorapid/Humalog/Apidra · 55 Fiasp · 45 Lyumjev) en je <b>DIA</b> uit het profiel. Hieruit volgen <b>IOB</b> (nog werkzame insuline) en de <b>activiteit</b> per moment — de basis onder alle insuline-berekeningen én waar je loop op stuurt. IOB komt bij voorkeur live uit devicestatus; anders reconstrueert de app het uit je bolussen.</p>
+      <p><b>Piektijd-check.</b> Na een schone correctie daalt je glucose het snelst rond de insuline-piek. Uit dat moment van steilste daling (mediaan over je correcties) schat de app je werkelijke piektijd en legt die naast je instelling — een check of je insulinesoort-instelling klopt. De meting leest ~10–15 min aan de vroege kant (curvevorm + tegenregulatie), dus de band is daar ruimer. <b>DIA</b> zelf is niet betrouwbaar te meten (te kleine, te ruizige staart); ≥ 5 u is de veilige standaard.</p>
 
       <h4 class="mh">6 · SMB vs. handmatige bolus</h4>
       <p>Een SMB (Super Micro Bolus) is je loop die automatisch micro-doseert; een handmatige bolus geef jij. De app herkent SMB's aan het veld <code>type:"SMB"</code> (of <code>isSMB</code>, of "SMB" in de labels). Overal waar het om <i>jouw</i> gedrag gaat — gemeten ISF, prebolus-timing, KH-ratio, bolustelling — tellen SMB's <b>niet</b> mee.</p>
@@ -1070,6 +1071,31 @@ function observedISF(glucose, treatments, timeline){
   return { n:ratios.length, obs:qf(.5), q25:qf(.25), q75:qf(.75),
     prof:isfProf.length?med(isfProf):null, evRaw, byDP };
 }
+// Gemeten piektijd: na een schone correctie daalt je glucose het snelst rond het
+// moment dat de insuline piekt. Uit de correctiecurves (dezelfde evRaw als de gemeten
+// ISF) halen we het tijdstip van de steilste daling — een indicatie van je werkelijke
+// piektijd naast de ingestelde. Tegenregulatie kan de gemeten piek iets naar voren
+// halen; het is een bespreekpunt, geen exacte meting.
+function observedPeak(oi){
+  if(!oi || !oi.evRaw) return { n:0 };
+  const peaks=[];
+  for(const e of oi.evRaw){ const w=e.win; if(!w || w.length<16) continue;
+    // Licht (3-punts) gladgestreken curve tegen sensorruis, dan de kortste helling —
+    // een breed gemiddelde zou de piek stelselmatig naar voren trekken.
+    const sm=w.map((p,i)=>{ const lo=Math.max(0,i-1),hi=Math.min(w.length-1,i+1); let s=0,c=0;
+      for(let j=lo;j<=hi;j++){ s+=w[j].bg; c++; } return { ts:p.ts, bg:s/c }; });
+    let best=null;
+    for(let i=1;i<sm.length;i++){ const dt=(sm[i].ts-sm[i-1].ts)/60000; if(dt<=0||dt>10) continue;
+      const slope=(sm[i].bg-sm[i-1].bg)/dt;                   // mmol/L per min
+      const tmid=((sm[i].ts+sm[i-1].ts)/2-e.ts)/60000;
+      if(tmid<15 || tmid>150) continue;                       // plausibel piekvenster
+      if(best===null || slope<best.slope) best={t:tmid, slope}; }
+    if(best && best.slope<-0.01) peaks.push(best.t);          // echte daling (< −0,6 /u)
+  }
+  if(peaks.length<8) return { n:peaks.length, few:true };
+  const s=[...peaks].sort((x,y)=>x-y), q=p=>s[Math.min(s.length-1,Math.floor(p*s.length))];
+  return { n:peaks.length, obs:Math.round(q(.5)), q25:Math.round(q(.25)), q75:Math.round(q(.75)) };
+}
 // De "Profiel"-sectie: het actieve basaal/ISF/KH-schema plus een koppeling naar
 // wat de data laat zien (basaalaandeel, waargenomen ISF, koolhydraatschatting).
 function profileHtml(pi, oi, ins, MR){
@@ -1088,6 +1114,13 @@ function profileHtml(pi, oi, ins, MR){
   // Koppeling profiel ↔ data
   const obs=[];
   if(ins&&ins.basalPct!=null) obs.push(`Je basaal telt op tot <b>${nl2(pi.basalDaily)} E/dag</b> — ${Math.round(ins.basalPct*100)}% van je totale dosis. Voor pomptherapie ligt basaal vaak rond 40–50%.`);
+  // Piektijd: gemeten steilste-daling-moment naast de ingestelde piektijd van het model.
+  { const pk=observedPeak(oi);
+    if(pk.obs!=null){ const d=pk.obs-PEAK_MIN;   // meet stelselmatig ~10–15 min vroeg → asymmetrische band
+      const judge = (d>=-30 && d<=20) ? `— dat sluit aan bij je ingestelde piektijd (<b>${PEAK_MIN} min</b>).`
+        : d<-30 ? `— duidelijk eerder dan je ingestelde <b>${PEAK_MIN} min</b>: je insuline lijkt sneller te werken. Controleer of je insulinesoort-instelling klopt (Fiasp/Lyumjev pieken eerder) en bespreek het met je team.`
+        : `— later dan je ingestelde <b>${PEAK_MIN} min</b>: je insuline lijkt trager te werken. Bespreekpunt voor je team.`;
+      obs.push(`Piektijd: de steilste daling na je correcties ligt mediaan rond <b>${pk.obs} min</b> (IQR ${pk.q25}–${pk.q75}, n=${pk.n}) ${judge} De piektijd vormt je IOB-curve — waar je loop op stuurt. Deze meting leest doorgaans ~10–15 min aan de vroege kant (tegenregulatie en de curvevorm); een indicatie, geen exacte meting.`); } }
   // Gemeten ISF/basaal naast je instelling staat op Overzicht (samenvatting) en in
   // Bespreekwaarden (per dagdeel) — hier alleen je ingestelde schema.
   if(MR&&MR.results.length>=MEAL_MIN){ const fr=MR.mfrac;
