@@ -336,6 +336,15 @@ details.fold>.foldbody{padding:0 1.05rem 1.05rem}
 .bwdetail>summary::-webkit-details-marker{display:none}
 .bwdetail>summary::after{content:" ↓"} .bwdetail[open]>summary::after{content:" ↑"}
 .bwbody{margin-top:.7rem}
+/* Methode & berekeningen (handleiding) */
+.meth{font-size:.86rem;line-height:1.6;color:var(--ink)}
+.meth p{margin:.35rem 0 .8rem;color:var(--muted)} .meth p b{color:var(--ink);font-weight:600}
+.meth .mlead{font-size:.9rem;color:var(--ink)}
+.mh{font-size:.8rem;font-weight:700;letter-spacing:.02em;color:var(--accent);margin:1.1rem 0 .1rem}
+.meth .mul{margin:.2rem 0 .8rem 1.1rem;padding:0;color:var(--muted)} .meth .mul li{margin:.25rem 0} .meth .mul b{color:var(--ink)}
+.meth .mnote{font-size:.76rem;color:var(--dim);margin:.3rem 0 .8rem}
+.meth code{font-size:.82em;background:var(--surface-2);border:1px solid var(--line);border-radius:.3rem;padding:.02rem .3rem}
+.meth .lok{color:var(--inRange)} .meth .prisk{color:var(--low)}
 .watch{padding:.55rem .7rem;border-radius:.55rem;background:var(--surface-2);border-left:3px solid var(--high);margin-bottom:.45rem}
 .watch:last-of-type{margin-bottom:0}
 .watch.info{border-left-color:var(--line-2)}
@@ -592,6 +601,64 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
       <div id="logList"></div>
     </div>
   </details>
+  <details class="fold" id="secMethode">
+    <summary>Methode &amp; berekeningen <span class="foldhint">hoe elk getal tot stand komt</span></summary>
+    <div class="foldbody meth">
+      <p class="mlead">DiaMetric leest je eigen Nightscout-data en rekent er patronen uit. Elk getal hieronder komt uit je eigen metingen — niets is een dosis of voorschrift. Hier staat precies hoe.</p>
+
+      <h4 class="mh">1 · Privacy &amp; opzet</h4>
+      <p>Eén HTML-bestand, geen build, werkt offline. Je data staat <b>alleen op dit apparaat</b>: metingen in IndexedDB, je adres en token in localStorage. Er gaat niets naar een server behalve <b>lees</b>verzoeken aan je eigen Nightscout (met je token: <code>?token=…</code>). Na de eerste keer werkt alles uit de lokale cache; syncen haalt alleen het nieuwe stuk op.</p>
+
+      <h4 class="mh">2 · Glucose &amp; eenheden</h4>
+      <p>Nightscout bewaart glucose in mg/dL; DiaMetric rekent alles op precies één plek om naar <b>mmol/L</b> (÷ 18,018) en toont nooit mg/dL. Streefbereik <b>3,9–10,0</b> mmol/L (internationale consensus, Battelino 2019).</p>
+
+      <h4 class="mh">3 · Kerncijfers (maand)</h4>
+      <ul class="mul">
+        <li><b>TIR</b> (tijd in bereik 3,9–10,0) — aandeel metingen in bereik. Streef &gt; 70%.</li>
+        <li><b>Hypo-tijd</b> — &lt; 3,9 (streef &lt; 4%) en &lt; 3,0 (streef &lt; 1%).</li>
+        <li><b>Boven bereik</b> — &gt; 10,0 (streef &lt; 25%) en &gt; 13,9 (&lt; 5%).</li>
+        <li><b>CV</b> (variatie) = standaarddeviatie ÷ gemiddelde. Streef ≤ 36% — de maat voor hoe grillig je waarden zijn.</li>
+        <li><b>GMI</b> (geschat HbA1c) = 3,31 + 0,02392 × gemiddelde glucose in mg/dL (Bergenstal). Een schatting, geen labwaarde.</li>
+      </ul>
+      <p class="mnote">Een dag telt pas mee vanaf ~70% dekking (≈ 200 metingen), zodat halve dagen de cijfers niet vertekenen.</p>
+
+      <h4 class="mh">4 · Hypo's: episode, dip of sensordruk</h4>
+      <p>Een <b>consensus-episode</b> = ≥ 15 aaneengesloten minuten onder 3,9 (telt mee in je cijfers). Korter = een <b>dip</b> (vroeg signaal, geen alarm). Een <b>sensordruk-patroon</b>: een snelle duik én snel herstel (te snel voor insuline) — vaak liggen op de sensor, waarschijnlijk geen echte hypo.</p>
+
+      <h4 class="mh">5 · Insulinemodel (oref)</h4>
+      <p>De exponentiële oref-curve met een instelbare <b>piektijd</b> (75 min Novorapid/Humalog/Apidra · 55 Fiasp · 45 Lyumjev) en je <b>DIA</b> uit het profiel. Hieruit volgen <b>IOB</b> (nog werkzame insuline) en de <b>activiteit</b> per moment — de basis onder alle insuline-berekeningen. IOB komt bij voorkeur live uit devicestatus; anders reconstrueert de app het uit je bolussen.</p>
+
+      <h4 class="mh">6 · SMB vs. handmatige bolus</h4>
+      <p>Een SMB (Super Micro Bolus) is je loop die automatisch micro-doseert; een handmatige bolus geef jij. De app herkent SMB's aan het veld <code>type:"SMB"</code> (of <code>isSMB</code>, of "SMB" in de labels). Overal waar het om <i>jouw</i> gedrag gaat — gemeten ISF, prebolus-timing, KH-ratio, bolustelling — tellen SMB's <b>niet</b> mee.</p>
+
+      <h4 class="mh">7 · Gemeten ISF (correctiefactor)</h4>
+      <p>Hoeveel liet 1 E je glucose écht dalen? De app pakt <b>schone, koolhydraatvrije correcties</b> (geen eten binnen het venster, nauwelijks andere insuline, verhoogde start, ≥ 0,5 E, geen SMB) en meet de daling over 3 uur. Die daling wordt gecorrigeerd voor de fractie insuline die binnen het venster is opgenomen (venster &lt; DIA), anders onderschat je de ISF. Ook mislukte correcties tellen mee — alleen de geslaagde middelen zou je gevoeligheid overschatten. Uitkomst: de <b>mediaan</b> met <b>IQR</b> en n. Vanaf 8 correcties.</p>
+
+      <h4 class="mh">8 · Basaaldrift</h4>
+      <p>In <b>maaltijd- en bolusvrije vensters</b> (≥ 5 u sinds het laatste event) hoort je glucose vlak te lopen. De app meet per uur van de dag de mediane helling (mmol/L per uur); structureel wegdrijven (≥ 0,3 /u, met p25 en p75 dezelfde kant op) wijst op te veel of te weinig basaal daar. <b>Kanttekening:</b> bij een closed loop breken SMB's en temp-basaal deze schone vensters, waardoor drift vaak niet meetbaar is — de loop maskeert het probleem door het real-time weg te regelen.</p>
+
+      <h4 class="mh">9 · Maaltijden</h4>
+      <p>Een "maaltijd" = ≥ 30 g koolhydraten, geïsoleerd (geen andere koolhydraten in −2…+4 u) én <b>met een handmatige maaltijdbolus</b> eromheen. Koolhydraten zónder bolus (hypo-redding, losse invoer) tellen niet mee. Per maaltijd berekent de app de opname-curve door de <i>verwachte</i> insuline-daling van de gemeten deviatie af te trekken; daaruit volgen <b>t50</b> (halve opname), de <b>piek</b> en de <b>prebolus-timing</b> = je handmatige bolus t.o.v. je koolhydraat-invoer (negatief = ervóór). Let op: de invoertijd is je bolusmoment, niet per se wanneer je begon te eten.</p>
+
+      <h4 class="mh">10 · Bespreekwaarden</h4>
+      <p>Per dagdeel (nacht/ochtend/middag/avond) zet de app je <b>gemeten</b> waarde naast je <b>ingestelde</b>, en als die &gt; 20% afwijkt, een concreet <b>kandidaatgetal</b>: een behoudende halve stap én de volledige gemeten waarde. Het effect wordt dóórgerekend met dezelfde simulaties als voorheen (correctie-, nacht- en maaltijd-simulatie, eerste-orde: extra insuline × gevoeligheid via de activiteitscurve). Een <b class="lok">✓</b> = gemeten sluit aan; <b>—</b> = te weinig data (géén oordeel); de <b>pijl</b> = een bespreekwaarde. <span class="prisk">Rood</span> = de simulatie ziet meer laagtes. Tegenregulatie (je lever bij een dreigende hypo) zit er níét in, dus "laag" is een risico-indicatie, geen exacte telling.</p>
+
+      <h4 class="mh">11 · Voor/na een wijziging</h4>
+      <p>Markeer je in het logboek een instelling-wijziging, dan vergelijkt de app 14 dagen ervóór met 14 dagen erná (alleen dagen met ≥ 70% dekking). <b>Kanttekening:</b> winst na een mindere periode kan deels terugveer naar het gemiddelde zijn — een vergelijking is geen bewijs van oorzaak.</p>
+
+      <h4 class="mh">12 · Hypo-gevoel</h4>
+      <p>Leg vast bij welke waarde je een hypo vóélt; de app volgt de <b>mediaan van je voelgrens</b> over de tijd. Een dalende voelgrens kan wijzen op afnemend hypo-gevoel — puur observatie.</p>
+
+      <h4 class="mh">13 · Tijdlijn &amp; bevindingen</h4>
+      <p>Het Overzicht bouwt een verhaal: <b>Nu</b> (laatste waarde, IOB/COB) → <b>Vandaag</b> (de nacht, dagcurve) → <b>Deze week</b> (maaltijd-, basaal- en wijzigingspatronen; valt nooit leeg terug) → <b>Deze maand</b> (kerncijfers + gemeten-vs-ingesteld). Elke bevinding draagt zijn bewijs (n + kanttekening) en kun je op je <b>consultlijst</b> zetten voor het rapport.</p>
+
+      <h4 class="mh">14 · Wat dit uitdrukkelijk níét is</h4>
+      <p>Geen dosis, geen voorschrift, geen medisch advies. Alles is een <b>observatie</b> of een <b>bespreekpunt voor je behandelteam</b>. Reken zelf niets om op je pomp; wijzig instellingen alleen in overleg, en één ding tegelijk.</p>
+
+      <p class="mnote" style="margin-top:1rem">Bron-drempels volgen de internationale consensus (Battelino e.a., 2019, <i>Diabetes Care</i>); het insulinemodel en de gevoeligheids-berekeningen volgen de oref/AndroidAPS-referentie.</p>
+    </div>
+  </details>
+
   <div id="secDeep" hidden>
     <div class="h3">Verdieping — voor wie wil sleutelen</div>
     <details class="deep" data-an="dagpatroon"><summary>Dagpatroon <span>— vaste uren waarop je wegdrijft (basaal)</span></summary><div class="body"><div class="loading">Openklappen om te berekenen…</div></div></details>
