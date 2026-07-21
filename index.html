@@ -1148,7 +1148,7 @@ function fineTuneData(drift, oi, MR, stack, pi){
 
   // 1 — Basaal
   { let st="na", read, dir=null, ev;
-    if(!drift||!drift.stat){ read="Nog te weinig nuchtere (maaltijd- en bolusvrije) vensters om je basaal te toetsen."; ev="drempel 0,3 mmol/L/u"; }
+    if(!drift||!drift.stat){ read="Nog te weinig nuchtere (maaltijd- en bolusvrije) vensters van 5 u om je basaal te toetsen. Bij een closed loop breken SMB's en temp-basaal die vensters en regelt de loop de drift zelf weg — dan is basaaldrift nauwelijks meetbaar. Je loop-gedrag (temp-basaal vs. profiel) is dan de betere ingang."; ev="drempel 0,3 mmol/L/u"; }
     else if(!drift.up.length && !drift.down.length){ st="ok"; read="In stille vensters drijf je nergens structureel weg — je basaal lijkt over de dag in balans."; ev=`n = ${drift.total.toLocaleString("nl")} driftmetingen`; }
     else { st="warn"; const parts=[], dirs=[];
       const eq = v => isfRef ? ` ≈ <b>${nl1(Math.abs(v)/isfRef)} E/u</b> verschil` : "";
@@ -1160,7 +1160,7 @@ function fineTuneData(drift, oi, MR, stack, pi){
 
   // 2 — ISF (correctiefactor)
   { let st="na", read, dir=null, ev=`n = ${oi?oi.n:0}`;
-    if(!oi||oi.obs==null){ read="Nog te weinig schone, koolhydraatvrije correcties (minimaal 8) om je ISF aan de praktijk te meten."; }
+    if(!oi||oi.obs==null){ read=`Nog te weinig schone, koolhydraatvrije <b>handmatige</b> correcties (${oi?oi.n:0} van 8) om je ISF te meten. Bij een closed loop corrigeer je meestal via SMB's in plaats van handmatig — dan blijven er weinig losse correcties over om op te meten.`; }
     else if(oi.prof==null){ read=`Gemeten daling ~${nl1(oi.obs)} mmol/L per E (IQR ${nl1(oi.q25)}–${nl1(oi.q75)}), maar geen profiel-ISF om naast te leggen.`; ev=`n = ${oi.n}`; }
     else { const r=oi.obs/oi.prof; ev=`n = ${oi.n} correcties · IQR ${nl1(oi.q25)}–${nl1(oi.q75)}`;
       if(r>=0.8 && r<=1.25){ st="ok"; read=`Gemeten <b>${nl1(oi.obs)}</b> mmol/L per E naast ingesteld <b>${nl1(oi.prof)}</b> — die sluiten op elkaar aan.`; }
