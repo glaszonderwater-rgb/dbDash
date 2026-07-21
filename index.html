@@ -327,6 +327,9 @@ details.fold>.foldbody{padding:0 1.05rem 1.05rem}
 .bwc.none{color:var(--dim);text-align:center}
 .bwc.chg{color:var(--ink)} .bwc.chg .parr{color:var(--dim);margin:0 .12rem} .bwc.chg b{font-weight:700}
 .bwc.risk b{color:var(--low)}
+.bwc.ok{color:var(--inRange);text-align:center;font-weight:700}
+.bwleg{display:flex;flex-wrap:wrap;gap:.15rem 1rem;margin-top:.45rem;font-size:.68rem;color:var(--muted)}
+.bwleg b{font-weight:700;margin-right:.15rem} .bwleg .lok{color:var(--inRange)} .bwleg .ldash{color:var(--dim)} .bwleg .larr{color:var(--ink)}
 .bwall{font-size:.82rem;color:var(--ink);margin-top:.5rem} .bwall .pdmeta{margin-left:.3rem}
 .bwdetail{margin-top:.7rem;border-top:1px solid var(--line);padding-top:.5rem}
 .bwdetail>summary{list-style:none;cursor:pointer;font-size:.78rem;font-weight:650;color:var(--accent)}
@@ -626,7 +629,7 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
   Alles blijft op dit apparaat: cache in IndexedDB, token in localStorage. Er gaat niets naar een
   server behalve leesverzoeken aan je eigen Nightscout.<br>
   Observaties, geen instelwaarden. Wat je met een patroon doet is een gesprek met je behandelteam.<br>
-  <span style="opacity:.8">DiaMetric · versie <b>5.5 · 20 jul 2026</b> — één overzicht: ISF, basaal en KH-ratio per dagdeel in één matrix (huidig → bespreekwaarde), onderbouwing op tik</span>
+  <span style="opacity:.8">DiaMetric · versie <b>5.6 · 20 jul 2026</b> — matrix met drie celtoestanden: ✓ gemeten sluit aan · — te weinig data · pijl = bespreekwaarde (geen dubbelzinnige lege cel)</span>
 </footer>
 
 <dialog id="cfgDlg">
@@ -2002,20 +2005,30 @@ function proposalEngine(drift, oi, MR, pi, glucose, treatments, q, timeline){
   const items=[];
   const isfRef = (oi&&oi.obs>0.5)?oi.obs : (pi.isf&&pi.isf.length?_pMed(pi.isf.map(b=>b.value)):null);
 
-  // 1 — ISF · correctiefactor, per dagdeel (val terug op de hele dag als geen enkel dagdeel genoeg heeft).
-  { const rows=[];
-    for(const d of DAYPARTS){ const sub=oi&&oi.byDP&&oi.byDP[d.key]; if(!sub||sub.obs==null) continue;
-      const r=isfCands(sub); if(r) rows.push({label:d.label, dpKey:d.key, meta:r.meta, cands:r.cands}); }
-    if(!rows.length && oi && oi.n>=8){ const r=isfCands(oi); if(r) rows.push({label:"hele dag", dpKey:"alle", meta:r.meta, cands:r.cands}); }
-    if(rows.length) items.push({ key:"isf", title:"ISF · correctiefactor", unit:"mmol/L per E", rows,
-      why:`Hoeveel 1 eenheid je écht liet dalen, naast wat je profiel aanneemt. Verschilt per dagdeel: 's ochtends ben je vaak minder gevoelig.` }); }
+  // 1 — ISF · correctiefactor, per dagdeel. Elk dagdeel krijgt een status:
+  // change (bespreekwaarde) · ok (gemeten sluit aan) · weinig (te weinig data).
+  { const rows=[], grid={};
+    for(const d of DAYPARTS){ const sub=oi&&oi.byDP&&oi.byDP[d.key];
+      if(!sub || sub.n<5 || sub.obs==null || sub.prof==null){ grid[d.key]={status:"weinig", n:sub?sub.n:0}; continue; }
+      const r=isfCands(sub);
+      if(r){ rows.push({label:d.label, dpKey:d.key, meta:r.meta, cands:r.cands});
+        const beh=r.cands.find(c=>c.tag==="behoudend"), gem=r.cands.find(c=>c.tag==="gemeten"), any=beh||gem;
+        grid[d.key]={status:"change", from:any.from, to:(beh&&gem&&beh.to!==gem.to)?`${beh.to}–${gem.to}`:(gem?gem.to:beh.to), risky:(beh&&beh.risky)||(gem&&gem.risky)}; }
+      else grid[d.key]={status:"ok", n:sub.n}; }
+    let allRow=null;
+    if(!rows.length && oi && oi.n>=8){ const r=isfCands(oi); if(r){ allRow={cands:r.cands, meta:r.meta}; rows.push({label:"hele dag", dpKey:"alle", meta:r.meta, cands:r.cands}); } }
+    if(rows.length || Object.values(grid).some(g=>g.status!=="weinig"))
+      items.push({ key:"isf", title:"ISF · correctiefactor", unit:"mmol/L per E", rows, grid, allRow,
+        why:`Hoeveel 1 eenheid je écht liet dalen, naast wat je profiel aanneemt. Verschilt per dagdeel: 's ochtends ben je vaak minder gevoelig.` }); }
 
   // 2 — Basaal per dagdeel, uit de nuchtere drift (eerste-orde: extra basaal × ISF
   // neutraliseert de drift). Alleen waar je in stille vensters structureel wegdrijft.
-  if(drift && drift.stat && isfRef){ const rows=[];
+  if(drift && drift.stat && isfRef){ const rows=[], grid={};
     for(const d of DAYPARTS){ const hrs=drift.stat.filter(s=>s.h>=d.lo/60 && s.h<d.hi/60 && s.med!=null);
-      if(hrs.length<2) continue; const agg=_pMed(hrs.map(s=>s.med)); if(Math.abs(agg)<drift.TH) continue;
-      const blk=(pi.basal||[]).find(b=>d.mid>=b.from&&d.mid<b.to)||(pi.basal||[])[0]; if(!blk) continue;
+      if(hrs.length<2){ grid[d.key]={status:"weinig"}; continue; }
+      const agg=_pMed(hrs.map(s=>s.med));
+      if(Math.abs(agg)<drift.TH){ grid[d.key]={status:"ok"}; continue; }
+      const blk=(pi.basal||[]).find(b=>d.mid>=b.from&&d.mid<b.to)||(pi.basal||[])[0]; if(!blk){ grid[d.key]={status:"weinig"}; continue; }
       const cb=blk.value, up=agg>0, sign=up?1:-1, dB=Math.abs(agg)/isfRef, seen=new Set(), cands=[];
       for(const [tag,frac] of [["behoudend",0.5],["gemeten",1.0]]){
         const C=_pR05(cb+sign*dB*frac); if(C===_pR05(cb)||C<0||seen.has(C)) continue; seen.add(C);
@@ -2023,18 +2036,24 @@ function proposalEngine(drift, oi, MR, pi, glucose, treatments, q, timeline){
         cands.push({tag, from:nl2(cb), to:nl2(C), risky:false,
           eff:`nuchtere drift ${_pSd(agg)} → ${_pSd(proj)} mmol/L/u`,
           dir:up?"hoger basaal (meer insuline)":"lager basaal (minder insuline)"}); }
-      if(cands.length) rows.push({label:d.label, dpKey:d.key, meta:`stille vensters · drift ${_pSd(agg)} mmol/L/u`, cands}); }
-    if(rows.length) items.push({ key:"basaal", title:"Basaal", unit:"E/u", rows,
-      why:`In maaltijd- en bolusvrije uren hoort je glucose vlak te lopen. Waar je toch wegdrijft, wijst dat op te veel of te weinig basaal — per dagdeel.` }); }
+      if(cands.length){ rows.push({label:d.label, dpKey:d.key, meta:`stille vensters · drift ${_pSd(agg)} mmol/L/u`, cands});
+        const beh=cands.find(c=>c.tag==="behoudend"), gem=cands.find(c=>c.tag==="gemeten"), any=beh||gem;
+        grid[d.key]={status:"change", from:any.from, to:(beh&&gem&&beh.to!==gem.to)?`${beh.to}–${gem.to}`:(gem?gem.to:beh.to), risky:false}; }
+      else grid[d.key]={status:"ok"}; }
+    if(rows.length || Object.values(grid).some(g=>g.status!=="weinig"))
+      items.push({ key:"basaal", title:"Basaal", unit:"E/u", rows, grid,
+        why:`In maaltijd- en bolusvrije uren hoort je glucose vlak te lopen. Waar je toch wegdrijft, wijst dat op te veel of te weinig basaal — per dagdeel.` }); }
 
   // 3 — KH-ratio per maaltijdmoment (ontbijt/lunch/diner). Te hoge piek = onderdekking;
   // lager getal g/E = sterkere ratio = meer maaltijdinsuline.
   if(MR && MR.results && MR.results.length>=MEAL_MIN && pi.ic && pi.ic.length){
     const parts=[{id:"ontbijt",lo:240,hi:660,mid:450,dp:"ochtend"},{id:"lunch",lo:660,hi:900,mid:780,dp:"middag"},{id:"diner",lo:900,hi:1320,mid:1110,dp:"avond"}];
-    const rows=[];
+    const rows=[], grid={nacht:{status:"weinig"}};
     for(const p of parts){ const rs=MR.results.filter(r=>r.ts!=null && todMin(r.ts)>=p.lo && todMin(r.ts)<p.hi);
-      if(rs.length<MEAL_MIN) continue; const rise=_pMed(rs.map(r=>r.peakRise)); if(rise==null||rise<2.5) continue;
-      const blk=(pi.ic||[]).find(b=>p.mid>=b.from&&p.mid<b.to)||(pi.ic||[])[0]; if(!blk) continue;
+      if(rs.length<MEAL_MIN){ grid[p.dp]={status:"weinig", n:rs.length}; continue; }
+      const rise=_pMed(rs.map(r=>r.peakRise));
+      const blk=(pi.ic||[]).find(b=>p.mid>=b.from&&p.mid<b.to)||(pi.ic||[])[0];
+      if(rise==null||rise<2.5||!blk){ grid[p.dp]={status:"ok", n:rs.length}; continue; }
       const cic=blk.value, sim=mealSim({results:rs},oi,[1.0,1.05,1.10],MEAL_MIN), seen=new Set(), cands=[];
       for(const [tag,m] of [["behoudend",1.05],["gemeten",1.10]]){
         const C=_pR5g(cic/m); if(C===_pR5g(cic)||seen.has(C)) continue; seen.add(C);
@@ -2043,9 +2062,12 @@ function proposalEngine(drift, oi, MR, pi, glucose, treatments, q, timeline){
           if(cur&&c){ eff=`piek +${nl1(cur.riseMed)} → +${nl1(c.riseMed)} · eindigt laag ${pct0(cur.lowFrac)} → ${pct0(c.lowFrac)}`;
             risky = c.lowFrac>cur.lowFrac+P_RISK; } }
         cands.push({tag, from:nl1(cic), to:nl1(C), eff, risky, dir:"sterker (meer maaltijdinsuline)"}); }
-      if(cands.length) rows.push({label:p.id, dpKey:p.dp, meta:`n=${rs.length} maaltijden · piek +${nl1(rise)}`, cands}); }
-    if(rows.length){ const timingNote = (MR.moffset!=null && MR.moffset>-5) ? " Let op: je bolust laat — een vroegere prebolus dempt de piek zónder meer insuline (zie Maaltijdrespons)." : "";
-      items.push({ key:"ic", title:"KH-ratio", unit:"g per E", rows,
+      if(cands.length){ rows.push({label:p.id, dpKey:p.dp, meta:`n=${rs.length} maaltijden · piek +${nl1(rise)}`, cands});
+        const beh=cands.find(c=>c.tag==="behoudend"), gem=cands.find(c=>c.tag==="gemeten"), any=beh||gem;
+        grid[p.dp]={status:"change", from:any.from, to:(beh&&gem&&beh.to!==gem.to)?`${beh.to}–${gem.to}`:(gem?gem.to:beh.to), risky:(beh&&beh.risky)||(gem&&gem.risky)}; }
+      else grid[p.dp]={status:"ok", n:rs.length}; }
+    if(rows.length || Object.values(grid).some(g=>g.status!=="weinig")){ const timingNote = (MR.moffset!=null && MR.moffset>-5) ? " Let op: je bolust laat — een vroegere prebolus dempt de piek zónder meer insuline (zie Maaltijdrespons)." : "";
+      items.push({ key:"ic", title:"KH-ratio", unit:"g per E", rows, grid,
         why:`Waar je maaltijdpiek structureel te hoog is, schiet de dekking tekort — vaak juist bij het ontbijt.${timingNote}` }); }
   }
 
@@ -2067,26 +2089,32 @@ function proposalsHtml(drift, oi, MR, pi, glucose, treatments, q, timeline){
       <div class="pcwhy">${it.why}</div>
       ${it.rows.map(row).join("")}
     </div>`;
-  // ── Het ene overzicht: dagdelen × hefbomen, huidig → bespreekwaarde ──
+  // ── Het ene overzicht: dagdelen × hefbomen. Drie celtoestanden zodat een lege
+  // cel niet twee dingen tegelijk betekent: ✓ = gemeten sluit aan · — = te weinig
+  // data · pijl = bespreekwaarde (huidig → behoudend–gemeten).
   const byKey=Object.fromEntries(items.map(it=>[it.key,it]));
   const LEV=[["isf","ISF","mmol/E"],["basaal","Basaal","E/u"],["ic","KH","g/E"]];
-  const cellOf=(k,dpKey)=>{ const it=byKey[k]; if(!it) return null;
-    const r=it.rows.find(x=>x.dpKey===dpKey); if(!r) return null;
-    const beh=r.cands.find(c=>c.tag==="behoudend"), gem=r.cands.find(c=>c.tag==="gemeten"), any=beh||gem;
-    const to=(beh&&gem&&beh.to!==gem.to)?`${beh.to}–${gem.to}`:(gem?gem.to:beh.to);
-    return { from:any.from, to, risky:(beh&&beh.risky)||(gem&&gem.risky) }; };
-  const dpsShown=DAYPARTS.filter(d=>LEV.some(([k])=>cellOf(k,d.key)));
-  const cellHtml=c=>c?`<td class="bwc chg${c.risky?" risk":""}">${c.from}<span class="parr">→</span><b>${c.to}</b></td>`:`<td class="bwc none">·</td>`;
+  const cellFor=(k,dpKey)=>{ const it=byKey[k]; return (it&&it.grid&&it.grid[dpKey])||{status:"weinig"}; };
+  const cellHtml=g=>{
+    if(g.status==="change") return `<td class="bwc chg${g.risky?" risk":""}">${g.from}<span class="parr">→</span><b>${g.to}</b></td>`;
+    if(g.status==="ok") return `<td class="bwc ok" title="gemeten sluit aan bij je instelling">✓</td>`;
+    return `<td class="bwc none" title="te weinig schone data in dit dagdeel">—</td>`; };
+  const dpsShown=DAYPARTS.filter(d=>LEV.some(([k])=>cellFor(k,d.key).status!=="weinig"));
   const matrix = dpsShown.length ? `<table class="bwm">
     <thead><tr><th>dagdeel</th>${LEV.map(([,l,u])=>`<th>${l}<span class="bwu">${u}</span></th>`).join("")}</tr></thead>
-    <tbody>${dpsShown.map(d=>`<tr><td class="bwd">${d.label.split(" ")[0]}</td>${LEV.map(([k])=>cellHtml(cellOf(k,d.key))).join("")}</tr>`).join("")}</tbody>
-  </table>` : "";
-  // ISF-terugval op de hele dag (geen dagdeel gehaald) — los eronder tonen.
-  const allRow = byKey.isf && byKey.isf.rows.find(r=>r.dpKey==="alle");
+    <tbody>${dpsShown.map(d=>`<tr><td class="bwd">${d.label.split(" ")[0]}</td>${LEV.map(([k])=>cellHtml(cellFor(k,d.key))).join("")}</tr>`).join("")}</tbody>
+  </table>
+  <div class="bwleg"><span><b class="lok">✓</b> gemeten sluit aan</span><span><b class="ldash">—</b> te weinig data</span><span><b class="larr">→</b> bespreekwaarde</span></div>` : "";
+  // ISF-terugval op de hele dag (geen dagdeel apart genoeg data).
+  const allRow = byKey.isf && byKey.isf.allRow;
   const allNote = allRow ? `<div class="bwall">ISF over de hele dag: <b>${allRow.cands[0].from} → ${allRow.cands.map(c=>c.to).join("–")}</b> <span class="pdmeta">${allRow.meta}</span></div>` : "";
-  const caveat = `<div class="muted" style="margin-top:.6rem">Elk getal is dóórgerekend met je eigen data (dezelfde eerste-orde simulaties als de wat-als; gevoeligheid uit je gemeten daling waar betrouwbaar). De pijl toont huidig → bespreekwaarde (behoudende stap–gemeten waarde); <span class="prisk">rood</span> = de simulatie ziet meer laagtes. Per dagdeel is de dataset kleiner — lees kleine n met voorzichtigheid. <b>Bespreekpunten voor je behandelteam — geen instel- of pompopdracht.</b></div>`;
-  return matrix + allNote + caveat +
-    `<details class="bwdetail"><summary>Onderbouwing per dagdeel — bewijs & effect</summary><div class="bwbody">${items.map(card).join("")}</div></details>`;
+  const changed = items.filter(it=>it.rows && it.rows.length);
+  const anyChange = changed.length>0;
+  const lead = anyChange ? "" :
+    `<div class="pgood" style="margin-top:.6rem">Op elk dagdeel met genoeg schone data sluit je gemeten waarde aan bij je instelling (✓). Waar een — staat, is er te weinig data om iets te zeggen — geen teken dat het goed óf fout staat.</div>`;
+  const caveat = `<div class="muted" style="margin-top:.6rem">Een <b class="lok">✓</b> betekent: op dit dagdeel is er genoeg schone data én je gemeten waarde valt binnen ±20% van je instelling. Een <b>—</b> betekent alléén "te weinig data" — géén oordeel. De pijl toont huidig → bespreekwaarde (behoudende stap–gemeten waarde); <span class="prisk">rood</span> = de simulatie ziet meer laagtes. Elk getal is dóórgerekend met je eigen data. <b>Bespreekpunten voor je behandelteam — geen instel- of pompopdracht.</b></div>`;
+  const detail = anyChange ? `<details class="bwdetail"><summary>Onderbouwing per dagdeel — bewijs & effect</summary><div class="bwbody">${changed.map(card).join("")}</div></details>` : "";
+  return matrix + allNote + lead + caveat + detail;
 }
 
 // ── Logboek & voor/na-vergelijker ──────────────────────────────────────────
