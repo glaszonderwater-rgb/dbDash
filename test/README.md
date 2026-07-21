@@ -15,8 +15,7 @@ Playwright-browserinstallatie.
 
 ## Overzicht
 - `verify_v21` — kernregressie · `synthcheck` — tijdlijn, bevindingen, consultlijst-triage
-- `watifcheck` / `watmealcheck` / `watisfcheck` — de drie wat-als-simulaties
-- `propcheck` — kandidaat-instellingen (behoudend + gemeten waarde, effect, hypo-risicovlag)
+- `propcheck` — bespreekwaarden per dagdeel (behoudend + gemeten, effect, hypo-risicovlag, celtoestanden ✓/—/→)
 - `logcheck` / `exportcheck` — logboek, voor/na, back-up round-trip
 - `awcheck` / `hypodef` — hypo-gevoel; episode/dip/sensordruk-classificatie
 - `pcheck` / `insulincheck` / `iobcheck` / `dscheck` — profiel, insulinetype, IOB/COB, devicestatus
