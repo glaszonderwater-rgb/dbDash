@@ -564,7 +564,6 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
     <div class="foldbody">
       <div class="kpis" id="insKpis"></div>
       <div class="muted" id="insObs" style="margin-top:.5rem"></div>
-      <details id="smbDiag" style="margin-top:.7rem"><summary style="cursor:pointer;font-size:.76rem;font-weight:650;color:var(--accent);list-style:none">SMB-herkenning · diagnose — hoe je bolussen gelabeld zijn ↓</summary><div id="smbDiagBody" style="margin-top:.5rem"></div></details>
     </div>
   </details>
   <details class="fold" id="secProfile" hidden>
@@ -1213,30 +1212,6 @@ function bandBarHtml(m){
   return `<div class="tirbar">${bar}</div><div class="tirrows">${rows}</div>`+
     `<div class="hypoline">Hypo-tijd (&lt;3,9): <b>${pct0(m.tbr)}</b> · streef &lt;4% ${tick(m.tbr<0.04)}</div>`;
 }
-// Diagnose: laat lokaal zien hoe je bolussen in Nightscout gelabeld zijn, zodat
-// we kunnen zien welk veld je SMB's onderscheidt (blijft in je browser).
-function smbDiagnostic(treatments){
-  const bol=treatments.filter(t=>t.insulin>0);
-  if(!bol.length) return `<div class="muted">Geen bolussen in deze periode.</div>`;
-  const smb=bol.filter(t=>t.isSMB).length;
-  const hist=(fn)=>{ const m={}; for(const t of bol){ const v=fn(t); if(v!=null&&v!=="") m[v]=(m[v]||0)+1; }
-    return Object.entries(m).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`${esc(String(k))} (${v})`).join(" · ")||"—"; };
-  const small=bol.filter(t=>t.insulin<1 && !(t.carbs>0));
-  const sample=small[0]||bol[0];
-  const rawKeys=sample&&sample.raw?Object.keys(sample.raw).filter(k=>k!=="_id"):[];
-  const sampleJson=sample&&sample.raw
-    ? esc(JSON.stringify(Object.fromEntries(Object.entries(sample.raw).filter(([k])=>k!=="_id"&&k!=="ts")),null,1))
-    : "—";
-  return `<div class="muted" style="line-height:1.7">`+
-    `<b>${smb}</b> van ${bol.length} bolussen worden nu als SMB herkend.<br>`+
-    `eventType: ${hist(t=>(t.raw&&t.raw.eventType))}<br>`+
-    `type: ${hist(t=>t.raw&&t.raw.type)}<br>`+
-    `enteredBy: ${hist(t=>t.raw&&t.raw.enteredBy)}<br>`+
-    `kleine (&lt;1 E) koolhydraatvrije bolussen: <b>${small.length}</b><br>`+
-    `velden op zo'n bolus: <code>${rawKeys.map(esc).join(", ")||"—"}</code></div>`+
-    `<pre style="white-space:pre-wrap;font-size:.66rem;background:var(--surface-2);border:1px solid var(--line);border-radius:.5rem;padding:.5rem;overflow-x:auto;margin:.5rem 0 0">${sampleJson}</pre>`+
-    `<div class="muted" style="margin-top:.4rem">Zie je hier het veld dat je SMB's onderscheidt (een <code>isSMB</code>, een <code>type</code>, een <code>enteredBy</code>…)? Stuur me deze regels, dan zet ik de herkenning erop.</div>`;
-}
 // Insuline & koolhydraten over de periode
 function insulinCarbs(treatments, timeline, q){
   const from=q.from||0, to=q.to||Date.now();
@@ -1570,8 +1545,7 @@ function render(glucose, treatments, timeline){
       : `Bolus en koolhydraten zijn exact. Basaal/bolus-verhouding ontbreekt (geen profiel met basaalschema gevonden).`)
       + (ins.nSmbDay>0
         ? ` SMB's (automatische micro-bolus) worden apart geteld en tellen níét mee als handmatige correctie — zo blijven gemeten ISF en de patronen op jóuw bolussen gebaseerd.`
-        : ` Geen SMB's herkend. Loop je closed-loop, open dan de diagnose hieronder — dan zien we hoe jouw bolussen gelabeld zijn.`);
-    document.getElementById("smbDiagBody").innerHTML = smbDiagnostic(treatments);
+        : ` Geen SMB's herkend — je gebruikt waarschijnlijk geen SMB's, of je Nightscout labelt ze anders dan bekend.`);
   }
 
   const pi = timeline ? profileInfo(timeline, q.to || Date.now()) : null;
@@ -1823,6 +1797,11 @@ function mealResults(glucose, treatments, timeline){
   for(const m of meals){ const prof=profileAt(timeline,m.ts); if(prof.source==="geen"||!prof.isf||!prof.ic)continue;
     const isf=prof.isf,ic=prof.ic,dia=Math.max(300,(prof.dia||6)*60),mdl=insulinModel(PEAK_MIN,dia),diaMs=dia*60000;
     const wB=boluses.filter(b=>b.ts>m.ts-diaMs&&b.ts<m.ts+WIN);
+    // Alleen koolhydraten mét een handmatige maaltijdbolus eromheen tellen als "maaltijd".
+    // Zonder bolus is het geen maaltijd om je KH-ratio op te toetsen: hypo-redding of
+    // losse koolhydraten. (SMB's zijn de loop, geen maaltijdbolus.)
+    const mealBolus=wB.reduce((s,b)=>(!b.isSMB && b.ts>=m.ts-45*60e3 && b.ts<=m.ts+90*60e3)?s+b.insulin:s,0);
+    if(mealBolus<0.5) continue;
     const win=[]; for(let i=lb(m.ts);i<T.length&&T[i]<=m.ts+WIN;i++)win.push(glucose[i]);
     if(win.length<MIN_READ)continue; if(win[0].ts-m.ts>15*60e3)continue;
     // timing van de bolus t.o.v. de maaltijd (negatief = prebolus)

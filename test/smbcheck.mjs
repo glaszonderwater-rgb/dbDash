@@ -25,11 +25,9 @@ await page.waitForFunction(()=>!document.getElementById('secInsulin').hidden,{ti
 await page.evaluate(()=>{showTab('analyses'); document.getElementById('secInsulin').open=true;});
 await page.waitForTimeout(200);
 const r=await page.evaluate(()=>({
-  kpis:[...document.querySelectorAll('#insKpis .kpi')].map(k=>k.querySelector('.k').textContent+'='+k.querySelector('.v').textContent),
-  diag:document.getElementById('smbDiagBody').textContent.replace(/\s+/g,' ').trim().slice(0,220) }));
+  kpis:[...document.querySelectorAll('#insKpis .kpi')].map(k=>k.querySelector('.k').textContent+'='+k.querySelector('.v').textContent) }));
 console.log('KPIs:', r.kpis.join(' | '));
 const smbRow=r.kpis.find(x=>x.startsWith("SMB's"));
-console.log("SMB-rij aanwezig:", !!smbRow, smbRow||'');
-console.log('diagnose:', r.diag);
+console.log("SMB-rij aanwezig (type:SMB herkend):", !!smbRow, smbRow||'');
 console.log('errors:', errors.length?errors:'geen');
 await browser.close();
