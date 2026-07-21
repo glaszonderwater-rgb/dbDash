@@ -9,7 +9,9 @@ const DIA=360,mdl=model(75,DIA);
 //  ochtend 08:00 → ISF 1,5 (minder gevoelig, dawn) ; middag 15:00 → ISF 2,6 (gevoeliger).
 // Profiel staat overal op 2,0 → per-dagdeel-kandidaten in beide richtingen verwacht.
 const entries=[],treatments=[],idx=new Map();
-for(let t=start;t<now;t+=STEP){const d=new Date(t);const r={_id:'e'+t,date:t,dateString:d.toISOString(),sgv:0,type:'sgv',direction:'Flat'};r.bg=6.5;entries.push(r);idx.set(t,entries.length-1);}
+// Basisreeks: 6,5 vlak, behalve een nachtelijke stijging (01–06 u, maaltijd-/bolusvrij)
+// zodat basaaldrift structureel wegdrijft → basaal-bespreekwaarde (change-pad) vuurt.
+for(let t=start;t<now;t+=STEP){const d=new Date(t);const r={_id:'e'+t,date:t,dateString:d.toISOString(),sgv:0,type:'sgv',direction:'Flat'};const h=((t-start)/3600e3)%24;r.bg=(h>=1&&h<6)?5.2+(h-1)*0.4:6.5;entries.push(r);idx.set(t,entries.length-1);}
 function corr(dayStart,hour,realISF,tag){
   const ct=dayStart+hour*3600e3;treatments.push({_id:tag+ct,created_at:new Date(ct).toISOString(),eventType:'Correction Bolus',carbs:0,insulin:1.5});
   for(let tt=ct;tt<=ct+3*3600e3;tt+=STEP){const i=idx.get(tt);if(i==null)continue;const min=(tt-ct)/60000;entries[i].bg=11.0 - realISF*1.5*(1-mdl.iob(min));}

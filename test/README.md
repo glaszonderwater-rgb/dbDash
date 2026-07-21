@@ -15,7 +15,8 @@ Playwright-browserinstallatie.
 
 ## Overzicht
 - `verify_v21` — kernregressie · `synthcheck` — tijdlijn, bevindingen, consultlijst-triage
-- `propcheck` — bespreekwaarden per dagdeel (behoudend + gemeten, effect, hypo-risicovlag, celtoestanden ✓/—/→)
+- `propcheck` — bespreekwaarden per dagdeel (behoudend + gemeten, effect, hypo-risicovlag, celtoestanden ✓/—/→, ISF+basaal)
+- `smbcheck` — SMB-herkenning (varianten) + diagnose-blokje in de Insuline-sectie
 - `logcheck` / `exportcheck` — logboek, voor/na, back-up round-trip
 - `awcheck` / `hypodef` — hypo-gevoel; episode/dip/sensordruk-classificatie
 - `pcheck` / `insulincheck` / `iobcheck` / `dscheck` — profiel, insulinetype, IOB/COB, devicestatus
