@@ -622,12 +622,6 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
   <button class="tab" data-tab="consult">Consult<span class="cbadge" id="consultBadge" hidden></span></button>
 </nav>
 
-<footer class="wrap">
-  Alles blijft op dit apparaat: cache in IndexedDB, token in localStorage. Er gaat niets naar een
-  server behalve leesverzoeken aan je eigen Nightscout.<br>
-  Observaties, geen instelwaarden. Wat je met een patroon doet is een gesprek met je behandelteam.<br>
-  <span style="opacity:.8">DiaMetric · versie <b>5.7 · 20 jul 2026</b> — opgeschoond: losse wat-als weg (Bespreekwaarden dekt het), dubbele gemeten-vs-ingesteld-teksten kruisverwijzen nu</span>
-</footer>
 
 <dialog id="cfgDlg">
   <h2>Nightscout</h2>
@@ -1015,17 +1009,8 @@ function profileHtml(pi, oi, ins, MR){
   // Koppeling profiel ↔ data
   const obs=[];
   if(ins&&ins.basalPct!=null) obs.push(`Je basaal telt op tot <b>${nl2(pi.basalDaily)} E/dag</b> — ${Math.round(ins.basalPct*100)}% van je totale dosis. Voor pomptherapie ligt basaal vaak rond 40–50%.`);
-  if(oi&&oi.obs!=null){
-    const spread = oi.q25!=null?` (IQR ${nl1(oi.q25)}–${nl1(oi.q75)}, n=${oi.n})`:` (n=${oi.n})`;
-    let dir="";
-    if(oi.prof!=null){
-      const r=oi.obs/oi.prof;
-      dir = r>1.25 ? ` — sterker dan ingesteld (${nl1(oi.prof)}); een concreet getal per dagdeel staat bij Bespreekwaarden.`
-        : r<0.8 ? ` — zwakker dan ingesteld (${nl1(oi.prof)}); een concreet getal per dagdeel staat bij Bespreekwaarden.`
-        : ` — dat sluit aan bij je ingestelde ISF (${nl1(oi.prof)}).`;
-    }
-    obs.push(`Gemeten daling: mediaan <b>${nl1(oi.obs)} mmol/L per E</b> correctie${spread}${dir} Meetwaarde, geen voorschrift; basaal en resterend eten verstoren.`); }
-  else obs.push(`Nog te weinig schone, koolhydraatvrije correcties (${oi?oi.n:0}, minimaal 8) om je ISF aan de praktijk te meten.`);
+  // Gemeten ISF/basaal naast je instelling staat op Overzicht (samenvatting) en in
+  // Bespreekwaarden (per dagdeel) — hier alleen je ingestelde schema.
   if(MR&&MR.results.length>=MEAL_MIN){ const fr=MR.mfrac;
     obs.push(`Van je ingevoerde koolhydraten zie ik mediaan <b>${pct0(fr)}</b> terug. Let op: deze maat telt alleen posítieve afwijkingen en valt daardoor structureel te hoog uit — alleen als context, nooit als bewijs van onderschatten.`); }
 
@@ -1038,7 +1023,7 @@ function profileHtml(pi, oi, ins, MR){
   return `<div class="kpis">${kpis}</div>`+
     `<div class="prof3">${col("Basaal",pi.basal,"E/u",nl2)}${col("ISF",pi.isf,"mmol/L·E",nl1)}${col("KH-ratio",pi.ic,"g/E",icf)}</div>`+
     `<div class="obs">${obs.join(" ")}</div>`+
-    `<div class="muted" style="margin-top:.5rem">${meta.join(" · ")}. Dit is je ingestelde profiel uit Nightscout; de vergelijkingen zijn observaties, geen insteladvies.</div>`;
+    `<div class="muted" style="margin-top:.5rem">${meta.join(" · ")}. Je ingestelde profiel uit Nightscout.</div>`;
 }
 // Fine-tune-paneel: per hefboom (basaal → ISF → KH-ratio → prebolus) een lezing —
 // "klopt", "mogelijk bijstellen + richting", of "te weinig data" — met het bewijs.
@@ -1057,7 +1042,7 @@ function fineTuneData(drift, oi, MR, stack, pi){
       const eq = v => isfRef ? ` ≈ <b>${nl1(Math.abs(v)/isfRef)} E/u</b> verschil` : "";
       if(drift.up.length){ parts.push(`stijg je nuchter rond <b>${joinHrs(drift.up.map(s=>s.h)).join(", ")}</b> (tot ${nl1(drift.peakUp)} mmol/L/u${eq(drift.peakUp)})`); dirs.push(`iets hóger basaal rond ${joinHrs(drift.up.map(s=>s.h)).join(", ")}`); }
       if(drift.down.length){ parts.push(`zak je nuchter rond <b>${joinHrs(drift.down.map(s=>s.h)).join(", ")}</b> (tot ${nl1(drift.peakDown)} mmol/L/u${eq(drift.peakDown)})`); dirs.push(`iets láger basaal rond ${joinHrs(drift.down.map(s=>s.h)).join(", ")}`); }
-      read=parts.join(" en ")+`.${isfRef?" Het E/u-getal is de gemeten omvang van de drift — een meetwaarde ter bespreking, geen instelwaarde.":""}`;
+      read=parts.join(" en ")+`.${isfRef?" Het E/u-getal is de gemeten omvang van de drift.":""}`;
       dir=dirs.join("; ")+" — in AAPS pas je een blok ~1–2 u vóór het effect aan"; ev=`n = ${drift.total.toLocaleString("nl")} driftmetingen · omvang via ${oi&&oi.obs>0.5?"gemeten":"profiel-"}ISF`; }
     rows.push({n:1,title:"Basaal",st,read,dir,ev}); }
 
@@ -1065,7 +1050,7 @@ function fineTuneData(drift, oi, MR, stack, pi){
   { let st="na", read, dir=null, ev=`n = ${oi?oi.n:0}`;
     if(!oi||oi.obs==null){ read="Nog te weinig schone, koolhydraatvrije correcties (minimaal 8) om je ISF aan de praktijk te meten."; }
     else if(oi.prof==null){ read=`Gemeten daling ~${nl1(oi.obs)} mmol/L per E (IQR ${nl1(oi.q25)}–${nl1(oi.q75)}), maar geen profiel-ISF om naast te leggen.`; ev=`n = ${oi.n}`; }
-    else { const r=oi.obs/oi.prof; ev=`n = ${oi.n} correcties · IQR ${nl1(oi.q25)}–${nl1(oi.q75)} · meetwaarde, geen voorschrift`;
+    else { const r=oi.obs/oi.prof; ev=`n = ${oi.n} correcties · IQR ${nl1(oi.q25)}–${nl1(oi.q75)}`;
       if(r>=0.8 && r<=1.25){ st="ok"; read=`Gemeten <b>${nl1(oi.obs)}</b> mmol/L per E naast ingesteld <b>${nl1(oi.prof)}</b> — die sluiten op elkaar aan.`; }
       else if(r>1.25){ st="warn"; read=`Gemeten <b>${nl1(oi.obs)}</b> mmol/L per E naast ingesteld <b>${nl1(oi.prof)}</b> — je bent gevoeliger dan je profiel aanneemt; correcties kunnen doorschieten naar een low${stack&&stack.elevated?`, en gestapelde correcties gingen inderdaad vaak vóór je hypo's`:``}.`; dir=`een concreet getal — per dagdeel — staat bij Bespreekwaarden`; }
       else { st="warn"; read=`Gemeten <b>${nl1(oi.obs)}</b> mmol/L per E naast ingesteld <b>${nl1(oi.prof)}</b> — correcties doen minder dan je profiel aanneemt.`; dir=`een concreet getal — per dagdeel — staat bij Bespreekwaarden`; } }
