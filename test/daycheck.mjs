@@ -16,6 +16,8 @@ await page.goto(FILE,{waitUntil:'load'});
 await page.fill('#inUrl','https://mock.nightscout.test');await page.fill('#inTok','x');await page.fill('#inDays','20');
 await page.click('#btnSave');
 await page.waitForFunction(()=>!document.getElementById('secDay').hidden,{timeout:40000}).catch(()=>{});
+await page.evaluate(()=>document.getElementById('secDay').open=true); // dagcurve zit sinds v5.1 in een inklapbare fold
+await page.waitForTimeout(100);
 const r1=await page.evaluate(()=>({label:document.getElementById('dayLabel').textContent,hasSvg:!!document.querySelector('#dayChart svg'),narr:document.getElementById('dayNarr').textContent,nextDisabled:document.getElementById('dayNext').disabled,prevDisabled:document.getElementById('dayPrev').disabled}));
 console.log('laatste dag:',r1.label,'| svg:',r1.hasSvg,'| next uit:',r1.nextDisabled);
 console.log('duiding:',r1.narr);

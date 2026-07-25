@@ -132,6 +132,10 @@ h2.sect::after{content:"";flex:1;height:1px;background:var(--line)}
 .nu .onb{margin-left:auto;font-family:var(--mono);font-size:.68rem;color:var(--dim);text-align:right}
 .nu .onb b{color:var(--ink);font-weight:600}
 .nu .ob-hint{color:var(--warn);font-weight:700}
+.nu .quickcarb{align-self:center;margin-left:auto;flex:none;border-radius:999px;padding:.3rem .62rem;
+  font-size:.74rem;font-weight:600;line-height:1;color:var(--ink);background:var(--surface);
+  border:1px solid var(--line);cursor:pointer;white-space:nowrap}
+.nu .quickcarb:hover,.nu .quickcarb:focus-visible{border-color:var(--accent);color:var(--accent)}
 
 /* tijdlijn-ruggengraat */
 .tl{position:relative;padding-left:1.5rem}
@@ -520,6 +524,7 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
     <span class="val" id="nowVal">—</span><span class="arrow" id="nowArrow"></span>
     <span class="age" id="nowAge"></span>
     <span class="onb" id="onboard" hidden></span>
+    <button class="quickcarb" id="btnCarbQuick" aria-label="Koolhydraten schatten" title="Koolhydraten schatten">🍽️ KH</button>
   </div>
 
   <div id="tl" hidden>
@@ -530,21 +535,24 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
   <section class="epoch" id="epVandaag">
     <div class="eh"><h2>Vandaag</h2><span class="sub" id="todaySub"></span></div>
     <div id="findToday"></div>
-    <div class="card" id="secDay" hidden>
-      <div class="chips" id="dayJump" style="margin-bottom:.55rem"></div>
-      <div class="daynav">
-        <button class="ghost" id="dayPrev" aria-label="vorige dag">◀</button>
-        <div class="daylabel" id="dayLabel">—</div>
-        <button class="ghost" id="dayNext" aria-label="volgende dag">▶</button>
+    <details class="fold" id="secDay" hidden>
+      <summary>Dagcurve <span class="foldhint">je dag per uur — eten, bolus, hypo's</span></summary>
+      <div class="foldbody">
+        <div class="chips" id="dayJump" style="margin-bottom:.55rem"></div>
+        <div class="daynav">
+          <button class="ghost" id="dayPrev" aria-label="vorige dag">◀</button>
+          <div class="daylabel" id="dayLabel">—</div>
+          <button class="ghost" id="dayNext" aria-label="volgende dag">▶</button>
+        </div>
+        <div id="dayChart"></div>
+        <div class="legend">
+          <span><i style="background:var(--carb)"></i>koolhydraten</span>
+          <span><i style="background:var(--accent)"></i>bolus</span>
+          <span><i style="background:var(--low)"></i>hypo</span>
+        </div>
+        <div class="obs" id="dayNarr"></div>
       </div>
-      <div id="dayChart"></div>
-      <div class="legend">
-        <span><i style="background:var(--carb)"></i>koolhydraten</span>
-        <span><i style="background:var(--accent)"></i>bolus</span>
-        <span><i style="background:var(--low)"></i>hypo</span>
-      </div>
-      <div class="obs" id="dayNarr"></div>
-    </div>
+    </details>
     <details class="fold" id="secAware" hidden>
       <summary>Hypo-gevoel <span class="foldhint">voelde je iets? leg het vast</span></summary>
       <div class="foldbody">
@@ -590,26 +598,7 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
 
   <!-- ANALYSES — de bibliotheek: alles bij naam, één tik -->
   <div class="view" data-view="analyses" hidden>
-  <div class="h3" id="anaGrid" style="margin-top:.2rem">Insuline &amp; basaal</div>
-  <details class="fold" id="secProposals" hidden>
-    <summary>Bespreekwaarden <span class="foldhint">concrete getallen om met je team te bespreken</span></summary>
-    <div class="foldbody"><div id="proposals"></div></div>
-  </details>
-  <details class="deep" data-an="loopbasal"><summary>Loop-basaal <span class="foldhint">wat je loop echt levert vs. je profiel</span></summary><div class="body"><div class="loading">Openklappen om te berekenen…</div></div></details>
-  <details class="deep" data-an="dagpatroon"><summary>Dagpatroon <span class="foldhint">vaste uren waarop je wegdrijft (basaal)</span></summary><div class="body"><div class="loading">Openklappen om te berekenen…</div></div></details>
-  <details class="fold" id="secInsulin" hidden>
-    <summary>Insuline &amp; koolhydraten <span class="foldhint">dagdosis en verhouding</span></summary>
-    <div class="foldbody">
-      <div class="kpis" id="insKpis"></div>
-      <div class="muted" id="insObs" style="margin-top:.5rem"></div>
-    </div>
-  </details>
-  <details class="fold" id="secProfile" hidden>
-    <summary>Profiel <span class="foldhint">je ingestelde schema's + piektijd</span></summary>
-    <div class="foldbody"><div id="profile"></div></div>
-  </details>
-
-  <div class="h3">Maaltijden</div>
+  <div class="h3" id="anaGrid" style="margin-top:.2rem">Maaltijden</div>
   <details class="deep" data-an="meals"><summary>Maaltijdrespons <span class="foldhint">opname, piek &amp; dagdelen</span></summary><div class="body"><div class="loading">Openklappen om te berekenen…</div></div></details>
   <details class="fold" id="secAgp" hidden>
     <summary>Dagprofiel (AGP) <span class="foldhint">je typische dag als band</span></summary>
@@ -658,6 +647,25 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
         </div>
       </div>
     </div>
+  </details>
+
+  <div class="h3">Insuline &amp; basaal</div>
+  <details class="fold" id="secProposals" hidden>
+    <summary>Bespreekwaarden <span class="foldhint">concrete getallen om met je team te bespreken</span></summary>
+    <div class="foldbody"><div id="proposals"></div></div>
+  </details>
+  <details class="deep" data-an="loopbasal"><summary>Loop-basaal <span class="foldhint">wat je loop echt levert vs. je profiel</span></summary><div class="body"><div class="loading">Openklappen om te berekenen…</div></div></details>
+  <details class="deep" data-an="dagpatroon"><summary>Dagpatroon <span class="foldhint">vaste uren waarop je wegdrijft (basaal)</span></summary><div class="body"><div class="loading">Openklappen om te berekenen…</div></div></details>
+  <details class="fold" id="secInsulin" hidden>
+    <summary>Insuline &amp; koolhydraten <span class="foldhint">dagdosis en verhouding</span></summary>
+    <div class="foldbody">
+      <div class="kpis" id="insKpis"></div>
+      <div class="muted" id="insObs" style="margin-top:.5rem"></div>
+    </div>
+  </details>
+  <details class="fold" id="secProfile" hidden>
+    <summary>Profiel <span class="foldhint">je ingestelde schema's + piektijd</span></summary>
+    <div class="foldbody"><div id="profile"></div></div>
   </details>
 
   <div class="h3">Voortgang</div>
@@ -3161,7 +3169,8 @@ function goTo(target, view){
   if(el.tagName==="DETAILS") el.open=true;
   setTimeout(()=>el.scrollIntoView({behavior:"smooth",block:"start"}),60);
 }
-document.querySelectorAll("[data-goto]").forEach(el=>el.onclick=()=>showTab("analyses"));
+document.querySelectorAll("[data-goto]").forEach(el=>el.onclick=()=>goTo(el.dataset.goto,"analyses"));
+document.getElementById("btnCarbQuick").onclick=()=>goTo("secCarb","analyses");
 
 // stickyhoogte van de kop voor de Nu-strip
 try{ document.documentElement.style.setProperty("--headh", document.querySelector("header").offsetHeight+"px"); }catch(_){}

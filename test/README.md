@@ -27,6 +27,7 @@ Playwright-browserinstallatie.
 - `whycheck` — "waarom"-motor: reconstrueert de oorzaak van een nacht-hypo (SMB-stapeling) met bewijs (actieve insuline, daalsnelheid) en telt de oorzaken over de week op
 - `carbcheck` — koolhydraat-schatter: zoek eten → portie → gram KH (banaan 25 g, cola-blikje 36 g), bord-totaal en vastleggen als maaltijd in het logboek
 - `spikecheck` — "waarom"-motor voor pieken: herkent een te late bolus (geen prebolus) als oorzaak van hoge maaltijdpieken en telt de oorzaken op
+- `navcheck` — navigatie: snelknop KH-schatter in de Nu-balk springt naar de schatter, dagcurve is een ingeklapte fold, Analyses staat op gebruiksvolgorde (Maaltijden/Veiligheid bovenaan)
 - `logcheck` / `exportcheck` — logboek, voor/na, back-up round-trip
 - `awcheck` / `hypodef` — hypo-gevoel; episode/dip/sensordruk-classificatie
 - `pcheck` / `insulincheck` / `iobcheck` / `dscheck` — profiel, insulinetype, IOB/COB, devicestatus
