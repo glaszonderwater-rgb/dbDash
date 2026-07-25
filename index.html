@@ -341,6 +341,9 @@ details.fold>.foldbody{padding:0 1.05rem 1.05rem}
 .meth p{margin:.35rem 0 .8rem;color:var(--muted)} .meth p b{color:var(--ink);font-weight:600}
 .meth .mlead{font-size:.9rem;color:var(--ink)}
 .mh{font-size:.8rem;font-weight:700;letter-spacing:.02em;color:var(--accent);margin:1.1rem 0 .1rem}
+.mpart{font-size:.68rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--ink);margin:1.4rem 0 .3rem;padding-top:.9rem;border-top:1px solid var(--line)}
+.mpart:first-of-type{border-top:0;padding-top:0;margin-top:.6rem}
+.meth .mterm{font-size:.86rem;line-height:1.55;color:var(--muted);padding:.4rem 0;border-bottom:1px solid var(--line)} .meth .mterm b{color:var(--ink);font-weight:650}
 .meth .mul{margin:.2rem 0 .8rem 1.1rem;padding:0;color:var(--muted)} .meth .mul li{margin:.25rem 0} .meth .mul b{color:var(--ink)}
 .meth .mnote{font-size:.76rem;color:var(--dim);margin:.3rem 0 .8rem}
 .meth code{font-size:.82em;background:var(--surface-2);border:1px solid var(--line);border-radius:.3rem;padding:.02rem .3rem}
@@ -610,9 +613,25 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
   </details>
   <div class="h3">Over de app</div>
   <details class="fold" id="secMethode">
-    <summary>Methode &amp; berekeningen <span class="foldhint">hoe elk getal tot stand komt</span></summary>
+    <summary>Uitleg &amp; leren <span class="foldhint">je diabetes begrijpen + hoe de app rekent</span></summary>
     <div class="foldbody meth">
-      <p class="mlead">DiaMetric leest je eigen Nightscout-data en rekent er patronen uit. Elk getal hieronder komt uit je eigen metingen — niets is een dosis of voorschrift. Hier staat precies hoe.</p>
+      <p class="mlead">Nieuw met diabetes of een loop? Hieronder eerst de begrippen in gewone taal, daarna hoe de app elk getal berekent. Niets hiervan is een dosis of voorschrift — het helpt je begrijpen en het gesprek met je team voeren.</p>
+
+      <div class="mpart">Diabetes in het kort</div>
+      <p>De basis, in gewone taal. Ken je dit al, sla het gerust over.</p>
+      <div class="mterm"><b>Bloedglucose (bloedsuiker)</b> — te <b>laag</b> (onder 3,9) is een <b>hypo</b>: acuut, je neemt dan snelle koolhydraten. Te <b>hoog</b> (boven 10) is een <b>hyper</b>. Doel: zo veel mogelijk tijd tussen 3,9 en 10,0.</div>
+      <div class="mterm"><b>Basaal</b> — je "achtergrond"-insuline die de klok rond doorloopt en je glucose stabiel houdt zónder eten. Staat hij goed, dan blijf je nuchter (zonder maaltijd) vlak.</div>
+      <div class="mterm"><b>Bolus</b> — de insuline die je er los bij geeft: voor een <b>maaltijd</b>, of om een hoge waarde te verlagen (een <b>correctie</b>).</div>
+      <div class="mterm"><b>KH-ratio</b> (koolhydraatratio) — hoeveel gram koolhydraten 1 eenheid insuline dekt. Bepaalt je maaltijdbolus. Een <i>lager</i> getal = sterker (meer insuline per maaltijd).</div>
+      <div class="mterm"><b>ISF</b> (correctiefactor) — hoeveel 1 eenheid je glucose laat zakken. Bepaalt je correctiebolus. Een <i>hoger</i> getal = je bent gevoeliger, je hebt minder insuline nodig.</div>
+      <div class="mterm"><b>Prebolus</b> — je bolus een kwartiertje vóór het eten geven, zodat de insuline op tijd werkt en je piek na de maaltijd lager blijft.</div>
+      <div class="mterm"><b>IOB</b> (insuline aan boord) — hoeveel eerder gegeven insuline nog aan het werk is. Belangrijk om niet te <b>stapelen</b>: te snel opnieuw bijspuiten kan een hypo geven.</div>
+      <div class="mterm"><b>Piektijd &amp; DIA</b> — wanneer je insuline het hardst werkt (piek) en hoe lang hij doorwerkt (DIA). Samen vormen ze de IOB-curve.</div>
+      <div class="mterm"><b>Closed loop (AAPS/Loop)</b> — je systeem stuurt zelf bij: het verhoogt of verlaagt tijdelijk je basaal (<b>temp-basaal</b>) en geeft kleine automatische bolussen (<b>SMB's</b>) om je in bereik te houden.</div>
+      <div class="mterm"><b>TIR · GMI · CV</b> — je periode samengevat: TIR = % tijd in bereik (hoger beter), GMI = geschat HbA1c, CV = hoe grillig je waarden zijn (lager = stabieler).</div>
+
+      <div class="mpart">Hoe de app rekent</div>
+      <p>Elk getal komt uit je eigen metingen. Hier staat per onderdeel precies hoe.</p>
 
       <h4 class="mh">1 · Privacy &amp; opzet</h4>
       <p>Eén HTML-bestand, geen build, werkt offline. Je data staat <b>alleen op dit apparaat</b>: metingen in IndexedDB, je adres en token in localStorage. Er gaat niets naar een server behalve <b>lees</b>verzoeken aan je eigen Nightscout (met je token: <code>?token=…</code>). Na de eerste keer werkt alles uit de lokale cache; syncen haalt alleen het nieuwe stuk op.</p>
