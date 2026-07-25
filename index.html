@@ -1438,6 +1438,25 @@ function explainHypo(e, glucose, treatments, timeline){
   steps.push(`Te weinig aanknopingspunten (insuline én koolhydraten laag) — mogelijk beweging, alcohol of een meetartefact.`);
   return { cause,label,conf,steps };
 }
+/* ── "Waarom"-motor voor post-maaltijd-pieken — verklaart één maaltijdpiek uit de
+   al berekende maaltijddata (bolus-timing, dekking, opnamesnelheid). Werkt op je
+   automatische Nightscout-maaltijden; geen invoer nodig, geen dosisopdracht. ── */
+function explainSpike(r){
+  const rise=r.peakRise, off=r.bolusOffset, frac=r.frac, t50=r.t50, tpk=r.tPeak;
+  const steps=[`Piek +${nl1(rise)} mmol/L, ${Math.round(tpk)} min na de maaltijd (${r.carbs} g koolhydraten).`];
+  let cause,label,conf="matig";
+  if(off!=null && off>10){ cause="prebolus"; label="je boluste laat — de insuline liep achter de koolhydraten aan";
+    steps.push(`Je bolus kwam ${Math.round(off)} min ná je koolhydraat-invoer; zonder voorsprong piekt je glucose hoger.`);
+    steps.push(`Een prebolus (~15 min vóór het eten) verlaagt juist die piek — een bespreekpunt over timing, geen instelopdracht.`); conf="hoog"; }
+  else if(frac>=1.25){ cause="kh-onderschat"; label="meer stijging dan bij je ingevoerde koolhydraten past";
+    steps.push(`Je zag ~${pct0(frac)} van de ingevoerde koolhydraten terug in je glucose — mogelijk ondergeschat, of de bolus dekte niet volledig.`); }
+  else if(t50!=null && t50>70){ cause="traag"; label="trage opname — grote of vette maaltijd";
+    steps.push(`Half opgenomen na ${Math.round(t50)} min: de koolhydraten kwamen traag los (vet/eiwit vertraagt), terwijl de bolus al werkte.`);
+    steps.push(`Bij zulke maaltijden hoort een latere piek; een verdeelde of latere bolus is een bespreekpunt.`); }
+  else { cause="verwacht"; label="binnen verwachting voor deze maaltijd"; conf="laag";
+    steps.push(`Timing en dekking ogen normaal; een piek van deze grootte hoort bij een maaltijd van ${r.carbs} g.`); }
+  return { cause,label,conf,steps,rise };
+}
 // Correctie-stapeling vóór hypo's (case-control, gematcht op tijd-van-de-dag, begrensd)
 function hypoStacking(glucose, treatments, q){
   const CASE=3*3600e3, TOL=20*60e3, MIN_EP=6, DAYMS=864e5;
@@ -1937,6 +1956,30 @@ async function renderFindings(ctx){
                 : `Gemengd beeld — open een hypo hierboven voor de reconstructie per keer.`),
           `Elke hypo is los doorgerekend uit je insuline, koolhydraten en daalsnelheid; open "vannacht" voor het bewijs per keer.` ],
         fine:`n = ${done} doorgerekende hypo's` });
+    }
+  }
+
+  // "Waarom"-patroon voor pieken: verklaar elke forse maaltijdpiek uit je
+  // automatische Nightscout-maaltijden en tel de oorzaken op.
+  if (MR && MR.results && MR.results.length){
+    const notable=MR.results.filter(r=>r.peakRise>=3.0);
+    if (notable.length>=3){
+      const SL={ prebolus:"een te late bolus (geen prebolus)", "kh-onderschat":"onderschatte koolhydraten of dekking",
+        traag:"een trage of vette maaltijd", verwacht:"binnen verwachting" };
+      const tally={}; for(const r of notable){ const w=explainSpike(r); tally[w.cause]=(tally[w.cause]||0)+1; }
+      const ranked=Object.entries(tally).sort((a,b)=>b[1]-a[1]).filter(([c])=>c!=="verwacht");
+      if (ranked.length){
+        const [top,topN]=ranked[0];
+        const biggest=notable.reduce((a,b)=>b.peakRise>a.peakRise?b:a);
+        const bw=explainSpike(biggest);
+        const breakdown=Object.entries(tally).map(([c,n])=>`${n}× ${SL[c]||c}`).join(" · ");
+        week.push({ id:"waarom-pieken", sev:"n", seenable:false, consultable:true,
+          title:`Je hoogste pieken komen het vaakst door <b>${SL[top]}</b> (${topN}×).`,
+          steps:[ `Over ${notable.length} maaltijden met een piek ≥ 3,0 mmol/L: ${breakdown}.`,
+            `Grootste piek — ${bw.steps[0]} ${bw.label}.`,
+            `Elke piek is doorgerekend met je eigen ISF en KH-ratio en je bolus-timing; een bespreekpunt, geen dosisopdracht.` ],
+          fine:`n = ${notable.length} maaltijden met piek ≥ 3,0` });
+      }
     }
   }
 
