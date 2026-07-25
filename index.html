@@ -2001,7 +2001,12 @@ function anLoopBasal(glucose, treatments, q, timeline){
     if(up.length) parts.push(`rond <b>${joinHrs(up).join(", ")}</b> levert je loop <b>méér</b> — profiel mogelijk te <b>laag</b>`);
     if(down.length) parts.push(`rond <b>${joinHrs(down).join(", ")}</b> <b>minder</b> — mogelijk te <b>hoog</b>`);
     lead=`Je loop levert <b>${ps}</b> t.o.v. je profiel-basaal: ${parts.join("; ")}. Bespreekpunt, geen instelwaarde.`; }
-  return loopBasalSvg(r.hours)+`<div class="obs">${lead}</div>`+
+  const explain=`<details class="mini" style="margin:0 0 .6rem"><summary>Wat zie ik hier?</summary><div class="minibody">`+
+    `<div>Je <b>profiel</b> is je plan (streepjes); je <b>loop</b> wijkt daarvan af om je in bereik te houden (balken).</div>`+
+    `<div>Geeft je loop op een uur dag na dag <b>méér</b> dan je profiel, dan staat je profiel-basaal daar waarschijnlijk te <b>laag</b>; structureel <b>minder</b> = te <b>hoog</b>.</div>`+
+    `<div><b>Wat je eraan hebt:</b> het wijst aan welke basaal-blokken je in je profiel kunt bijstellen. Klopt je profiel beter, dan hoeft je loop minder te corrigeren — dat geeft vlakkere, voorspelbaardere waarden.</div>`+
+    `</div></details>`;
+  return explain+loopBasalSvg(r.hours)+`<div class="obs">${lead}</div>`+
     `<div class="muted" style="margin-top:.4rem">Geleverde basaal (temp-basaal) vs. profiel, per uur over ${r.days} dagen; maaltijduren eruit gefilterd. Temp-basaal reageert ook op correcties, dus richting — geen exacte instelwaarde.</div>`;
 }
 
