@@ -23,6 +23,7 @@ Playwright-browserinstallatie.
 - `peakcheck` — gemeten piektijd (steilste daling) ligt binnen band van het model
 - `loopcheck` — loop-basaal: temp-basaal vs. profiel per uur (closed loop)
 - `bwloopcheck` — basaal-bespreekwaarde vult zich uit loop-basaal (looper zonder drift)
+- `pwacheck` — PWA: manifest geldig (standalone + maskable icoon), service worker bestuurt de pagina, offline herladen werkt (eigen mini-http-server, want SW registreert niet vanaf `file://`)
 - `logcheck` / `exportcheck` — logboek, voor/na, back-up round-trip
 - `awcheck` / `hypodef` — hypo-gevoel; episode/dip/sensordruk-classificatie
 - `pcheck` / `insulincheck` / `iobcheck` / `dscheck` — profiel, insulinetype, IOB/COB, devicestatus

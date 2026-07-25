@@ -1,0 +1,30 @@
+{
+  "id": "./",
+  "name": "DiaMetric — persoonlijke diabetesanalyse",
+  "short_name": "DiaMetric",
+  "description": "Lokale, privé analyse van je eigen Nightscout/closed-loop data. Alles in mmol/L. Observaties en bespreekpunten — nooit een doseeropdracht.",
+  "lang": "nl",
+  "dir": "ltr",
+  "start_url": ".",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "portrait",
+  "theme_color": "#0E7C6B",
+  "background_color": "#F5F7F6",
+  "categories": ["health", "medical", "lifestyle"],
+  "icons": [
+    {
+      "src": "icon.svg",
+      "type": "image/svg+xml",
+      "sizes": "any",
+      "purpose": "any"
+    },
+    {
+      "src": "icon.svg",
+      "type": "image/svg+xml",
+      "sizes": "any",
+      "purpose": "maskable"
+    }
+  ]
+}

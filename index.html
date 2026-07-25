@@ -9,6 +9,14 @@
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <title>DiaMetric</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon.svg">
+<meta name="application-name" content="DiaMetric">
+<meta name="apple-mobile-web-app-title" content="DiaMetric">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <style>
 /* ══════════════════════════════════════════════════════════════════════════
    DiaMetric — lichte herbouw. Geen Plotly: alle grafieken zijn zelfgebouwde,
@@ -2766,6 +2774,16 @@ initDeep();
   if (!cfg.url){ setConn("","niet ingesteld"); openDlg(); }
   else { setConn("ok","ingesteld"); document.getElementById("btnSync").disabled=false; }
   try { await refresh(); } catch(e){ console.error(e); }
+})();
+
+/* PWA: registreer de offline-schil. Alleen op http(s) — vanaf file:// of zonder
+   ondersteuning slaan we het stil over, de app blijft gewoon werken. */
+(function registerSW(){
+  if(!("serviceWorker" in navigator)) return;
+  if(location.protocol!=="https:" && location.protocol!=="http:") return;
+  window.addEventListener("load",function(){
+    navigator.serviceWorker.register("sw.js").catch(function(e){ console.warn("SW niet geregistreerd:", e && e.message); });
+  });
 })();
 </script>
 </body>
