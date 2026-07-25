@@ -1121,10 +1121,10 @@ function profileHtml(pi, oi, ins, MR){
   // Piektijd: gemeten steilste-daling-moment naast de ingestelde piektijd van het model.
   { const pk=observedPeak(oi);
     if(pk.obs!=null){ const d=pk.obs-PEAK_MIN;   // meet stelselmatig ~10–15 min vroeg → asymmetrische band
-      const judge = (d>=-30 && d<=20) ? `— dat sluit aan bij je ingestelde piektijd (<b>${PEAK_MIN} min</b>).`
-        : d<-30 ? `— duidelijk eerder dan je ingestelde <b>${PEAK_MIN} min</b>: je insuline lijkt sneller te werken. Controleer of je insulinesoort-instelling klopt (Fiasp/Lyumjev pieken eerder) en bespreek het met je team.`
-        : `— later dan je ingestelde <b>${PEAK_MIN} min</b>: je insuline lijkt trager te werken. Bespreekpunt voor je team.`;
-      obs.push(`Piektijd: de steilste daling na je correcties ligt mediaan rond <b>${pk.obs} min</b> (IQR ${pk.q25}–${pk.q75}, n=${pk.n}) ${judge} De piektijd vormt je IOB-curve — waar je loop op stuurt. Deze meting leest doorgaans ~10–15 min aan de vroege kant (tegenregulatie en de curvevorm); een indicatie, geen exacte meting.`); } }
+      const judge = (d>=-30 && d<=20) ? `sluit aan bij je ingestelde <b>${PEAK_MIN} min</b>.`
+        : d<-30 ? `duidelijk eerder dan je ingestelde <b>${PEAK_MIN} min</b> — je insuline lijkt sneller (Fiasp/Lyumjev pieken eerder); check je insulinesoort-instelling.`
+        : `later dan je ingestelde <b>${PEAK_MIN} min</b> — je insuline lijkt trager. Bespreekpunt.`;
+      obs.push(`Piektijd: steilste daling mediaan rond <b>${pk.obs} min</b> (n=${pk.n}) — ${judge} Vormt je IOB-curve, waar je loop op stuurt. Leest ~10–15 min vroeg; indicatie, geen exacte meting.`); } }
   // Gemeten ISF/basaal naast je instelling staat op Overzicht (samenvatting) en in
   // Bespreekwaarden (per dagdeel) — hier alleen je ingestelde schema.
   if(MR&&MR.results.length>=MEAL_MIN){ const fr=MR.mfrac;
@@ -1152,7 +1152,7 @@ function fineTuneData(drift, oi, MR, stack, pi){
 
   // 1 — Basaal
   { let st="na", read, dir=null, ev;
-    if(!drift||!drift.stat){ read="Nog te weinig nuchtere (maaltijd- en bolusvrije) vensters van 5 u om je basaal te toetsen. Bij een closed loop breken SMB's en temp-basaal die vensters en regelt de loop de drift zelf weg — dan is basaaldrift nauwelijks meetbaar. Je loop-gedrag (temp-basaal vs. profiel) is dan de betere ingang."; ev="drempel 0,3 mmol/L/u"; }
+    if(!drift||!drift.stat){ read="Te weinig nuchtere vensters om basaaldrift te meten. Bij een closed loop maskeert temp-basaal de drift — zie <b>Loop-basaal</b> voor de betere ingang."; ev="drempel 0,3 mmol/L/u"; }
     else if(!drift.up.length && !drift.down.length){ st="ok"; read="In stille vensters drijf je nergens structureel weg — je basaal lijkt over de dag in balans."; ev=`n = ${drift.total.toLocaleString("nl")} driftmetingen`; }
     else { st="warn"; const parts=[], dirs=[];
       const eq = v => isfRef ? ` ≈ <b>${nl1(Math.abs(v)/isfRef)} E/u</b> verschil` : "";
@@ -1164,7 +1164,7 @@ function fineTuneData(drift, oi, MR, stack, pi){
 
   // 2 — ISF (correctiefactor)
   { let st="na", read, dir=null, ev=`n = ${oi?oi.n:0}`;
-    if(!oi||oi.obs==null){ read=`Nog te weinig schone, koolhydraatvrije <b>handmatige</b> correcties (${oi?oi.n:0} van 8) om je ISF te meten. Bij een closed loop corrigeer je meestal via SMB's in plaats van handmatig — dan blijven er weinig losse correcties over om op te meten.`; }
+    if(!oi||oi.obs==null){ read=`Te weinig schone <b>handmatige</b> correcties (${oi?oi.n:0}/8) om je ISF te meten. Bij een closed loop corrigeer je meestal via SMB's.`; }
     else if(oi.prof==null){ read=`Gemeten daling ~${nl1(oi.obs)} mmol/L per E (IQR ${nl1(oi.q25)}–${nl1(oi.q75)}), maar geen profiel-ISF om naast te leggen.`; ev=`n = ${oi.n}`; }
     else { const r=oi.obs/oi.prof; ev=`n = ${oi.n} correcties · IQR ${nl1(oi.q25)}–${nl1(oi.q75)}`;
       if(r>=0.8 && r<=1.25){ st="ok"; read=`Gemeten <b>${nl1(oi.obs)}</b> mmol/L per E naast ingesteld <b>${nl1(oi.prof)}</b> — die sluiten op elkaar aan.`; }
@@ -1955,20 +1955,20 @@ function loopBasalSvg(hours){
 function anLoopBasal(glucose, treatments, q, timeline){
   const r=loopBasal(treatments, timeline, q);
   if(r.noprof) return `<div class="muted">Geen profiel met basaalschema in Nightscout gevonden — nodig om je loop-basaal naast je profiel te leggen.</div>`;
-  if(r.thin) return `<div class="muted">Te weinig nuchtere uren met loop-data (buiten 3 u na maaltijden) om je basaal per uur te vergelijken. Met meer historie komt dit beschikbaar.</div>`;
-  if(r.few!=null) return `<div class="muted">Te weinig temp-basaal-gegevens (${r.few}). Deze analyse werkt alleen bij een <b>closed loop</b> die temp-basaal naar Nightscout stuurt (AAPS/Loop). Bij pen- of pomptherapie zonder loop is dit niet van toepassing.</div>`;
+  if(r.thin) return `<div class="muted">Te weinig nuchtere uren met loop-data om je basaal per uur te vergelijken.</div>`;
+  if(r.few!=null) return `<div class="muted">Te weinig temp-basaal-data (${r.few}). Werkt alleen bij een <b>closed loop</b> (AAPS/Loop) die temp-basaal naar Nightscout stuurt.</div>`;
   const TH=0.15;
   const dev=r.hours.filter(x=>x.act!=null && Math.abs(x.act-x.prof)/Math.max(0.05,x.prof)>=TH);
   const up=dev.filter(x=>x.act>x.prof).map(x=>x.h), down=dev.filter(x=>x.act<x.prof).map(x=>x.h);
   const pct=r.ratio!=null?Math.round((r.ratio-1)*100):0, ps=(pct>=0?"+":"")+pct+"%";
   let lead;
-  if(!up.length && !down.length) lead=`Je loop levert over de nuchtere uren ongeveer je profiel-basaal (${ps} totaal) — je profiel-basaal sluit aan bij wat de loop werkelijk nodig heeft.`;
+  if(!up.length && !down.length) lead=`Je loop levert ongeveer je profiel-basaal (${ps} totaal) — je profiel sluit aan bij wat de loop nodig heeft.`;
   else { const parts=[];
-    if(up.length) parts.push(`rond <b>${joinHrs(up).join(", ")}</b> geeft je loop structureel <b>méér</b> dan je profiel — daar staat je profiel-basaal mogelijk te <b>laag</b>`);
-    if(down.length) parts.push(`rond <b>${joinHrs(down).join(", ")}</b> geeft je loop <b>minder</b> — daar mogelijk te <b>hoog</b>`);
-    lead=`Over de nuchtere uren levert je loop <b>${ps}</b> t.o.v. je profiel-basaal. ${parts.join("; en ")}. Een bespreekpunt voor je team — geen instelwaarde.`; }
+    if(up.length) parts.push(`rond <b>${joinHrs(up).join(", ")}</b> levert je loop <b>méér</b> — profiel mogelijk te <b>laag</b>`);
+    if(down.length) parts.push(`rond <b>${joinHrs(down).join(", ")}</b> <b>minder</b> — mogelijk te <b>hoog</b>`);
+    lead=`Je loop levert <b>${ps}</b> t.o.v. je profiel-basaal: ${parts.join("; ")}. Bespreekpunt, geen instelwaarde.`; }
   return loopBasalSvg(r.hours)+`<div class="obs">${lead}</div>`+
-    `<div class="muted" style="margin-top:.4rem">Werkelijk geleverde basaal (temp-basaal, profiel waar geen temp actief) vs. je profiel, per uur, over ${r.days} dagen. Maaltijduren (3 u na koolhydraten) zijn eruit gefilterd; SMB's tellen mee als correctie, niet als basaal. Zo lees je waar je loop je profiel structureel bijstuurt — dé ingang voor basaal bij een closed loop. Temp-basaal reageert ook op correcties, dus lees dit als richting, niet als exacte instelwaarde.</div>`;
+    `<div class="muted" style="margin-top:.4rem">Geleverde basaal (temp-basaal) vs. profiel, per uur over ${r.days} dagen; maaltijduren eruit gefilterd. Temp-basaal reageert ook op correcties, dus richting — geen exacte instelwaarde.</div>`;
 }
 
 // Herbruikbare maaltijd-berekening (gebruikt door de kaart én door "Jouw vragen").
@@ -2024,7 +2024,7 @@ function anMeals(glucose, treatments, q, timeline){
   const speed=mt50==null?"":mt50>60?" Aan de trage kant — passend bij grote of vette maaltijden.":mt50<35?" Snel — dan telt prebolus-timing zwaar mee.":" Vrij gemiddeld.";
   const acc=mfrac>=0.8&&mfrac<=1.2?"je koolhydraatschatting sluit redelijk aan bij wat je glucose laat zien":mfrac<0.8?"je ziet minder terug dan ingevoerd — mogelijk tel je te hoog, of dekt insuline ruim":"je ziet meer terug dan ingevoerd — mogelijk ondergeteld, of te weinig bolus";
   const stats=`<div class="kpis" style="margin-top:.6rem"><div class="kpi"><div class="k">t50</div><div class="v">${mt50==null?"—":Math.round(mt50)}</div><div class="s">min tot 50%</div></div><div class="kpi"><div class="k">Piek</div><div class="v">${Math.round(mtpk)}</div><div class="s">min na maaltijd</div></div></div>`;
-  return absorpSvg(GRID,medc,mt50)+stats+mealDayparts(results,med)+`<div class="obs">Je maaltijden vanaf ${MIN_CARBS} g zijn mediaan na ${mt50==null?"—":Math.round(mt50)} min voor de helft opgenomen, met de piek rond ${Math.round(mtpk)} min.${speed} Dit is het bruikbaarste voor je bolus-timing.</div><div class="muted" style="margin-top:.4rem">Terzijde (indicatief): van de ingevoerde koolhydraten zie ik mediaan ${pct0(mfrac)} terug — ${acc}. Alleen positieve deviaties, temp-basaal niet meegerekend, dus neem dit percentage met een korrel zout. n = ${results.length} maaltijden.</div>`;
+  return absorpSvg(GRID,medc,mt50)+stats+mealDayparts(results,med)+`<div class="obs">Je maaltijden vanaf ${MIN_CARBS} g zijn mediaan na ${mt50==null?"—":Math.round(mt50)} min half opgenomen, piek rond ${Math.round(mtpk)} min.${speed} Bruikbaar voor je bolus-timing.</div><div class="muted" style="margin-top:.4rem">Terzijde: van je koolhydraten zie ik mediaan ${pct0(mfrac)} terug — ${acc}. Deze maat valt structureel te hoog uit (alleen positieve deviaties), dus alleen als context. n = ${results.length}.</div>`;
 }
 // Maaltijden per dagdeel: legt ochtendresistentie (hoger ontbijt-piek) bloot.
 function mealDayparts(results, med){
@@ -2284,8 +2284,8 @@ function proposalsHtml(drift, oi, MR, pi, glucose, treatments, q, timeline){
   const changed = items.filter(it=>it.rows && it.rows.length);
   const anyChange = changed.length>0;
   const lead = anyChange ? "" :
-    `<div class="pgood" style="margin-top:.6rem">Op elk dagdeel met genoeg schone data sluit je gemeten waarde aan bij je instelling (✓). Waar een — staat, is er te weinig data om iets te zeggen — geen teken dat het goed óf fout staat.</div>`;
-  const caveat = `<div class="muted" style="margin-top:.6rem">Een <b class="lok">✓</b> betekent: op dit dagdeel is er genoeg schone data én je gemeten waarde valt binnen ±20% van je instelling. Een <b>—</b> betekent alléén "te weinig data" — géén oordeel. De pijl toont huidig → bespreekwaarde (behoudende stap–gemeten waarde); <span class="prisk">rood</span> = de simulatie ziet meer laagtes. Elk getal is dóórgerekend met je eigen data. <b>Bespreekpunten voor je behandelteam — geen instel- of pompopdracht.</b></div>`;
+    `<div class="pgood" style="margin-top:.6rem">Waar genoeg data is, sluiten je gemeten waarden aan bij je instellingen. Een — betekent te weinig data — geen oordeel.</div>`;
+  const caveat = `<div class="muted" style="margin-top:.6rem">Dóórgerekend met je eigen data; <span class="prisk">rood</span> = de simulatie ziet meer laagtes. Bespreekpunten voor je team — geen instel- of pompopdracht.</div>`;
   const detail = anyChange ? `<details class="bwdetail"><summary>Onderbouwing per dagdeel — bewijs & effect</summary><div class="bwbody">${changed.map(card).join("")}</div></details>` : "";
   return matrix + allNote + lead + caveat + detail;
 }
@@ -2429,7 +2429,7 @@ async function renderLog(){
   const list=document.getElementById("logList"); if(!list) return;
   let anns=[]; try{ anns=await DB.all("annotations"); }catch(_){}
   anns=anns.filter(a=>a.type!=="hypogevoel").sort((a,b)=>b.ts-a.ts);   // hypo-gevoel heeft z'n eigen sectie
-  if(!anns.length){ list.innerHTML=`<div class="muted" style="padding-top:.3rem">Nog geen markeringen. Leg vast wanneer je een instelling aanpaste of er iets bijzonders speelde — bij een aangepaste instelling vergelijkt de app vanzelf de periode ervóór en erná.</div>`; return; }
+  if(!anns.length){ list.innerHTML=`<div class="muted" style="padding-top:.3rem">Nog geen markeringen. Leg een instelling-wijziging of gebeurtenis vast — bij een wijziging vergelijkt de app vanzelf de periode ervóór en erná.</div>`; return; }
   list.innerHTML=anns.map(an=>{ const t=annotType(an.type);
     const d=new Date(an.ts).toLocaleDateString("nl-NL",{day:"2-digit",month:"short",year:"numeric"});
     return `<div class="logentry"><div class="leh"><span class="ic">${t.icon}</span><span class="lt">${esc(t.label)}</span><span class="ld">${d}</span><button class="del" data-id="${esc(an.id)}" title="verwijderen" aria-label="verwijderen">✕</button></div>`+
@@ -2450,7 +2450,7 @@ function buildAwChips(){
   c.querySelectorAll(".chip").forEach(ch=>ch.onclick=()=>{ _awSel=ch.dataset.int; buildAwChips(); });
 }
 function awareHtml(aw, hy){
-  if(!aw.n) return `<div class="muted" style="padding-top:.3rem">Nog geen hypo-gevoel gelogd. Leg vast wannéér je een hypo vóélt (en zo mogelijk je meterwaarde) — dan volgt de app op welke glucose je het merkt, en of die grens over de tijd zakt: een vroeg teken van verminderd hypogevoel.</div>`;
+  if(!aw.n) return `<div class="muted" style="padding-top:.3rem">Nog geen hypo-gevoel gelogd. Leg vast wannéér je een hypo vóélt (met je meterwaarde) — dan volgt de app of die voelgrens over de tijd zakt.</div>`;
   const thrTxt = aw.thr<3.3 ? `Je merkt hypo's mediaan pas bij <b>${nl1(aw.thr)} mmol/L</b> — vrij laag. Dat kán wijzen op verminderd hypogevoel.`
     : aw.thr<3.9 ? `Je voelt hypo's mediaan rond <b>${nl1(aw.thr)} mmol/L</b>.`
     : `Je voelt hypo's mediaan al rond <b>${nl1(aw.thr)} mmol/L</b> — ruim op tijd.`;
@@ -2466,7 +2466,7 @@ function awareHtml(aw, hy){
   let cov="";
   if(hy && hy.allLows && hy.allLows.length){ const felt=aw.ev.map(e=>e.ts);
     const covered=hy.allLows.filter(ep=>felt.some(ft=>Math.abs(ft-ep.start)<=30*60e3)).length;
-    cov=`<div class="muted" style="margin-top:.45rem">Van je ${hy.allLows.length} sensor-lows (episodes én dips) had ${covered} een gelogd gevoel eromheen. Weinig overlap kán betekenen dat je ze niet voelt — óf simpelweg niet logt. Een hint, geen diagnose; hypogevoel toets je met je team.</div>`; }
+    cov=`<div class="muted" style="margin-top:.45rem">Van je ${hy.allLows.length} sensor-lows had ${covered} een gelogd gevoel eromheen. Weinig overlap kan betekenen dat je ze niet voelt — of niet logt. Een hint, geen diagnose.</div>`; }
   return `<div class="kpis">${kpis}</div><div class="obs">${thrTxt}${trendTxt}</div>`+cov;
 }
 async function renderAware(){
