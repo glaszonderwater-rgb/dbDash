@@ -295,6 +295,35 @@ details.fold>.foldbody{padding:0 1.05rem 1.05rem}
 .leh .ld{font-family:var(--mono);font-size:.72rem;color:var(--muted)}
 .leh .del{margin-left:auto;background:none;border:0;color:var(--dim);font-size:1rem;cursor:pointer;padding:.1rem .3rem;line-height:1}
 .lenote{font-size:.82rem;color:var(--muted);margin-top:.2rem}
+.lecarb{font-size:.82rem;color:var(--ink);margin-top:.25rem;font-weight:600}
+.lecarb .litems{font-weight:400;color:var(--muted)}
+/* ── Koolhydraat-schatter ──────────────────────────────────────────────────── */
+.cbNote{font-size:.76rem;line-height:1.5;color:var(--muted);background:var(--surface-2);border-radius:.55rem;padding:.5rem .6rem;margin-bottom:.6rem}
+#cbSearch{width:100%;box-sizing:border-box;font-size:.9rem;padding:.55rem .7rem;border:1px solid var(--line-2);border-radius:.6rem;background:var(--bg);color:var(--ink)}
+.cbCats{display:flex;flex-wrap:wrap;gap:.3rem;margin:.55rem 0}
+.cbResults{display:flex;flex-direction:column}
+.cbRow{border-top:1px solid var(--line);padding:.5rem 0}
+.cbRow:first-child{border-top:0}
+.cbRhead{display:flex;align-items:baseline;gap:.5rem;cursor:pointer}
+.cbRhead .cbN{font-weight:600;font-size:.9rem;color:var(--ink)}
+.cbRhead .cbP{margin-left:auto;font-family:var(--mono);font-size:.72rem;color:var(--muted);white-space:nowrap}
+.cbEdit{margin-top:.5rem;padding:.55rem .6rem;background:var(--surface-2);border-radius:.55rem}
+.cbUnits{display:flex;flex-wrap:wrap;gap:.3rem;margin-bottom:.5rem}
+.cbUnit{font-size:.76rem;padding:.28rem .5rem;border-radius:.5rem;border:1px solid var(--line-2);background:var(--bg);color:var(--muted);cursor:pointer}
+.cbUnit.sel{border-color:transparent;background:var(--accent);color:var(--on-accent);font-weight:600}
+.cbQrow{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap}
+.cbQrow label{font-size:.78rem;color:var(--muted)}
+.cbQrow input{width:4.2rem;font-size:.9rem;padding:.35rem .45rem;border:1px solid var(--line-2);border-radius:.5rem;background:var(--bg);color:var(--ink)}
+.cbEst{font-weight:700;color:var(--accent);font-variant-numeric:tabular-nums}
+.cbAdd{flex:0 0 auto;margin-left:auto;font-size:.8rem;padding:.35rem .7rem;border-radius:.5rem;border:1px solid var(--accent);background:var(--accent);color:var(--on-accent);cursor:pointer;font-weight:600}
+.cbNone{font-size:.82rem;color:var(--muted);padding:.5rem .1rem}
+.cbPlate{margin-top:.8rem;border-top:2px solid var(--line-2);padding-top:.7rem}
+.cbPlateHead{font-size:.62rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);margin-bottom:.4rem}
+.cbItem{display:flex;align-items:baseline;gap:.5rem;padding:.3rem 0;font-size:.85rem}
+.cbItem .ci-n{color:var(--ink)} .cbItem .ci-d{color:var(--muted);font-size:.76rem}
+.cbItem .ci-c{margin-left:auto;font-variant-numeric:tabular-nums;color:var(--ink);font-weight:600}
+.cbItem .ci-x{background:none;border:0;color:var(--dim);font-size:.95rem;cursor:pointer;padding:0 .2rem;line-height:1}
+.cbTotal{margin:.5rem 0 .6rem;font-size:.95rem;color:var(--ink)} .cbTotal b{color:var(--accent);font-variant-numeric:tabular-nums;font-size:1.1rem}
 .ba{margin-top:.45rem;padding:.5rem .6rem;border-radius:.55rem;background:var(--surface-2);font-size:.8rem;line-height:1.6}
 .ba .bar{display:flex;justify-content:space-between;gap:.5rem} .ba b{color:var(--ink);font-variant-numeric:tabular-nums}
 .ba .up{color:var(--inRange)} .ba .dn{color:var(--low)}
@@ -609,6 +638,26 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
   <details class="fold" id="bandCard">
     <summary>Verdeling per band <span class="foldhint">alle 5 banden + streefwaarden</span></summary>
     <div class="foldbody"><div id="bandBar"></div></div>
+  </details>
+
+  <div class="h3">Eten &amp; koolhydraten</div>
+  <details class="fold" id="secCarb">
+    <summary>Koolhydraten schatten <span class="foldhint">kies eten + portie → gram KH</span></summary>
+    <div class="foldbody">
+      <div class="cbNote">Gemiddelde tabelwaarden als <b>hulpmiddel om te leren schatten</b> — geen exacte telling en <b>geen dosisadvies</b>. Merken en bereiding wisselen; jij blijft verantwoordelijk voor je bolus.</div>
+      <input type="search" id="cbSearch" placeholder="zoek eten… (bijv. banaan, rijst, cola)" autocomplete="off">
+      <div class="cbCats" id="cbCats"></div>
+      <div class="cbResults" id="cbResults"></div>
+      <div class="cbPlate" id="cbPlate" hidden>
+        <div class="cbPlateHead">Op je bord</div>
+        <div id="cbPlateItems"></div>
+        <div class="cbTotal">Totaal <b id="cbTotal">0 g</b> koolhydraten</div>
+        <div class="logrow">
+          <input type="date" id="cbDate" aria-label="datum">
+          <button class="ghost" id="cbSave">Vastleggen in logboek</button>
+        </div>
+      </div>
+    </div>
   </details>
 
   <div class="h3">Voortgang</div>
@@ -2450,6 +2499,7 @@ const ANNOT_TYPES = [
   { id:"reis",      label:"Reis / tijdzone",     icon:"✈" },
   { id:"stress",    label:"Stress",              icon:"⚡" },
   { id:"notitie",   label:"Notitie",             icon:"📝" },
+  { id:"maaltijd",  label:"Maaltijd",            icon:"🍽", hideChip:true },  // via de koolhydraat-schatter, niet als handmatige chip
 ];
 const annotType = id => ANNOT_TYPES.find(t=>t.id===id) || ANNOT_TYPES[ANNOT_TYPES.length-1];
 const INTENSITY = [ { id:"licht", label:"licht" }, { id:"duidelijk", label:"duidelijk" }, { id:"ernstig", label:"ernstig" } ];
@@ -2542,7 +2592,7 @@ const esc = s => String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&g
 let _logSel = "wijziging";
 function buildChips(){
   const c=document.getElementById("logChips");
-  c.innerHTML=ANNOT_TYPES.map(t=>`<button type="button" class="chip${t.id===_logSel?" sel":""}" data-type="${t.id}">${t.icon} ${t.label}</button>`).join("");
+  c.innerHTML=ANNOT_TYPES.filter(t=>!t.hideChip).map(t=>`<button type="button" class="chip${t.id===_logSel?" sel":""}" data-type="${t.id}">${t.icon} ${t.label}</button>`).join("");
   c.querySelectorAll(".chip").forEach(ch=>ch.onclick=()=>{ _logSel=ch.dataset.type; buildChips(); });
 }
 // Voor/na-strip onder een ankerpunt (type "wijziging").
@@ -2582,6 +2632,7 @@ async function renderLog(){
   list.innerHTML=anns.map(an=>{ const t=annotType(an.type);
     const d=new Date(an.ts).toLocaleDateString("nl-NL",{day:"2-digit",month:"short",year:"numeric"});
     return `<div class="logentry"><div class="leh"><span class="ic">${t.icon}</span><span class="lt">${esc(t.label)}</span><span class="ld">${d}</span><button class="del" data-id="${esc(an.id)}" title="verwijderen" aria-label="verwijderen">✕</button></div>`+
+      (an.carbs!=null?`<div class="lecarb">≈ ${an.carbs} g koolhydraten${an.items&&an.items.length?`<span class="litems"> · ${esc(an.items.map(i=>i.n).join(", "))}</span>`:``}</div>`:``)+
       (an.note?`<div class="lenote">${esc(an.note)}</div>`:``)+
       (t.anchor?baHtml(an.ts):``)+`</div>`;
   }).join("");
@@ -2821,6 +2872,222 @@ document.getElementById("logAdd").onclick = async ()=>{
   try{ await DB.putMany("annotations",[an]); }catch(e){ toast("Opslaan mislukt: "+e.message); return; }
   document.getElementById("logNote").value=""; toast("Markering toegevoegd.");
   renderLog(); };
+
+/* ── Koolhydraat-schatter ────────────────────────────────────────────────────
+   Lokale tabel met gemiddelde koolhydraatwaarden (g per 100 g) en typische
+   porties. Volledig offline, geen externe opzoeking. Puur een leer- en
+   schat-hulpmiddel — geen exacte telling en nooit een dosisopdracht.
+   u = porties [label, gram]. k = categorie. per = g koolhydraten per 100 g. */
+const CARB_CATS=[["brood","Brood"],["graan","Graan · pasta · rijst"],["aardappel","Aardappel"],["peul","Peulvruchten"],["fruit","Fruit"],["groente","Groente"],["zuivel","Zuivel"],["noten","Kaas · ei · noten"],["snoep","Snoep · koek · gebak"],["drank","Dranken"],["hartig","Hartig · fastfood"],["beleg","Beleg · saus"]];
+const CARB_DB=[
+  {n:"Volkorenbrood",k:"brood",per:41,u:[["snee",35],["dun sneetje",25]]},
+  {n:"Bruinbrood",k:"brood",per:42,u:[["snee",35]]},
+  {n:"Witbrood",k:"brood",per:49,u:[["snee",35]]},
+  {n:"Roggebrood",k:"brood",per:46,u:[["snee",25]]},
+  {n:"Krentenbol",k:"brood",per:52,u:[["stuk",55]]},
+  {n:"Croissant",k:"brood",per:46,u:[["stuk",45]]},
+  {n:"Beschuit",k:"brood",per:74,u:[["stuk",10]]},
+  {n:"Cracker (volkoren)",k:"brood",per:70,u:[["stuk",8]]},
+  {n:"Knäckebröd",k:"brood",per:68,u:[["stuk",10]]},
+  {n:"Stokbrood",k:"brood",per:52,u:[["stuk",40]]},
+  {n:"Bagel",k:"brood",per:50,u:[["stuk",85]]},
+  {n:"Wrap / tortilla",k:"brood",per:50,u:[["stuk",45]]},
+  {n:"Pannenkoek",k:"brood",per:30,u:[["stuk",80]]},
+  {n:"Ontbijtkoek",k:"brood",per:60,u:[["plak",25]]},
+  {n:"Witte rijst (gekookt)",k:"graan",per:28,u:[["opscheplepel",60],["bord",150]]},
+  {n:"Zilvervliesrijst (gekookt)",k:"graan",per:25,u:[["opscheplepel",60],["bord",150]]},
+  {n:"Pasta (gekookt)",k:"graan",per:25,u:[["opscheplepel",60],["bord",200]]},
+  {n:"Volkoren pasta (gekookt)",k:"graan",per:23,u:[["opscheplepel",60],["bord",200]]},
+  {n:"Couscous (gekookt)",k:"graan",per:23,u:[["opscheplepel",60]]},
+  {n:"Bulgur (gekookt)",k:"graan",per:19,u:[["opscheplepel",60]]},
+  {n:"Quinoa (gekookt)",k:"graan",per:21,u:[["opscheplepel",60]]},
+  {n:"Noedels (gekookt)",k:"graan",per:25,u:[["opscheplepel",60],["bord",200]]},
+  {n:"Havermout (droog)",k:"graan",per:60,u:[["eetlepel",15],["portie",40]]},
+  {n:"Muesli",k:"graan",per:60,u:[["portie",45]]},
+  {n:"Cruesli",k:"graan",per:65,u:[["portie",45]]},
+  {n:"Cornflakes",k:"graan",per:84,u:[["portie",30]]},
+  {n:"Brinta",k:"graan",per:75,u:[["portie",30]]},
+  {n:"Aardappel (gekookt)",k:"aardappel",per:15,u:[["stuk",65],["opscheplepel",75]]},
+  {n:"Aardappelpuree",k:"aardappel",per:14,u:[["opscheplepel",90]]},
+  {n:"Friet / patat",k:"aardappel",per:34,u:[["kleine portie",100],["patatje",150]]},
+  {n:"Krieltjes",k:"aardappel",per:15,u:[["opscheplepel",80]]},
+  {n:"Gebakken aardappel",k:"aardappel",per:20,u:[["opscheplepel",80]]},
+  {n:"Zoete aardappel (gekookt)",k:"aardappel",per:20,u:[["stuk",130],["opscheplepel",80]]},
+  {n:"Bruine bonen (gekookt)",k:"peul",per:17,u:[["opscheplepel",80]]},
+  {n:"Kidneybonen",k:"peul",per:15,u:[["opscheplepel",80]]},
+  {n:"Kikkererwten",k:"peul",per:18,u:[["opscheplepel",80]]},
+  {n:"Linzen (gekookt)",k:"peul",per:16,u:[["opscheplepel",80]]},
+  {n:"Doperwten",k:"peul",per:12,u:[["opscheplepel",70]]},
+  {n:"Appel",k:"fruit",per:12,u:[["stuk",130]]},
+  {n:"Banaan",k:"fruit",per:21,u:[["stuk",120],["kleine",90]]},
+  {n:"Peer",k:"fruit",per:12,u:[["stuk",150]]},
+  {n:"Sinaasappel",k:"fruit",per:9,u:[["stuk",140]]},
+  {n:"Mandarijn",k:"fruit",per:10,u:[["stuk",70]]},
+  {n:"Druiven",k:"fruit",per:16,u:[["handvol",80]]},
+  {n:"Aardbeien",k:"fruit",per:6,u:[["schaaltje",150]]},
+  {n:"Blauwe bessen",k:"fruit",per:12,u:[["schaaltje",125]]},
+  {n:"Kiwi",k:"fruit",per:10,u:[["stuk",75]]},
+  {n:"Meloen",k:"fruit",per:8,u:[["part",150]]},
+  {n:"Watermeloen",k:"fruit",per:8,u:[["part",150]]},
+  {n:"Ananas",k:"fruit",per:12,u:[["schijf",80]]},
+  {n:"Mango",k:"fruit",per:14,u:[["half",100]]},
+  {n:"Perzik",k:"fruit",per:9,u:[["stuk",120]]},
+  {n:"Pruim",k:"fruit",per:10,u:[["stuk",60]]},
+  {n:"Rozijnen",k:"fruit",per:75,u:[["handvol",25]]},
+  {n:"Dadel",k:"fruit",per:65,u:[["stuk",8]]},
+  {n:"Wortel",k:"groente",per:7,u:[["stuk",60]]},
+  {n:"Maïs",k:"groente",per:19,u:[["opscheplepel",70]]},
+  {n:"Biet (gekookt)",k:"groente",per:7,u:[["opscheplepel",70]]},
+  {n:"Pompoen",k:"groente",per:7,u:[["opscheplepel",80]]},
+  {n:"Broccoli",k:"groente",per:4,u:[["opscheplepel",80]]},
+  {n:"Bloemkool",k:"groente",per:4,u:[["opscheplepel",80]]},
+  {n:"Sperziebonen",k:"groente",per:5,u:[["opscheplepel",80]]},
+  {n:"Tomaat",k:"groente",per:3,u:[["stuk",90]]},
+  {n:"Paprika",k:"groente",per:5,u:[["stuk",120]]},
+  {n:"Ui",k:"groente",per:8,u:[["stuk",60]]},
+  {n:"Halfvolle melk",k:"zuivel",per:5,u:[["glas",200]]},
+  {n:"Volle melk",k:"zuivel",per:5,u:[["glas",200]]},
+  {n:"Karnemelk",k:"zuivel",per:4,u:[["glas",200]]},
+  {n:"Yoghurt naturel",k:"zuivel",per:5,u:[["schaaltje",150]]},
+  {n:"Griekse yoghurt",k:"zuivel",per:4,u:[["schaaltje",150]]},
+  {n:"Kwark naturel",k:"zuivel",per:4,u:[["schaaltje",150]]},
+  {n:"Fruityoghurt",k:"zuivel",per:12,u:[["schaaltje",150]]},
+  {n:"Vla",k:"zuivel",per:16,u:[["schaaltje",150]]},
+  {n:"Chocolademelk",k:"zuivel",per:10,u:[["glas",200]]},
+  {n:"Pudding / toetje",k:"zuivel",per:18,u:[["schaaltje",125]]},
+  {n:"Roomijs (vanille)",k:"zuivel",per:24,u:[["bol",50]]},
+  {n:"Kaas",k:"noten",per:1,u:[["plak",20]]},
+  {n:"Ei",k:"noten",per:1,u:[["stuk",55]]},
+  {n:"Pindakaas",k:"noten",per:12,u:[["eetlepel",15]]},
+  {n:"Pinda's",k:"noten",per:16,u:[["handvol",25]]},
+  {n:"Amandelen",k:"noten",per:20,u:[["handvol",25]]},
+  {n:"Cashewnoten",k:"noten",per:30,u:[["handvol",25]]},
+  {n:"Hummus",k:"noten",per:15,u:[["eetlepel",25]]},
+  {n:"Melkchocolade",k:"snoep",per:58,u:[["reep",25],["blokje",5]]},
+  {n:"Pure chocolade",k:"snoep",per:46,u:[["reep",25],["blokje",5]]},
+  {n:"Koekje",k:"snoep",per:65,u:[["stuk",12]]},
+  {n:"Stroopwafel",k:"snoep",per:65,u:[["stuk",35]]},
+  {n:"Gevulde koek",k:"snoep",per:58,u:[["stuk",60]]},
+  {n:"Cake",k:"snoep",per:55,u:[["plak",40]]},
+  {n:"Appeltaart",k:"snoep",per:33,u:[["punt",125]]},
+  {n:"Donut",k:"snoep",per:50,u:[["stuk",60]]},
+  {n:"Muffin",k:"snoep",per:50,u:[["stuk",70]]},
+  {n:"Chips",k:"snoep",per:50,u:[["zakje",40],["klein zakje",25]]},
+  {n:"Drop",k:"snoep",per:75,u:[["handvol",30]]},
+  {n:"Winegums",k:"snoep",per:78,u:[["handvol",30]]},
+  {n:"Pepernoten",k:"snoep",per:75,u:[["handvol",25]]},
+  {n:"Speculaas",k:"snoep",per:70,u:[["stuk",12]]},
+  {n:"Snickers",k:"snoep",per:55,u:[["reep",50]]},
+  {n:"Mars",k:"snoep",per:68,u:[["reep",45]]},
+  {n:"Liga",k:"snoep",per:70,u:[["stuk",25]]},
+  {n:"Suiker",k:"snoep",per:100,u:[["klontje",4],["theelepel",5]]},
+  {n:"Cola",k:"drank",per:11,u:[["glas",200],["blikje",330]]},
+  {n:"Sinas / Fanta",k:"drank",per:11,u:[["glas",200],["blikje",330]]},
+  {n:"Appelsap",k:"drank",per:11,u:[["glas",200]]},
+  {n:"Sinaasappelsap",k:"drank",per:9,u:[["glas",200]]},
+  {n:"Ranja (aangelengd)",k:"drank",per:5,u:[["glas",200]]},
+  {n:"Ice tea",k:"drank",per:7,u:[["glas",200]]},
+  {n:"Sportdrank (AA)",k:"drank",per:6,u:[["flesje",500]]},
+  {n:"Bier",k:"drank",per:3,u:[["glas",250]]},
+  {n:"Wijn",k:"drank",per:1,u:[["glas",150]]},
+  {n:"Pizza margherita",k:"hartig",per:28,u:[["punt",100]]},
+  {n:"Hamburger (met broodje)",k:"hartig",per:25,u:[["stuk",110]]},
+  {n:"Tosti",k:"hartig",per:28,u:[["stuk",90]]},
+  {n:"Saucijzenbroodje",k:"hartig",per:30,u:[["stuk",90]]},
+  {n:"Loempia",k:"hartig",per:25,u:[["stuk",100]]},
+  {n:"Nasi / bami (bereid)",k:"hartig",per:20,u:[["opscheplepel",80],["bord",250]]},
+  {n:"Shoarma (met brood)",k:"hartig",per:25,u:[["portie",250]]},
+  {n:"Sushi",k:"hartig",per:30,u:[["stukje",22]]},
+  {n:"Kroket",k:"hartig",per:20,u:[["stuk",65]]},
+  {n:"Frikandel",k:"hartig",per:10,u:[["stuk",55]]},
+  {n:"Bitterbal",k:"hartig",per:18,u:[["stuk",20]]},
+  {n:"Kipnuggets",k:"hartig",per:15,u:[["stuk",18]]},
+  {n:"Hagelslag",k:"beleg",per:68,u:[["portie (snee)",15]]},
+  {n:"Jam",k:"beleg",per:60,u:[["portie (snee)",15]]},
+  {n:"Honing",k:"beleg",per:80,u:[["eetlepel",20]]},
+  {n:"Appelstroop",k:"beleg",per:65,u:[["portie (snee)",15]]},
+  {n:"Nutella",k:"beleg",per:57,u:[["portie (snee)",15]]},
+  {n:"Ketchup",k:"beleg",per:25,u:[["eetlepel",15]]},
+  {n:"Appelmoes",k:"beleg",per:17,u:[["opscheplepel",75]]},
+  {n:"Satésaus",k:"beleg",per:20,u:[["eetlepel",20]]},
+];
+
+let _cbCat="", _cbOpen=null, _cbUnit=0, _cbQty=1, _cbPlate=[];
+const cbGrams=(food)=> _cbUnit>=food.u.length ? _cbQty : food.u[_cbUnit][1]*_cbQty;   // laatste index = "gram"
+const cbCarbs=(food,g)=> Math.round(g*food.per/100);
+function renderCbCats(){
+  const el=document.getElementById("cbCats"); if(!el) return;
+  el.innerHTML=`<button type="button" class="chip${_cbCat===""?" sel":""}" data-k="">Alles</button>`+
+    CARB_CATS.map(([k,l])=>`<button type="button" class="chip${_cbCat===k?" sel":""}" data-k="${k}">${l}</button>`).join("");
+  el.querySelectorAll(".chip").forEach(c=>c.onclick=()=>{ _cbCat=c.dataset.k; _cbOpen=null; renderCbCats(); renderCbResults(); });
+}
+function renderCbResults(){
+  const el=document.getElementById("cbResults"); if(!el) return;
+  const q=(document.getElementById("cbSearch").value||"").trim().toLowerCase();
+  let list=CARB_DB.filter(f=>(!_cbCat||f.k===_cbCat)&&(!q||f.n.toLowerCase().includes(q)));
+  if(q) list=list.sort((a,b)=>a.n.toLowerCase().indexOf(q)-b.n.toLowerCase().indexOf(q));
+  list=list.slice(0,40);
+  if(!list.length){ el.innerHTML=`<div class="cbNone">Niets gevonden. Kies een andere zoekterm, of leg de grammen straks handmatig vast.</div>`; return; }
+  el.innerHTML=list.map(f=>{
+    const open=_cbOpen===f.n;
+    let h=`<div class="cbRow"><div class="cbRhead" data-n="${esc(f.n)}"><span class="cbN">${esc(f.n)}</span><span class="cbP">${f.per} g / 100 g</span></div>`;
+    if(open){
+      const units=f.u.map(([lab,g],i)=>`<button type="button" class="cbUnit${_cbUnit===i?" sel":""}" data-u="${i}">${esc(lab)} (${g} g)</button>`).join("")
+        +`<button type="button" class="cbUnit${_cbUnit>=f.u.length?" sel":""}" data-u="${f.u.length}">gram</button>`;
+      const g=cbGrams(f), c=cbCarbs(f,g);
+      h+=`<div class="cbEdit"><div class="cbUnits">${units}</div>`+
+        `<div class="cbQrow"><label>aantal</label><input type="number" id="cbQty" min="0" step="0.5" value="${_cbQty}">`+
+        `<span class="cbEst" id="cbEst">≈ ${c} g KH</span>`+
+        `<button type="button" class="cbAdd" id="cbAddBtn">+ op bord</button></div></div>`;
+    }
+    return h+`</div>`;
+  }).join("");
+  el.querySelectorAll(".cbRhead").forEach(r=>r.onclick=()=>{
+    const n=r.dataset.n; _cbOpen=(_cbOpen===n?null:n); _cbUnit=0; _cbQty=1; renderCbResults(); });
+  if(_cbOpen){
+    const food=CARB_DB.find(f=>f.n===_cbOpen);
+    const est=()=>{ const g=cbGrams(food); document.getElementById("cbEst").textContent=`≈ ${cbCarbs(food,g)} g KH`; };
+    el.querySelectorAll(".cbUnit").forEach(b=>b.onclick=()=>{ _cbUnit=+b.dataset.u;
+      el.querySelectorAll(".cbUnit").forEach(x=>x.classList.toggle("sel",+x.dataset.u===_cbUnit)); est(); });
+    const qi=document.getElementById("cbQty");
+    if(qi) qi.oninput=()=>{ _cbQty=parseNum(qi.value)||0; est(); };
+    const ab=document.getElementById("cbAddBtn");
+    if(ab) ab.onclick=()=>{ const g=cbGrams(food); if(!(g>0)){ toast("Vul een aantal in."); return; }
+      const label=_cbUnit>=food.u.length?`${_cbQty}× gram`:`${_cbQty}× ${food.u[_cbUnit][0]}`;
+      _cbPlate.push({n:food.n,label,g:Math.round(g),c:cbCarbs(food,g)});
+      _cbOpen=null; renderCbResults(); renderCbPlate(); toast("Toegevoegd aan je bord."); };
+  }
+}
+function renderCbPlate(){
+  const wrap=document.getElementById("cbPlate"), items=document.getElementById("cbPlateItems"); if(!wrap) return;
+  wrap.hidden=_cbPlate.length===0; if(!_cbPlate.length) return;
+  items.innerHTML=_cbPlate.map((it,i)=>`<div class="cbItem"><span class="ci-n">${esc(it.n)}</span><span class="ci-d">${esc(it.label)} · ${it.g} g</span><span class="ci-c">${it.c} g</span><button class="ci-x" data-i="${i}" aria-label="verwijderen">✕</button></div>`).join("");
+  const total=_cbPlate.reduce((s,x)=>s+x.c,0);
+  document.getElementById("cbTotal").textContent=`${total} g`;
+  items.querySelectorAll(".ci-x").forEach(b=>b.onclick=()=>{ _cbPlate.splice(+b.dataset.i,1); renderCbPlate(); });
+}
+function initCarb(){
+  const sec=document.getElementById("secCarb"); if(!sec) return;
+  sec.hidden=false;
+  renderCbCats(); renderCbResults();
+  const s=document.getElementById("cbSearch");
+  if(s) s.oninput=()=>{ _cbOpen=null; renderCbResults(); };
+  const d=document.getElementById("cbDate");
+  if(d) d.value=(()=>{ const x=new Date(); return `${x.getFullYear()}-${String(x.getMonth()+1).padStart(2,"0")}-${String(x.getDate()).padStart(2,"0")}`; })();
+  const save=document.getElementById("cbSave");
+  if(save) save.onclick=async()=>{
+    if(!_cbPlate.length){ toast("Nog niets op je bord."); return; }
+    const dv=document.getElementById("cbDate").value; if(!dv){ toast("Kies een datum."); return; }
+    const ts=new Date(dv+"T12:00:00").getTime();
+    const carbs=_cbPlate.reduce((s,x)=>s+x.c,0);
+    const an={ id:"m"+Date.now()+"-"+Math.random().toString(36).slice(2,7), ts, type:"maaltijd",
+      carbs, items:_cbPlate.map(x=>({n:x.n,g:x.g,c:x.c})),
+      note:_cbPlate.map(x=>`${x.n} (${x.label})`).join(", "), created:Date.now() };
+    try{ await DB.putMany("annotations",[an]); }catch(e){ toast("Opslaan mislukt: "+e.message); return; }
+    _cbPlate=[]; renderCbPlate(); toast(`Maaltijd van ${carbs} g vastgelegd.`); renderLog();
+  };
+}
+initCarb();
 
 // Thema — handmatige keuze (systeem → licht → donker) die de systeeminstelling overschrijft
 function applyTheme(t){

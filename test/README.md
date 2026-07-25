@@ -25,6 +25,7 @@ Playwright-browserinstallatie.
 - `bwloopcheck` — basaal-bespreekwaarde vult zich uit loop-basaal (looper zonder drift)
 - `pwacheck` — PWA: manifest geldig (standalone + maskable icoon), service worker bestuurt de pagina, offline herladen werkt (eigen mini-http-server, want SW registreert niet vanaf `file://`)
 - `whycheck` — "waarom"-motor: reconstrueert de oorzaak van een nacht-hypo (SMB-stapeling) met bewijs (actieve insuline, daalsnelheid) en telt de oorzaken over de week op
+- `carbcheck` — koolhydraat-schatter: zoek eten → portie → gram KH (banaan 25 g, cola-blikje 36 g), bord-totaal en vastleggen als maaltijd in het logboek
 - `logcheck` / `exportcheck` — logboek, voor/na, back-up round-trip
 - `awcheck` / `hypodef` — hypo-gevoel; episode/dip/sensordruk-classificatie
 - `pcheck` / `insulincheck` / `iobcheck` / `dscheck` — profiel, insulinetype, IOB/COB, devicestatus

@@ -30,7 +30,7 @@ await page.waitForFunction(()=>document.getElementById('kpis')&&document.getElem
 await page.$eval('details[data-an="meals"]', d=>{d.open=true;});
 await page.waitForFunction(()=>{const b=document.querySelector('details[data-an="meals"] .body');return b&&!b.querySelector('.loading');},{timeout:15000}).catch(()=>{});
 const txt=await page.evaluate(()=>document.querySelector('details[data-an="meals"] .body').textContent);
-const mN=txt.match(/n = (\d+) maaltijden/);
+const mN=txt.match(/n = (\d+)\.?\s*$/) || txt.match(/n = (\d+)\b/);
 const n=mN?+mN[1]:null;
 console.log('maaltijden geteld:', n, '(≈40 gebolust verwacht; hypo-reddingen zónder bolus uitgesloten)');
 console.log('reddingen uitgesloten:', n!=null && n<=45 ? 'JA' : 'NEE — te veel maaltijden, rescue lekt door');
