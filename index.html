@@ -1322,6 +1322,73 @@ function hypoStats(g){
   return { episodes:eps.length, eps, dips, allLows:runs, parts, label, level2, nocturnal, suspect,
     worst: parts.some(x=>x>0) ? label[parts.indexOf(Math.max(...parts))] : null };
 }
+/* ── "Waarom"-motor — reconstrueert de waarschijnlijke oorzaak van één low uit je
+   eigen data: actieve insuline (gesplitst naar SMB / correctie / maaltijd),
+   koolhydraten, de daalsnelheid ervoor en de basaalcontext. Geen doseeradvies —
+   een onderbouwd bespreekpunt met bewijs en een eerlijke zekerheid. ────────── */
+function explainHypo(e, glucose, treatments, timeline){
+  const t0=e.start;
+  const prof=timeline?profileAt(timeline,t0):null;
+  const dia=Math.max(300,(prof&&prof.dia?prof.dia:6)*60);   // min
+  const basalHr=prof&&isFinite(prof.basal)?prof.basal:null; // E/u profiel op dat uur
+  const mdl=insulinModel(PEAK_MIN,dia);
+  // Actieve insuline op het moment van de low, per bron.
+  let iobSMB=0,iobMeal=0,iobMan=0,nSMB=0,biggest=null;
+  for(const t of treatments){ if(!(t.insulin>0)) continue;
+    const dt=(t0-t.ts)/60000; if(dt<0||dt>dia) continue;
+    const c=t.insulin*mdl.iob(dt); if(c<=0) continue;
+    if(detectSMB(t)){ iobSMB+=c; nSMB++; }
+    else if(t.carbs>0){ iobMeal+=c; }
+    else { iobMan+=c; }
+    if(!biggest||t.insulin>biggest.insulin) biggest=t; }
+  const iob=iobSMB+iobMeal+iobMan;
+  const cob=carbsOnBoard(treatments,t0);
+  const rescue=treatments.filter(t=>t.carbs>0 && !(t.insulin>0) && t.ts>t0-90*60e3 && t.ts<=t0+10*60e3);
+  // Daalsnelheid ervoor: glucose ~45 min vóór de low t.o.v. bij het inzakken.
+  const bgAt=ts=>{ let lo=0,hi=glucose.length-1,best=null,bd=Infinity;
+    while(lo<=hi){const m=(lo+hi)>>1,d=glucose[m].ts-ts; if(Math.abs(d)<bd){bd=Math.abs(d);best=glucose[m];} if(d<0)lo=m+1;else hi=m-1;}
+    return best&&bd<=15*60e3?best.bg:null; };
+  const bgBefore=bgAt(t0-45*60e3), bgOnset=bgAt(t0);   // tijd-gebaseerd: onafhankelijk van welke array de low uit komt
+  const drop=(bgBefore!=null&&bgOnset!=null)?bgBefore-bgOnset:null;
+  const fast=drop!=null && drop>=2.5;                        // ≥2,5 mmol/L in 45 min
+  const THR=Math.max(0.4, basalHr!=null?basalHr*0.75:0.4);   // "noemenswaardige" IOB
+  const u=v=>nl2(v)+" E", part=[];
+  if(iobSMB>=0.15) part.push(`${u(iobSMB)} uit ${nSMB} loop-correctie${nSMB===1?"":"s"} (SMB)`);
+  if(iobMeal>=0.15) part.push(`${u(iobMeal)} uit een maaltijdbolus`);
+  if(iobMan>=0.15) part.push(`${u(iobMan)} uit een handmatige correctie`);
+  const iobLine=`Actieve insuline toen je onder 3,9 zakte: <b>${u(iob)}</b>${part.length?` (${part.join(", ")})`:""}.`;
+  const dropLine=drop!=null?`Je zakte ${nl1(drop)} mmol/L in ~45 min${fast?" — snel, dat past bij een insuline-effect":" — geleidelijk"}.`:null;
+
+  // Classificatie — eerste die past wint.
+  let cause,label,conf;
+  if(e.suspect){ cause="sensordruk"; label="sensordruk — mogelijk geen echte hypo"; conf="matig";
+    return { cause,label,conf, steps:[`Snelle duik én snel herstel rond een korte low — het patroon van op de sensor liggen.`,`Een artefact telt niet als echte hypo; check de plek van je sensor.`] }; }
+  const dom=Math.max(iobSMB,iobMeal,iobMan);
+  if(iob>=THR && dom>=0.15){
+    const steps=[iobLine]; if(dropLine)steps.push(dropLine);
+    if(dom===iobSMB){ cause="smb-stapeling"; label="loop-correcties werkten door";
+      steps.push(`De loop stapelde ${nSMB} SMB'${nSMB===1?"s":"s"} tegen een stijging; die insuline werkte door tot ná de piek.`); }
+    else if(dom===iobMeal && cob<10){ cause="maaltijd-nawerking"; label="maaltijdbolus werkte na de koolhydraten door";
+      steps.push(`De koolhydraten waren vermoedelijk eerder op dan de insuline (nog ${nl1(cob)} g actief) — de staart van de bolus duwde je omlaag.`); }
+    else { cause="correctie-nawerking"; label="een correctiebolus werkte door";
+      steps.push(`De correctie bracht je verder omlaag dan nodig — mogelijk te vroeg gestapeld op nog actieve insuline.`); }
+    conf = dom>=0.6*iob && iob>=THR ? "hoog" : "matig";
+    if(rescue.length) steps.push(`Je vulde ${nl1(rescue.reduce((s,t)=>s+t.carbs,0))} g koolhydraten bij — reddingskoolhydraten, geen maaltijd.`);
+    return { cause,label,conf,steps };
+  }
+  if(iob<THR && cob<10 && !rescue.length){
+    cause="basaal"; label="geen actieve bolus — dit venster leunt op je basaal"; conf = (drop!=null&&!fast)?"matig":"laag";
+    const steps=[`Nauwelijks actieve insuline (${u(iob)}) en geen recente koolhydraten toen je wegzakte.`];
+    if(dropLine)steps.push(dropLine);
+    steps.push(basalHr!=null?`Zonder bolus als verklaring lijkt de basaal van ~${nl2(basalHr)} E/u hier aan de hoge kant — een bespreekpunt, geen instelopdracht.`:`Zonder bolus als verklaring wijst dit richting je basaal in dit venster.`);
+    if(rescue.length) steps.push(`Je vulde koolhydraten bij (redding).`);
+    return { cause,label,conf,steps };
+  }
+  cause="onverklaard"; label="geen duidelijke oorzaak in de data"; conf="laag";
+  const steps=[iobLine]; if(dropLine)steps.push(dropLine);
+  steps.push(`Te weinig aanknopingspunten (insuline én koolhydraten laag) — mogelijk beweging, alcohol of een meetartefact.`);
+  return { cause,label,conf,steps };
+}
 // Correctie-stapeling vóór hypo's (case-control, gematcht op tijd-van-de-dag, begrensd)
 function hypoStacking(glucose, treatments, q){
   const CASE=3*3600e3, TOL=20*60e3, MIN_EP=6, DAYMS=864e5;
@@ -1733,7 +1800,7 @@ function render(glucose, treatments, timeline){
     (pi?`Profiel: basaal ~${pi.basalDaily.toFixed(2).replace(".",",")} E/dag`+(oi.obs!=null?`, gemeten ISF ~${nl1(oi.obs)} mmol/L per E (meetwaarde)`:``)+`\n`:``);
 
   // ── bevindingen + consultlijst (async, buiten de renderflow) ──
-  renderFindings({ glucose, q, m, hy, tr, drift, oi, MR, stack });
+  renderFindings({ glucose, q, m, hy, tr, drift, oi, MR, stack, treatments, timeline });
   renderLog(); renderAware(); renderConsult();
 }
 
@@ -1762,7 +1829,7 @@ function findingCard(f, st){
 let _fctx=null;
 async function renderFindings(ctx){
   _fctx=ctx;
-  const { MR, drift, q, glucose } = ctx;
+  const { MR, drift, q, glucose, treatments, timeline } = ctx;
   let fs={}, cl=[];
   try{ fs=(await DB.meta("fstate"))||{}; cl=(await DB.meta("consultlist"))||[]; }catch(_){}
   const onList=id=>cl.some(x=>x.id===id);
@@ -1776,12 +1843,16 @@ async function renderFindings(ctx){
   const nacht=(hyDay.allLows||[]).filter(e=>todMin(e.start)<360);
   if (nacht.length){
     const e=nacht[0], sus=nacht.filter(x=>x.suspect).length, isEp=e.dur>=15;
+    // "Waarom"-motor: reconstrueer de oorzaak van deze low (alleen zinvol bij een
+    // echte hypo, niet bij een sensordruk-artefact).
+    let why=null; try{ if(!sus && treatments) why=explainHypo(e, glucose, treatments, timeline); }catch(_){}
+    const steps=[ `${nacht.length}× onder 3,9 tussen 00–06 u; laagste <b>${nl1(Math.min(...nacht.map(x=>x.min)))}</b>.` ];
+    if (why){ steps.push(`<b>Waarom (zekerheid: ${why.conf})</b> — ${why.label}.`); for(const s of why.steps) steps.push(s); }
+    else steps.push(sus?`Bij ${sus}: snelle duik én snel herstel — <b>te snel voor insuline</b>, het patroon van liggen op de sensor.`:`Duur ${Math.round(e.dur)} min.`);
+    steps.push(isEp?`Echte hypo (≥15 min) — telt mee in je maandcijfers.`:`Korte dip (&lt;15 min) — nog geen echte hypo.`);
     today.push({ id:`nacht-${lastKey}`, sev:"w", when:"vannacht", seenable:true, consultable:true, dayKey:lastKey,
-      title:`<b>${isEp?"Hypo":"Dip"} om ${fmtHM(e.start)}</b>${sus?` — past bij sensordruk${nacht.length>1?`, ${nacht.length}× vannacht`:""}`:` — laagste ${nl1(e.min)}`}.`,
-      steps:[ `${nacht.length}× onder 3,9 tussen 00–06 u; laagste <b>${nl1(Math.min(...nacht.map(x=>x.min)))}</b>.`,
-        sus?`Bij ${sus}: snelle duik én snel herstel — <b>te snel voor insuline</b>, het patroon van liggen op de sensor.`:`Duur ${Math.round(e.dur)} min.`,
-        isEp?`Echte hypo (≥15 min) — telt mee in je maandcijfers.`:`Korte dip (&lt;15 min) — nog geen echte hypo.` ],
-      fine:"vroeg signaal, geen alarm" });
+      title:`<b>${isEp?"Hypo":"Dip"} om ${fmtHM(e.start)}</b>${sus?` — past bij sensordruk${nacht.length>1?`, ${nacht.length}× vannacht`:""}`:why?` — ${why.label}`:` — laagste ${nl1(e.min)}`}.`,
+      steps, fine:"vroeg signaal, geen alarm" });
   } else {
     today.push({ id:`nacht-${lastKey}`, sev:"g", pos:true, when:"vannacht", seenable:false,
       title:`<b>Rustige nacht</b> — geen waarden onder 3,9.` });
@@ -1789,6 +1860,37 @@ async function renderFindings(ctx){
 
   // week — drie zinnen
   const med=a=>{const s2=[...a].sort((x,y)=>x-y);return s2.length?s2[Math.floor(s2.length/2)]:null;};
+
+  // "Waarom"-patroon over de hele periode: verklaar élke echte hypo en tel de
+  // oorzaken op. Zo zie je niet alleen hóéveel lows je had, maar wáárom.
+  const eps=(ctx.hy&&ctx.hy.eps)||[];
+  if (eps.length>=3 && treatments){
+    const LBL={ "smb-stapeling":"loop-correcties (SMB's) werkten door",
+      "correctie-nawerking":"correctiebolus werkte door", "maaltijd-nawerking":"maaltijdbolus werkte door",
+      "basaal":"basaal aan de hoge kant in dat venster", "sensordruk":"sensordruk (mogelijk artefact)",
+      "onverklaard":"geen duidelijke oorzaak" };
+    const tally={}; let done=0;
+    for(const e of eps){ let w=null; try{ w=explainHypo(e, glucose, treatments, timeline); }catch(_){}
+      if(!w) continue; tally[w.cause]=(tally[w.cause]||0)+1; done++; }
+    const ranked=Object.entries(tally).sort((a,b)=>b[1]-a[1]);
+    if (done>=3 && ranked.length){
+      const [topCause,topN]=ranked[0];
+      const rest=ranked.slice(1).filter(([c])=>c!=="sensordruk"||true);
+      const breakdown=ranked.map(([c,n])=>`${n}× ${LBL[c]||c}`).join(" · ");
+      const insulinCauses=(tally["smb-stapeling"]||0)+(tally["correctie-nawerking"]||0)+(tally["maaltijd-nawerking"]||0);
+      week.push({ id:"waarom-patroon", sev: topCause==="sensordruk"?"n":"w", seenable:false, consultable:true,
+        title:`Van je <b>${done}</b> hypo's paste bij <b>${topN}</b> het vaakst: ${LBL[topCause]||topCause}.`,
+        steps:[ `Verdeling: ${breakdown}.`,
+          insulinCauses>=Math.ceil(done/2)
+            ? `Meer dan de helft draait om <b>actieve insuline die doorwerkte</b> — kijk naar bolus-timing en het stapelen van correcties, samen met je team.`
+            : (tally["basaal"]>=Math.ceil(done/2)
+                ? `Vooral <b>basaal-gedreven</b> lows in stille vensters — een bespreekpunt voor je basaalprofiel, geen instelopdracht.`
+                : `Gemengd beeld — open een hypo hierboven voor de reconstructie per keer.`),
+          `Elke hypo is los doorgerekend uit je insuline, koolhydraten en daalsnelheid; open "vannacht" voor het bewijs per keer.` ],
+        fine:`n = ${done} doorgerekende hypo's` });
+    }
+  }
+
   if (MR && MR.results.length>=MEAL_MIN){
     const dp=[["ontbijt",240,660],["lunch",660,900],["diner",900,1320]]
       .map(([id,lo,hi])=>{const rs=MR.results.filter(r=>r.ts!=null&&todMin(r.ts)>=lo&&todMin(r.ts)<hi);
