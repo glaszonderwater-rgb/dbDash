@@ -341,6 +341,13 @@ details.fold>.foldbody{padding:0 1.05rem 1.05rem}
 .meth p{margin:.35rem 0 .8rem;color:var(--muted)} .meth p b{color:var(--ink);font-weight:600}
 .meth .mlead{font-size:.9rem;color:var(--ink)}
 .mh{font-size:.8rem;font-weight:700;letter-spacing:.02em;color:var(--accent);margin:1.1rem 0 .1rem}
+/* Compacte 'wat betekent dit'-uitklap bij cijfers */
+.mini{margin-top:.5rem}
+.mini>summary{list-style:none;cursor:pointer;font-size:.76rem;font-weight:600;color:var(--accent)}
+.mini>summary::-webkit-details-marker{display:none}
+.mini>summary::after{content:" ↓"} .mini[open]>summary::after{content:" ↑"}
+.minibody{margin-top:.5rem;display:flex;flex-direction:column;gap:.5rem}
+.minibody>div{font-size:.82rem;line-height:1.5;color:var(--muted)} .minibody b{color:var(--ink);font-weight:650}
 .mpart{font-size:.68rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--ink);margin:1.4rem 0 .3rem;padding-top:.9rem;border-top:1px solid var(--line)}
 .mpart:first-of-type{border-top:0;padding-top:0;margin-top:.6rem}
 .meth .mterm{font-size:.86rem;line-height:1.55;color:var(--muted);padding:.4rem 0;border-bottom:1px solid var(--line)} .meth .mterm b{color:var(--ink);font-weight:650}
@@ -526,6 +533,14 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
   <section class="epoch" id="epMaand">
     <div class="eh"><h2>Deze maand</h2><span class="sub" id="monthSub"></span></div>
     <div class="kpis" id="kpis"></div>
+    <details class="mini"><summary>Wat betekenen deze cijfers?</summary>
+      <div class="minibody">
+        <div><b>In bereik (TIR)</b> — hoeveel % van de tijd je glucose tussen 3,9 en 10,0 zat. Je belangrijkste maat: hoe hoger, hoe stabieler je dag. Streef &gt; 70%.</div>
+        <div><b>Hypo</b> — % tijd te laag (&lt; 3,9). Dit gaat over veiligheid — laag houden telt zwaarder dan een paar procent extra in bereik. Streef &lt; 4%.</div>
+        <div><b>Variatie (CV)</b> — hoe grillig je waarden zijn. Lager = vlakker en voorspelbaarder, en meestal de grootste winst. Streef ≤ 36%.</div>
+        <div><b>GMI</b> — een schatting van je HbA1c uit je gemiddelde glucose. Een langetermijn-indicatie, geen labwaarde.</div>
+      </div>
+    </details>
     <div id="secWatch" hidden><div id="watch" style="margin-top:.6rem"></div></div>
     <div class="card" id="mvsCard" style="margin-top:.6rem" hidden>
       <div class="mvshead"><span>instelling</span><span>gemeten · ingesteld</span></div>
@@ -650,27 +665,27 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
       <p class="mnote">Een dag telt pas mee vanaf ~70% dekking (≈ 200 metingen), zodat halve dagen de cijfers niet vertekenen.</p>
 
       <h4 class="mh">4 · Hypo's: episode, dip of sensordruk</h4>
-      <p>Een <b>consensus-episode</b> = ≥ 15 aaneengesloten minuten onder 3,9 (telt mee in je cijfers). Korter = een <b>dip</b> (vroeg signaal, geen alarm). Een <b>sensordruk-patroon</b>: een snelle duik én snel herstel (te snel voor insuline) — vaak liggen op de sensor, waarschijnlijk geen echte hypo.</p>
+      <p>Een <b>echte hypo</b> (in de internationale afspraak: een episode) = ≥ 15 minuten aaneengesloten onder 3,9; die telt mee in je cijfers. Korter = een <b>dip</b> (vroeg signaal, geen alarm). Een <b>sensordruk-patroon</b> is een snelle duik én snel herstel — te snel voor insuline, vaak omdat je op de sensor lag; waarschijnlijk geen echte hypo.</p>
 
       <h4 class="mh">5 · Insulinemodel (oref)</h4>
       <p>De exponentiële oref-curve met een instelbare <b>piektijd</b> (75 min Novorapid/Humalog/Apidra · 55 Fiasp · 45 Lyumjev) en je <b>DIA</b> uit het profiel. Hieruit volgen <b>IOB</b> (nog werkzame insuline) en de <b>activiteit</b> per moment — de basis onder alle insuline-berekeningen én waar je loop op stuurt. IOB komt bij voorkeur live uit devicestatus; anders reconstrueert de app het uit je bolussen.</p>
-      <p><b>Piektijd-check.</b> Na een schone correctie daalt je glucose het snelst rond de insuline-piek. Uit dat moment van steilste daling (mediaan over je correcties) schat de app je werkelijke piektijd en legt die naast je instelling — een check of je insulinesoort-instelling klopt. De meting leest ~10–15 min aan de vroege kant (curvevorm + tegenregulatie), dus de band is daar ruimer. <b>DIA</b> zelf is niet betrouwbaar te meten (te kleine, te ruizige staart); ≥ 5 u is de veilige standaard.</p>
+      <p><b>Piektijd-check.</b> Na een schone correctie daalt je glucose het snelst rond de insuline-piek. Uit dat moment van steilste daling (mediaan over je correcties) schat de app je werkelijke piektijd en legt die naast je instelling — een check of je insulinesoort-instelling klopt. De meting leest ~10–15 min aan de vroege kant (door de curvevorm en doordat je lichaam bij een dreigende hypo zelf tegenwerkt), dus de band is daar ruimer. <b>DIA</b> zelf is niet betrouwbaar te meten (te kleine, te ruizige staart); ≥ 5 u is de veilige standaard.</p>
 
       <h4 class="mh">6 · SMB vs. handmatige bolus</h4>
       <p>Een SMB (Super Micro Bolus) is je loop die automatisch micro-doseert; een handmatige bolus geef jij. De app herkent SMB's aan het veld <code>type:"SMB"</code> (of <code>isSMB</code>, of "SMB" in de labels). Overal waar het om <i>jouw</i> gedrag gaat — gemeten ISF, prebolus-timing, KH-ratio, bolustelling — tellen SMB's <b>niet</b> mee.</p>
 
       <h4 class="mh">7 · Gemeten ISF (correctiefactor)</h4>
-      <p>Hoeveel liet 1 E je glucose écht dalen? De app pakt <b>schone, koolhydraatvrije correcties</b> (geen eten binnen het venster, nauwelijks andere insuline, verhoogde start, ≥ 0,5 E, geen SMB) en meet de daling over 3 uur. Die daling wordt gecorrigeerd voor de fractie insuline die binnen het venster is opgenomen (venster &lt; DIA), anders onderschat je de ISF. Ook mislukte correcties tellen mee — alleen de geslaagde middelen zou je gevoeligheid overschatten. Uitkomst: de <b>mediaan</b> met <b>IQR</b> en n. Vanaf 8 correcties.</p>
+      <p>Hoeveel liet 1 E je glucose écht dalen? De app pakt <b>schone, koolhydraatvrije correcties</b> (geen eten binnen het venster, nauwelijks andere insuline, verhoogde start, ≥ 0,5 E, geen SMB) en meet de daling over 3 uur. Die daling wordt gecorrigeerd voor de fractie insuline die binnen het venster is opgenomen (venster &lt; DIA), anders onderschat je de ISF. Ook mislukte correcties tellen mee — alleen de geslaagde middelen zou je gevoeligheid overschatten. Uitkomst: de <b>mediaan</b> (middelste waarde) met de spreiding (IQR = de middelste helft van je metingen) en n (het aantal). Vanaf 8 correcties.</p>
 
       <h4 class="mh">8 · Basaaldrift</h4>
       <p>In <b>maaltijd- en bolusvrije vensters</b> (≥ 5 u sinds het laatste event) hoort je glucose vlak te lopen. De app meet per uur van de dag de mediane helling (mmol/L per uur); structureel wegdrijven (≥ 0,3 /u, met p25 en p75 dezelfde kant op) wijst op te veel of te weinig basaal daar. <b>Kanttekening:</b> bij een closed loop breken SMB's en temp-basaal deze schone vensters, waardoor drift vaak niet meetbaar is — de loop maskeert het probleem door het real-time weg te regelen.</p>
       <p><b>Loop-basaal</b> (voor closed-loop-gebruikers). Waar basaaldrift starft, lees je beter wat de lóóp deed: per uur van de dag de werkelijk geleverde basaal (uit je temp-basaal-historie, met je profiel als terugval waar geen temp actief is) naast je profiel-basaal. Levert je loop rond een bepaald uur dag na dag <b>méér</b> dan je profiel → je profiel-basaal staat daar mogelijk te laag; consistent <b>minder</b> → te hoog. Maaltijduren (3 u na koolhydraten) worden eruit gefilterd zodat het over nuchtere behoefte gaat; SMB's tellen mee als correctie, niet als basaal. Dit werkt juist <i>wél</i> door de loop heen (zoals Autotune). Richting, geen instelwaarde.</p>
 
       <h4 class="mh">9 · Maaltijden</h4>
-      <p>Een "maaltijd" = ≥ 30 g koolhydraten, geïsoleerd (geen andere koolhydraten in −2…+4 u) én <b>met een handmatige maaltijdbolus</b> eromheen. Koolhydraten zónder bolus (hypo-redding, losse invoer) tellen niet mee. Per maaltijd berekent de app de opname-curve door de <i>verwachte</i> insuline-daling van de gemeten deviatie af te trekken; daaruit volgen <b>t50</b> (halve opname), de <b>piek</b> en de <b>prebolus-timing</b> = je handmatige bolus t.o.v. je koolhydraat-invoer (negatief = ervóór). Let op: de invoertijd is je bolusmoment, niet per se wanneer je begon te eten.</p>
+      <p>Een "maaltijd" = ≥ 30 g koolhydraten, geïsoleerd (geen andere koolhydraten in −2…+4 u) én <b>met een handmatige maaltijdbolus</b> eromheen. Koolhydraten zónder bolus (hypo-redding, losse invoer) tellen niet mee. Per maaltijd berekent de app de opname-curve door de <i>verwachte</i> insuline-daling van de gemeten glucosestijging af te trekken; daaruit volgen <b>t50</b> (na hoeveel minuten de helft is opgenomen), de <b>piek</b> en de <b>prebolus-timing</b> = je handmatige bolus t.o.v. je koolhydraat-invoer (negatief = ervóór). Let op: de invoertijd is je bolusmoment, niet per se wanneer je begon te eten.</p>
 
       <h4 class="mh">10 · Bespreekwaarden</h4>
-      <p>Per dagdeel (nacht/ochtend/middag/avond) zet de app je <b>gemeten</b> waarde naast je <b>ingestelde</b>, en als die &gt; 20% afwijkt, een concreet <b>kandidaatgetal</b>: een behoudende halve stap én de volledige gemeten waarde. Het effect wordt dóórgerekend met dezelfde simulaties als voorheen (correctie-, nacht- en maaltijd-simulatie, eerste-orde: extra insuline × gevoeligheid via de activiteitscurve). Een <b class="lok">✓</b> = gemeten sluit aan; <b>—</b> = te weinig data (géén oordeel); de <b>pijl</b> = een bespreekwaarde. <span class="prisk">Rood</span> = de simulatie ziet meer laagtes. Tegenregulatie (je lever bij een dreigende hypo) zit er níét in, dus "laag" is een risico-indicatie, geen exacte telling.</p>
+      <p>Per dagdeel (nacht/ochtend/middag/avond) zet de app je <b>gemeten</b> waarde naast je <b>ingestelde</b>, en als die &gt; 20% afwijkt, een concreet <b>kandidaatgetal</b>: een behoudende halve stap én de volledige gemeten waarde. Het effect wordt doorgerekend met een eenvoudige simulatie op je eigen data (extra insuline × je gevoeligheid, via de werkingscurve van de insuline). Een <b class="lok">✓</b> = gemeten sluit aan; <b>—</b> = te weinig data (géén oordeel); de <b>pijl</b> = een bespreekwaarde. <span class="prisk">Rood</span> = de simulatie ziet meer laagtes. Dat je lichaam bij een dreigende hypo zelf tegenwerkt, zit er níét in — dus "laag" is een waarschuwing, geen exacte telling.</p>
 
       <h4 class="mh">11 · Voor/na een wijziging</h4>
       <p>Markeer je in het logboek een instelling-wijziging, dan vergelijkt de app 14 dagen ervóór met 14 dagen erná (alleen dagen met ≥ 70% dekking). <b>Kanttekening:</b> winst na een mindere periode kan deels terugveer naar het gemiddelde zijn — een vergelijking is geen bewijs van oorzaak.</p>
@@ -1757,7 +1772,7 @@ async function renderFindings(ctx){
       title:`<b>${isEp?"Hypo":"Dip"} om ${fmtHM(e.start)}</b>${sus?` — past bij sensordruk${nacht.length>1?`, ${nacht.length}× vannacht`:""}`:` — laagste ${nl1(e.min)}`}.`,
       steps:[ `${nacht.length}× onder 3,9 tussen 00–06 u; laagste <b>${nl1(Math.min(...nacht.map(x=>x.min)))}</b>.`,
         sus?`Bij ${sus}: snelle duik én snel herstel — <b>te snel voor insuline</b>, het patroon van liggen op de sensor.`:`Duur ${Math.round(e.dur)} min.`,
-        isEp?`Consensus-episode (≥15 min) — telt mee in je maandcijfers.`:`Korte dip (&lt;15 min) — geen consensus-episode.` ],
+        isEp?`Echte hypo (≥15 min) — telt mee in je maandcijfers.`:`Korte dip (&lt;15 min) — nog geen echte hypo.` ],
       fine:"vroeg signaal, geen alarm" });
   } else {
     today.push({ id:`nacht-${lastKey}`, sev:"g", pos:true, when:"vannacht", seenable:false,
