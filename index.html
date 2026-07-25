@@ -637,6 +637,7 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
 
       <h4 class="mh">8 · Basaaldrift</h4>
       <p>In <b>maaltijd- en bolusvrije vensters</b> (≥ 5 u sinds het laatste event) hoort je glucose vlak te lopen. De app meet per uur van de dag de mediane helling (mmol/L per uur); structureel wegdrijven (≥ 0,3 /u, met p25 en p75 dezelfde kant op) wijst op te veel of te weinig basaal daar. <b>Kanttekening:</b> bij een closed loop breken SMB's en temp-basaal deze schone vensters, waardoor drift vaak niet meetbaar is — de loop maskeert het probleem door het real-time weg te regelen.</p>
+      <p><b>Loop-basaal</b> (voor closed-loop-gebruikers). Waar basaaldrift starft, lees je beter wat de lóóp deed: per uur van de dag de werkelijk geleverde basaal (uit je temp-basaal-historie, met je profiel als terugval waar geen temp actief is) naast je profiel-basaal. Levert je loop rond een bepaald uur dag na dag <b>méér</b> dan je profiel → je profiel-basaal staat daar mogelijk te laag; consistent <b>minder</b> → te hoog. Maaltijduren (3 u na koolhydraten) worden eruit gefilterd zodat het over nuchtere behoefte gaat; SMB's tellen mee als correctie, niet als basaal. Dit werkt juist <i>wél</i> door de loop heen (zoals Autotune). Richting, geen instelwaarde.</p>
 
       <h4 class="mh">9 · Maaltijden</h4>
       <p>Een "maaltijd" = ≥ 30 g koolhydraten, geïsoleerd (geen andere koolhydraten in −2…+4 u) én <b>met een handmatige maaltijdbolus</b> eromheen. Koolhydraten zónder bolus (hypo-redding, losse invoer) tellen niet mee. Per maaltijd berekent de app de opname-curve door de <i>verwachte</i> insuline-daling van de gemeten deviatie af te trekken; daaruit volgen <b>t50</b> (halve opname), de <b>piek</b> en de <b>prebolus-timing</b> = je handmatige bolus t.o.v. je koolhydraat-invoer (negatief = ervóór). Let op: de invoertijd is je bolusmoment, niet per se wanneer je begon te eten.</p>
@@ -663,6 +664,7 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
   <div id="secDeep" hidden>
     <div class="h3">Verdieping — voor wie wil sleutelen</div>
     <details class="deep" data-an="dagpatroon"><summary>Dagpatroon <span>— vaste uren waarop je wegdrijft (basaal)</span></summary><div class="body"><div class="loading">Openklappen om te berekenen…</div></div></details>
+    <details class="deep" data-an="loopbasal"><summary>Loop-basaal <span>— wat je loop echt levert vs. je profiel</span></summary><div class="body"><div class="loading">Openklappen om te berekenen…</div></div></details>
     <details class="deep" data-an="meals"><summary>Maaltijdrespons <span>— hoe snel koolhydraten opnemen</span></summary><div class="body"><div class="loading">Openklappen om te berekenen…</div></div></details>
   </div>
   </div>
@@ -1903,6 +1905,71 @@ function anDagpatroon(glucose, treatments, q){
   return driftSvg(stat)+`<div class="obs">${obs}</div><div class="muted" style="margin-top:.4rem">n = ${total.toLocaleString("nl")} driftmetingen in schone vensters · drempel 0,3 mmol/L/u · bij een closed loop kan temp-basaal een echt profielverschil maskeren</div>`;
 }
 
+// Loop-basaal: voor een closed loop werkt basaaldrift niet (de loop regelt de drift
+// weg). Beter is te lezen wat de lóóp deed: per uur van de dag de werkelijk geleverde
+// basaal (temp-basaal, met je profiel als terugval waar geen temp actief is) naast je
+// profiel-basaal. Waar de loop dag na dag structureel méér/minder levert, staat je
+// profiel daar te laag/hoog. Maaltijduren (3 u na koolhydraten) worden eruit gefilterd
+// zodat het over nuchtere basaalbehoefte gaat; SMB's blijven juist meetellen.
+function loopBasal(treatments, timeline, q){
+  if(!timeline) return { noprof:true };
+  const from=q.from||0, to=q.to||Date.now();
+  const temps=treatments.filter(t=>t.type==="Temp Basal").map(t=>{ const r=t.raw||{};
+    const durMs=r.durationInMilliseconds!=null?+r.durationInMilliseconds:(t.duration||0)*60000;
+    return { ts:t.ts, end:t.ts+durMs,
+      abs:(r.absolute!=null?+r.absolute:(r.rate!=null?+r.rate:null)),
+      pct:(r.percent!=null?+r.percent:null) };
+  }).filter(x=>x.end>from && x.ts<to && (x.abs!=null||x.pct!=null)).sort((a,b)=>a.ts-b.ts);
+  if(temps.length<50) return { few:temps.length };
+  const TL=temps.map(t=>t.ts);
+  const lastTemp=ts=>{ let lo=0,hi=TL.length; while(lo<hi){const m=(lo+hi)>>1; if(TL[m]<=ts)lo=m+1;else hi=m;} return lo-1; };
+  const carbTs=treatments.filter(t=>t.carbs>=20).map(t=>t.ts).sort((a,b)=>a-b);
+  const MEAL=3*3600e3;
+  const nearMeal=ts=>{ let lo=0,hi=carbTs.length; while(lo<hi){const m=(lo+hi)>>1; if(carbTs[m]<=ts)lo=m+1;else hi=m;} return lo>0 && carbTs[lo-1]>ts-MEAL; };
+  const STEP=10*60e3, hp=Array.from({length:24},()=>({a:0,p:0,n:0}));
+  for(let t=from;t<to;t+=STEP){
+    if(nearMeal(t)) continue;
+    const prof=profileAt(timeline,t); if(!prof||prof.basal==null||prof.source==="geen") continue;
+    const pr=prof.basal; let ar=pr; const i=lastTemp(t);
+    if(i>=0 && t<temps[i].end){ const tb=temps[i]; ar = tb.abs!=null ? tb.abs : pr*(tb.pct/100); }
+    const h=Math.floor(todMin(t)/60)%24; hp[h].a+=ar; hp[h].p+=pr; hp[h].n++;
+  }
+  const hours=hp.map((o,h)=>o.n>=18?{h,act:o.a/o.n,prof:o.p/o.n,n:o.n}:{h,n:o.n});
+  const valid=hours.filter(x=>x.act!=null);
+  if(valid.length<6) return { few:temps.length, thin:true };
+  const totA=valid.reduce((s,x)=>s+x.act,0), totP=valid.reduce((s,x)=>s+x.prof,0);
+  return { hours, ratio:totP>0?totA/totP:null, days:Math.max(1,Math.round((to-from)/DAY)), nTemps:temps.length };
+}
+function loopBasalSvg(hours){
+  const W=340,H=124,PT=8,PB=16,PL=6, mx=Math.max(0.1,...hours.map(x=>Math.max(x.act||0,x.prof||0)));
+  const bw=(W-PL*2)/24, X=h=>PL+h*bw, Y=v=>H-PB-(v/mx)*(H-PT-PB);
+  let bars="",pmark="";
+  for(let h=0;h<24;h++){ const o=hours[h]; if(o.act==null) continue; const x=X(h), y=Y(o.act), yp=Y(o.prof);
+    bars+=`<rect x="${(x+.8).toFixed(1)}" y="${y.toFixed(1)}" width="${(bw-1.6).toFixed(1)}" height="${(H-PB-y).toFixed(1)}" fill="var(--accent)" opacity="${o.act>=o.prof?'.55':'.3'}" rx="1"/>`;
+    pmark+=`<line x1="${(x+.6).toFixed(1)}" y1="${yp.toFixed(1)}" x2="${(x+bw-.6).toFixed(1)}" y2="${yp.toFixed(1)}" stroke="var(--ink)" stroke-width="1.6"/>`; }
+  const ax=[0,6,12,18,24].map(h=>`<text x="${X(Math.min(h,23.5)).toFixed(1)}" y="${H-4}" font-size="8" fill="var(--muted)" text-anchor="middle">${h}</text>`).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;display:block">${bars}${pmark}${ax}</svg>`+
+    `<div class="legend"><span><i style="background:var(--accent);opacity:.55"></i>loop geleverd</span><span><i style="background:var(--ink)"></i>profiel</span></div>`;
+}
+function anLoopBasal(glucose, treatments, q, timeline){
+  const r=loopBasal(treatments, timeline, q);
+  if(r.noprof) return `<div class="muted">Geen profiel met basaalschema in Nightscout gevonden — nodig om je loop-basaal naast je profiel te leggen.</div>`;
+  if(r.thin) return `<div class="muted">Te weinig nuchtere uren met loop-data (buiten 3 u na maaltijden) om je basaal per uur te vergelijken. Met meer historie komt dit beschikbaar.</div>`;
+  if(r.few!=null) return `<div class="muted">Te weinig temp-basaal-gegevens (${r.few}). Deze analyse werkt alleen bij een <b>closed loop</b> die temp-basaal naar Nightscout stuurt (AAPS/Loop). Bij pen- of pomptherapie zonder loop is dit niet van toepassing.</div>`;
+  const TH=0.15;
+  const dev=r.hours.filter(x=>x.act!=null && Math.abs(x.act-x.prof)/Math.max(0.05,x.prof)>=TH);
+  const up=dev.filter(x=>x.act>x.prof).map(x=>x.h), down=dev.filter(x=>x.act<x.prof).map(x=>x.h);
+  const pct=r.ratio!=null?Math.round((r.ratio-1)*100):0, ps=(pct>=0?"+":"")+pct+"%";
+  let lead;
+  if(!up.length && !down.length) lead=`Je loop levert over de nuchtere uren ongeveer je profiel-basaal (${ps} totaal) — je profiel-basaal sluit aan bij wat de loop werkelijk nodig heeft.`;
+  else { const parts=[];
+    if(up.length) parts.push(`rond <b>${joinHrs(up).join(", ")}</b> geeft je loop structureel <b>méér</b> dan je profiel — daar staat je profiel-basaal mogelijk te <b>laag</b>`);
+    if(down.length) parts.push(`rond <b>${joinHrs(down).join(", ")}</b> geeft je loop <b>minder</b> — daar mogelijk te <b>hoog</b>`);
+    lead=`Over de nuchtere uren levert je loop <b>${ps}</b> t.o.v. je profiel-basaal. ${parts.join("; en ")}. Een bespreekpunt voor je team — geen instelwaarde.`; }
+  return loopBasalSvg(r.hours)+`<div class="obs">${lead}</div>`+
+    `<div class="muted" style="margin-top:.4rem">Werkelijk geleverde basaal (temp-basaal, profiel waar geen temp actief) vs. je profiel, per uur, over ${r.days} dagen. Maaltijduren (3 u na koolhydraten) zijn eruit gefilterd; SMB's tellen mee als correctie, niet als basaal. Zo lees je waar je loop je profiel structureel bijstuurt — dé ingang voor basaal bij een closed loop. Temp-basaal reageert ook op correcties, dus lees dit als richting, niet als exacte instelwaarde.</div>`;
+}
+
 // Herbruikbare maaltijd-berekening (gebruikt door de kaart én door "Jouw vragen").
 const MEAL_MIN=8;
 function mealResults(glucose, treatments, timeline){
@@ -2288,6 +2355,7 @@ function initDeep(){
       try {
         const { glucose, q, treatments, timeline } = _ctx;
         body.innerHTML = an==="dagpatroon" ? anDagpatroon(glucose, treatments, q)
+          : an==="loopbasal" ? anLoopBasal(glucose, treatments, q, timeline)
           : an==="meals" ? anMeals(glucose, treatments, q, timeline)
           : an==="stacking" ? anStacking(glucose, treatments, q)
           : "";
@@ -2608,6 +2676,7 @@ const ANA_TILES=[
   ["secProfile","Profiel","je schema's"],
   ["secInsulin","Insuline & KH","dagdosis"],
   ["an:dagpatroon","Dagpatroon","basaaldrift per uur"],
+  ["an:loopbasal","Loop-basaal","loop vs. profiel (closed loop)"],
   ["an:meals","Maaltijdrespons","opname & dagdelen"],
   ["secTrend","Weektrend","word je beter?"],
   ["secLog","Logboek","markeer & vergelijk"],
