@@ -102,12 +102,15 @@ button.ghost:hover:not(:disabled){color:var(--ink);opacity:1}
 .scope .warn b{color:var(--warn)}
 
 /* Onderbalk-navigatie — duim-bereikbaar, vast onderaan */
-.nav{position:fixed;left:0;right:0;bottom:0;z-index:30;display:flex;justify-content:center;gap:.25rem;
+.nav{position:fixed;left:0;right:0;bottom:0;z-index:30;display:flex;justify-content:center;gap:.15rem;
   background:color-mix(in srgb,var(--surface) 90%,transparent);backdrop-filter:blur(16px) saturate(1.4);
-  border-top:1px solid var(--line);padding:.35rem .3rem calc(.35rem + env(safe-area-inset-bottom,0px))}
-.nav .tab{flex:0 1 auto;background:transparent;border:0;box-shadow:none;color:var(--dim);
-  font-size:.72rem;font-weight:650;letter-spacing:.01em;padding:.44rem .85rem;border-radius:999px;
+  border-top:1px solid var(--line);padding:.3rem .35rem calc(.3rem + env(safe-area-inset-bottom,0px))}
+.nav .tab{position:relative;flex:1 1 0;max-width:6.5rem;display:flex;flex-direction:column;align-items:center;gap:.16rem;
+  background:transparent;border:0;box-shadow:none;color:var(--dim);
+  font-size:.62rem;font-weight:650;letter-spacing:.01em;padding:.34rem .3rem;border-radius:.85rem;
   cursor:pointer;transition:color .14s,background .14s}
+.nav .tab svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;
+  stroke-linecap:round;stroke-linejoin:round;display:block}
 .nav .tab.on{color:var(--accent);background:var(--accent-soft)}
 .nav .tab:active{transform:translateY(.5px)}
 @media (hover:hover){ .nav .tab:hover:not(.on){color:var(--muted)} }
@@ -132,10 +135,6 @@ h2.sect::after{content:"";flex:1;height:1px;background:var(--line)}
 .nu .onb{margin-left:auto;font-family:var(--mono);font-size:.68rem;color:var(--dim);text-align:right}
 .nu .onb b{color:var(--ink);font-weight:600}
 .nu .ob-hint{color:var(--warn);font-weight:700}
-.nu .quickcarb{align-self:center;margin-left:auto;flex:none;border-radius:999px;padding:.3rem .62rem;
-  font-size:.74rem;font-weight:600;line-height:1;color:var(--ink);background:var(--surface);
-  border:1px solid var(--line);cursor:pointer;white-space:nowrap}
-.nu .quickcarb:hover,.nu .quickcarb:focus-visible{border-color:var(--accent);color:var(--accent)}
 
 /* tijdlijn-ruggengraat */
 .tl{position:relative;padding-left:1.5rem}
@@ -199,8 +198,8 @@ h2.sect::after{content:"";flex:1;height:1px;background:var(--line)}
 .citem{display:flex;gap:.6rem;align-items:baseline;background:var(--surface);border:1px solid var(--line);
   border-radius:14px;padding:.7rem .9rem;margin-bottom:.5rem;font-size:.86rem}
 .citem .del{margin-left:auto;background:none;border:0;color:var(--dim);cursor:pointer;font-size:.9rem;padding:0 .2rem}
-.cbadge{background:var(--warn);color:#fff;font-family:var(--mono);font-size:.58rem;
-  border-radius:999px;padding:.06rem .38rem;margin-left:.3rem;transform:translateY(-1px);display:inline-block}
+.cbadge{position:absolute;top:.16rem;right:.9rem;background:var(--warn);color:#fff;font-family:var(--mono);
+  font-size:.54rem;line-height:1;border-radius:999px;padding:.1rem .32rem;display:inline-block}
 .cbadge[hidden]{display:none}
 
 .spark{width:100%;height:56px;display:block;margin-top:.7rem}
@@ -217,8 +216,8 @@ h2.sect::after{content:"";flex:1;height:1px;background:var(--line)}
 .tile span{font-size:.68rem;color:var(--muted)}
 .tile:active{transform:translateY(.5px)}
 .tolink{margin-top:.7rem;font-size:.8rem;font-weight:650;color:var(--accent);cursor:pointer}
-.view[data-view="consult"] .epoch{padding-left:0}
-.view[data-view="consult"] .epoch::before{display:none}
+.view[data-view="consult"] .epoch,.view[data-view="eten"] .epoch{padding-left:0}
+.view[data-view="consult"] .epoch::before,.view[data-view="eten"] .epoch::before{display:none}
 details.fold{scroll-margin-top:7.5rem}
 details.deep{scroll-margin-top:7.5rem}
 
@@ -524,7 +523,6 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
     <span class="val" id="nowVal">—</span><span class="arrow" id="nowArrow"></span>
     <span class="age" id="nowAge"></span>
     <span class="onb" id="onboard" hidden></span>
-    <button class="quickcarb" id="btnCarbQuick" aria-label="Koolhydraten schatten" title="Koolhydraten schatten">🍽️ KH</button>
   </div>
 
   <div id="tl" hidden>
@@ -627,26 +625,6 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
   <details class="fold" id="bandCard">
     <summary>Verdeling per band <span class="foldhint">alle 5 banden + streefwaarden</span></summary>
     <div class="foldbody"><div id="bandBar"></div></div>
-  </details>
-
-  <div class="h3">Eten &amp; koolhydraten</div>
-  <details class="fold" id="secCarb">
-    <summary>Koolhydraten schatten <span class="foldhint">kies eten + portie → gram KH</span></summary>
-    <div class="foldbody">
-      <div class="cbNote">Gemiddelde tabelwaarden als <b>hulpmiddel om te leren schatten</b> — geen exacte telling en <b>geen dosisadvies</b>. Merken en bereiding wisselen; jij blijft verantwoordelijk voor je bolus.</div>
-      <input type="search" id="cbSearch" placeholder="zoek eten… (bijv. banaan, rijst, cola)" autocomplete="off">
-      <div class="cbCats" id="cbCats"></div>
-      <div class="cbResults" id="cbResults"></div>
-      <div class="cbPlate" id="cbPlate" hidden>
-        <div class="cbPlateHead">Op je bord</div>
-        <div id="cbPlateItems"></div>
-        <div class="cbTotal">Totaal <b id="cbTotal">0 g</b> koolhydraten</div>
-        <div class="logrow">
-          <input type="date" id="cbDate" aria-label="datum">
-          <button class="ghost" id="cbSave">Vastleggen in logboek</button>
-        </div>
-      </div>
-    </div>
   </details>
 
   <div class="h3">Insuline &amp; basaal</div>
@@ -770,6 +748,26 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
 
   </div>
 
+  <!-- ETEN — de koolhydraat-schatter als eigen, snel bereikbare bestemming -->
+  <div class="view" data-view="eten" hidden>
+  <section class="epoch" id="epEten" style="margin-left:0">
+    <div class="eh"><h2>Koolhydraten schatten</h2><span class="sub">kies eten + portie → gram</span></div>
+    <div class="cbNote">Gemiddelde tabelwaarden als <b>hulpmiddel om te leren schatten</b> — geen exacte telling en <b>geen dosisadvies</b>. Merken en bereiding wisselen; jij blijft verantwoordelijk voor je bolus.</div>
+    <input type="search" id="cbSearch" placeholder="zoek eten… (bijv. banaan, rijst, cola)" autocomplete="off">
+    <div class="cbCats" id="cbCats"></div>
+    <div class="cbResults" id="cbResults"></div>
+    <div class="cbPlate" id="cbPlate" hidden>
+      <div class="cbPlateHead">Op je bord</div>
+      <div id="cbPlateItems"></div>
+      <div class="cbTotal">Totaal <b id="cbTotal">0 g</b> koolhydraten</div>
+      <div class="logrow">
+        <input type="date" id="cbDate" aria-label="datum">
+        <button class="ghost" id="cbSave">Vastleggen in logboek</button>
+      </div>
+    </div>
+  </section>
+  </div>
+
   <!-- CONSULT -->
   <div class="view" data-view="consult" hidden>
   <section class="epoch" id="epConsult" style="margin-left:0">
@@ -788,9 +786,18 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
 </main>
 
 <nav id="tabbar" class="nav" hidden aria-label="Hoofdnavigatie">
-  <button class="tab on" data-tab="overzicht">Overzicht</button>
-  <button class="tab" data-tab="analyses">Analyses</button>
-  <button class="tab" data-tab="consult">Consult<span class="cbadge" id="consultBadge" hidden></span></button>
+  <button class="tab on" data-tab="overzicht">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+    <span>Overzicht</span></button>
+  <button class="tab" data-tab="eten">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 2v7c0 1.1.9 2 2 2a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/></svg>
+    <span>Eten</span></button>
+  <button class="tab" data-tab="analyses">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg>
+    <span>Analyses</span></button>
+  <button class="tab" data-tab="consult">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M9 12h6"/><path d="M9 16h6"/></svg>
+    <span>Consult</span><span class="cbadge" id="consultBadge" hidden></span></button>
 </nav>
 
 
@@ -3118,8 +3125,7 @@ function renderCbPlate(){
   items.querySelectorAll(".ci-x").forEach(b=>b.onclick=()=>{ _cbPlate.splice(+b.dataset.i,1); renderCbPlate(); });
 }
 function initCarb(){
-  const sec=document.getElementById("secCarb"); if(!sec) return;
-  sec.hidden=false;
+  if(!document.getElementById("cbCats")) return; // schatter woont sinds v5.2 in de Eten-tab
   renderCbCats(); renderCbResults();
   const s=document.getElementById("cbSearch");
   if(s) s.oninput=()=>{ _cbOpen=null; renderCbResults(); };
@@ -3170,7 +3176,6 @@ function goTo(target, view){
   setTimeout(()=>el.scrollIntoView({behavior:"smooth",block:"start"}),60);
 }
 document.querySelectorAll("[data-goto]").forEach(el=>el.onclick=()=>goTo(el.dataset.goto,"analyses"));
-document.getElementById("btnCarbQuick").onclick=()=>goTo("secCarb","analyses");
 
 // stickyhoogte van de kop voor de Nu-strip
 try{ document.documentElement.style.setProperty("--headh", document.querySelector("header").offsetHeight+"px"); }catch(_){}

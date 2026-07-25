@@ -16,8 +16,7 @@ await page.goto(FILE,{waitUntil:'load'});
 await page.fill('#inUrl','https://mock.nightscout.test');await page.fill('#inTok','x');await page.fill('#inDays','7');
 await page.click('#btnSave');
 await page.waitForFunction(()=>document.getElementById('kpis')&&document.getElementById('kpis').children.length>0,{timeout:40000}).catch(()=>{});
-await page.evaluate(()=>{showTab('analyses'); const n=document.getElementById('tabbar'); if(n) n.style.display='none';});
-await page.evaluate(()=>{document.getElementById('secCarb').open=true;});
+await page.evaluate(()=>{showTab('eten'); const n=document.getElementById('tabbar'); if(n) n.style.display='none';}); // schatter is sinds v5.2 een eigen tab
 await page.waitForTimeout(150);
 
 // 1) Zoek "banaan" → resultaat verschijnt

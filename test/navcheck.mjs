@@ -18,28 +18,37 @@ await page.click('#btnSave');
 await page.waitForFunction(()=>document.getElementById('kpis')&&document.getElementById('kpis').children.length>0,{timeout:40000}).catch(()=>{});
 await page.waitForTimeout(200);
 
-// 1) Snelknop KH-schatter: zichtbaar in de Nu-balk, ook vanuit een ander tabblad
-const btnVisible=await page.isVisible('#btnCarbQuick');
+// 1) Onderbalk: 4 tabs in vaste volgorde, elk met een SVG-icoon + labeltekst
+const bar=await page.evaluate(()=>[...document.querySelectorAll('#tabbar .tab')].map(b=>({
+  tab:b.dataset.tab, hasSvg:!!b.querySelector('svg'), label:(b.querySelector('span:not(.cbadge)')?.textContent||'').trim()})));
+const tabs=bar.map(b=>b.tab).join(',');
+const allIcons=bar.every(b=>b.hasSvg && b.label);
 // 2) Dagcurve is standaard ingeklapt (details, niet open)
 const dayFold=await page.evaluate(()=>{const el=document.getElementById('secDay');return{tag:el.tagName,open:el.open};});
 // 3) Analyses-volgorde: eerste kop = Maaltijden (id anaGrid), Veiligheid vóór Insuline & basaal
 const order=await page.evaluate(()=>{const hs=[...document.querySelectorAll('.view[data-view="analyses"] .h3')].map(h=>h.textContent.trim());return{first:hs[0],firstId:document.getElementById('anaGrid').textContent.trim(),list:hs};});
-// 4) Snelknop springt naar de schatter: opent tab Analyses én klapt secCarb open
-await page.click('#btnCarbQuick');
+// 4) Eten-tab: opent de eigen view met de werkende schatter (categorie-chips gevuld)
+await page.click('#tabbar .tab[data-tab="eten"]');
 await page.waitForTimeout(200);
-const jumped=await page.evaluate(()=>({analysesShown:!document.querySelector('.view[data-view="analyses"]').hidden,carbOpen:document.getElementById('secCarb').open}));
+const eten=await page.evaluate(()=>({
+  shown:!document.querySelector('.view[data-view="eten"]').hidden,
+  hasSearch:!!document.querySelector('.view[data-view="eten"] #cbSearch'),
+  cats:document.querySelectorAll('#cbCats .cbCat, #cbCats button').length}));
 
-const meals=order.list.indexOf('Maaltijden'), safety=order.list.indexOf('Veiligheid & bereik'), insulin=order.list.indexOf('Insuline & basaal');
-console.log('snelknop zichtbaar:', btnVisible?'JA':'NEE');
+const safety=order.list.indexOf('Veiligheid & bereik'), insulin=order.list.indexOf('Insuline & basaal');
+console.log('onderbalk-tabs:', tabs);
+console.log('  4 tabs met icoon+label:', (bar.length===4&&allIcons)?'JA':'NEE');
+console.log('  Eten-tab aanwezig:', bar.some(b=>b.tab==='eten')?'JA':'NEE');
 console.log('dagcurve = ingeklapte fold:', (dayFold.tag==='DETAILS'&&!dayFold.open)?'JA':'NEE', `(${dayFold.tag}, open=${dayFold.open})`);
 console.log('analyses-volgorde:', order.list.join(' → '));
 console.log('  Maaltijden eerst:', order.first==='Maaltijden'&&order.firstId==='Maaltijden'?'JA':'NEE');
 console.log('  Veiligheid vóór Insuline:', (safety>-1&&insulin>-1&&safety<insulin)?'JA':'NEE');
-console.log('snelknop → Analyses + schatter open:', (jumped.analysesShown&&jumped.carbOpen)?'JA':'NEE');
+console.log('Eten-tab → eigen view + schatter:', (eten.shown&&eten.hasSearch&&eten.cats>0)?'JA':'NEE', `(cats=${eten.cats})`);
 console.log('errors:', errors.length?errors:'geen');
 
-const ok = btnVisible && dayFold.tag==='DETAILS' && !dayFold.open && order.first==='Maaltijden'
-  && safety<insulin && jumped.analysesShown && jumped.carbOpen && !errors.length;
+const ok = bar.length===4 && allIcons && tabs==='overzicht,eten,analyses,consult'
+  && dayFold.tag==='DETAILS' && !dayFold.open && order.first==='Maaltijden' && safety<insulin
+  && eten.shown && eten.hasSearch && eten.cats>0 && !errors.length;
 console.log('\nRESULTAAT:', ok?'OK':'FOUT');
 if(!ok) process.exitCode=1;
 await browser.close();
