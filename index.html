@@ -2133,6 +2133,7 @@ function correctionSim(oi, MULT=[0.9,0.95,1.0,1.05,1.1], minN=8){
 const _pR1=x=>Math.round(x*10)/10, _pR05=x=>Math.round(x*20)/20, _pR5g=x=>Math.round(x*2)/2;
 const _pClamp=(x,a,b)=>Math.min(Math.max(a,x),Math.min(b,Math.max(a,b)));
 const _pMed=a=>{const s=[...a].sort((x,y)=>x-y);return s.length?s[Math.floor(s.length/2)]:null;};
+const _pMean=a=>a.length?a.reduce((s,x)=>s+x,0)/a.length:null;
 const _pSd=v=>(v>0?"+":v<0?"−":"")+nl1(Math.abs(v));       // getekende drift
 const P_RISK=0.03;                                          // 3 procentpunt extra laag = risicovlag
 
@@ -2171,28 +2172,50 @@ function proposalEngine(drift, oi, MR, pi, glucose, treatments, q, timeline){
       items.push({ key:"isf", title:"ISF · correctiefactor", unit:"mmol/L per E", rows, grid, allRow,
         why:`Hoeveel 1 eenheid je écht liet dalen, naast wat je profiel aanneemt. Verschilt per dagdeel: 's ochtends ben je vaak minder gevoelig.` }); }
 
-  // 2 — Basaal per dagdeel, uit de nuchtere drift (eerste-orde: extra basaal × ISF
-  // neutraliseert de drift). Alleen waar je in stille vensters structureel wegdrijft.
-  if(drift && drift.stat && isfRef){ const rows=[], grid={};
-    for(const d of DAYPARTS){ const hrs=drift.stat.filter(s=>s.h>=d.lo/60 && s.h<d.hi/60 && s.med!=null);
-      if(hrs.length<2){ grid[d.key]={status:"weinig"}; continue; }
-      const agg=_pMed(hrs.map(s=>s.med));
-      if(Math.abs(agg)<drift.TH){ grid[d.key]={status:"ok"}; continue; }
-      const blk=(pi.basal||[]).find(b=>d.mid>=b.from&&d.mid<b.to)||(pi.basal||[])[0]; if(!blk){ grid[d.key]={status:"weinig"}; continue; }
-      const cb=blk.value, up=agg>0, sign=up?1:-1, dB=Math.abs(agg)/isfRef, seen=new Set(), cands=[];
-      for(const [tag,frac] of [["behoudend",0.5],["gemeten",1.0]]){
-        const C=_pR05(cb+sign*dB*frac); if(C===_pR05(cb)||C<0||seen.has(C)) continue; seen.add(C);
-        const proj=agg*(1-frac);
-        cands.push({tag, from:nl2(cb), to:nl2(C), risky:false,
-          eff:`nuchtere drift ${_pSd(agg)} → ${_pSd(proj)} mmol/L/u`,
-          dir:up?"hoger basaal (meer insuline)":"lager basaal (minder insuline)"}); }
-      if(cands.length){ rows.push({label:d.label, dpKey:d.key, meta:`stille vensters · drift ${_pSd(agg)} mmol/L/u`, cands});
-        const beh=cands.find(c=>c.tag==="behoudend"), gem=cands.find(c=>c.tag==="gemeten"), any=beh||gem;
-        grid[d.key]={status:"change", from:any.from, to:(beh&&gem&&beh.to!==gem.to)?`${beh.to}–${gem.to}`:(gem?gem.to:beh.to), risky:false}; }
-      else grid[d.key]={status:"ok"}; }
+  // 2 — Basaal per dagdeel. Bij een closed loop lezen we wat de lóóp werkelijk
+  // leverde (temp-basaal vs. profiel) — die data is er wél; anders de nuchtere drift.
+  { const lb=loopBasal(treatments, timeline, q), lbHours=(lb&&lb.hours)?lb.hours:null;
+    const rows=[], grid={}; let source=null;
+    for(const d of DAYPARTS){
+      // A — loop-basaal (voorkeur bij een loop): wat je loop echt leverde vs. profiel
+      if(lbHours){ const hrs=lbHours.filter(x=>x.act!=null && x.h>=d.lo/60 && x.h<d.hi/60);
+        if(hrs.length>=2){ source=source||"loop";
+          const act=_pMean(hrs.map(x=>x.act)), prof=_pMean(hrs.map(x=>x.prof));
+          if(prof>0.05){ const dev=(act-prof)/prof;
+            if(Math.abs(dev)>=0.15){ const up=act>prof, seen=new Set(), cands=[];
+              for(const [tag,frac] of [["behoudend",0.5],["gemeten",1.0]]){
+                const C=_pR05(prof+(act-prof)*frac); if(C===_pR05(prof)||C<0||seen.has(C)) continue; seen.add(C);
+                cands.push({tag, from:nl2(prof), to:nl2(C), risky:false,
+                  eff:`loop leverde gem. ${nl2(act)} vs profiel ${nl2(prof)} E/u`,
+                  dir:up?"loop levert méér — profiel mogelijk te laag":"loop levert minder — mogelijk te hoog"}); }
+              if(cands.length){ rows.push({label:d.label, dpKey:d.key, meta:`loop vs profiel · ${hrs.reduce((s,x)=>s+x.n,0).toLocaleString("nl")} metingen`, cands});
+                const beh=cands.find(c=>c.tag==="behoudend"), gem=cands.find(c=>c.tag==="gemeten"), any=beh||gem;
+                grid[d.key]={status:"change", from:any.from, to:(beh&&gem&&beh.to!==gem.to)?`${beh.to}–${gem.to}`:(gem?gem.to:beh.to), risky:false}; continue; } }
+            grid[d.key]={status:"ok"}; continue; } } }
+      // B — nuchtere drift (val terug voor niet-loopers)
+      if(drift && drift.stat && isfRef){ const hrs=drift.stat.filter(s=>s.h>=d.lo/60 && s.h<d.hi/60 && s.med!=null);
+        if(hrs.length<2){ grid[d.key]={status:"weinig"}; continue; }
+        const agg=_pMed(hrs.map(s=>s.med));
+        if(Math.abs(agg)<drift.TH){ grid[d.key]={status:"ok"}; continue; }
+        const blk=(pi.basal||[]).find(b=>d.mid>=b.from&&d.mid<b.to)||(pi.basal||[])[0]; if(!blk){ grid[d.key]={status:"weinig"}; continue; }
+        const cb=blk.value, up=agg>0, sign=up?1:-1, dB=Math.abs(agg)/isfRef, seen=new Set(), cands=[]; source=source||"drift";
+        for(const [tag,frac] of [["behoudend",0.5],["gemeten",1.0]]){
+          const C=_pR05(cb+sign*dB*frac); if(C===_pR05(cb)||C<0||seen.has(C)) continue; seen.add(C);
+          const proj=agg*(1-frac);
+          cands.push({tag, from:nl2(cb), to:nl2(C), risky:false,
+            eff:`nuchtere drift ${_pSd(agg)} → ${_pSd(proj)} mmol/L/u`,
+            dir:up?"hoger basaal (meer insuline)":"lager basaal (minder insuline)"}); }
+        if(cands.length){ rows.push({label:d.label, dpKey:d.key, meta:`stille vensters · drift ${_pSd(agg)} mmol/L/u`, cands});
+          const beh=cands.find(c=>c.tag==="behoudend"), gem=cands.find(c=>c.tag==="gemeten"), any=beh||gem;
+          grid[d.key]={status:"change", from:any.from, to:(beh&&gem&&beh.to!==gem.to)?`${beh.to}–${gem.to}`:(gem?gem.to:beh.to), risky:false}; }
+        else grid[d.key]={status:"ok"}; }
+      else grid[d.key]={status:"weinig"};
+    }
     if(rows.length || Object.values(grid).some(g=>g.status!=="weinig"))
       items.push({ key:"basaal", title:"Basaal", unit:"E/u", rows, grid,
-        why:`In maaltijd- en bolusvrije uren hoort je glucose vlak te lopen. Waar je toch wegdrijft, wijst dat op te veel of te weinig basaal — per dagdeel.` }); }
+        why: source==="loop"
+          ? `Wat je loop werkelijk leverde (temp-basaal) naast je profiel-basaal, per dagdeel. Levert de loop structureel méér/minder, dan staat je profiel daar mogelijk te laag/hoog. Maaltijduren zijn eruit gefilterd.`
+          : `In maaltijd- en bolusvrije uren hoort je glucose vlak te lopen. Waar je toch wegdrijft, wijst dat op te veel of te weinig basaal — per dagdeel.` }); }
 
   // 3 — KH-ratio per maaltijdmoment (ontbijt/lunch/diner). Te hoge piek = onderdekking;
   // lager getal g/E = sterkere ratio = meer maaltijdinsuline.
