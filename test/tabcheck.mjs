@@ -20,7 +20,8 @@ const r=await page.evaluate(()=>({
   aria:document.querySelector('#tabbar .tab[aria-current="page"]')?.dataset.tab,
   anaVis:!document.querySelector('.view[data-view="analyses"]').hidden,
   ovHid:document.querySelector('.view[data-view="overzicht"]').hidden,
-  tiles:document.querySelectorAll('#anaTiles .tile').length }));
-console.log('na klik analyses: aria=',r.aria,'| analyses zichtbaar:',r.anaVis,'| overzicht dicht:',r.ovHid,'| tegels:',r.tiles);
+  groepen:document.querySelectorAll('.view[data-view="analyses"] .h3').length,
+  secties:document.querySelectorAll('.view[data-view="analyses"] details').length }));
+console.log('na klik analyses: aria=',r.aria,'| analyses zichtbaar:',r.anaVis,'| overzicht dicht:',r.ovHid,'| groepen:',r.groepen,'| secties:',r.secties);
 console.log('errors:',errors.length?errors:'geen');
 await browser.close();

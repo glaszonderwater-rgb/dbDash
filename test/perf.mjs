@@ -14,7 +14,7 @@ await page.route('https://mock.nightscout.test/**',route=>{const u=new URL(route
 await page.goto(FILE,{waitUntil:'load'});
 await page.fill('#inUrl','https://mock.nightscout.test');await page.fill('#inTok','x');await page.fill('#inDays','90');
 await page.click('#btnSave');
-await page.waitForFunction(()=>!document.getElementById('secDeep').hidden,{timeout:40000}).catch(()=>{});
+await page.waitForFunction(()=>document.getElementById('kpis')&&document.getElementById('kpis').children.length>0,{timeout:40000}).catch(()=>{});
 await page.waitForTimeout(300);
 const timing=await page.evaluate(()=>{const {glucose,q,treatments,timeline}=_ctx;const t0=performance.now();const r=nightSim(glucose,treatments,q,timeline);const t1=performance.now();return {ms:+(t1-t0).toFixed(1),nights:r.nights,glucoseN:glucose.length};});
 console.log('data:',timing.glucoseN,'metingen · nachten:',timing.nights);

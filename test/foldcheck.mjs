@@ -12,7 +12,7 @@ await page.route('https://mock.nightscout.test/**',route=>{const u=new URL(route
 await page.goto(FILE,{waitUntil:'load'});
 await page.fill('#inUrl','https://mock.nightscout.test');await page.fill('#inTok','x');await page.fill('#inDays','30');
 await page.click('#btnSave');
-await page.waitForFunction(()=>!document.getElementById('secInsulin').hidden,{timeout:40000}).catch(()=>{});
+await page.waitForFunction(()=>document.getElementById('kpis')&&document.getElementById('kpis').children.length>0,{timeout:40000}).catch(()=>{});
 await page.waitForTimeout(300);
 // volgorde-check + fold open/dicht
 const r=await page.evaluate(()=>{

@@ -535,17 +535,27 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
 
   <!-- ANALYSES — de bibliotheek: alles bij naam, één tik -->
   <div class="view" data-view="analyses" hidden>
-  <div class="h3" id="anaGrid" style="margin-top:.2rem">Alle analyses</div>
-  <div class="grid" id="anaTiles"></div>
-
-  <details class="fold" id="secProposals" open hidden>
+  <div class="h3" id="anaGrid" style="margin-top:.2rem">Insuline &amp; basaal</div>
+  <details class="fold" id="secProposals" hidden>
     <summary>Bespreekwaarden <span class="foldhint">concrete getallen om met je team te bespreken</span></summary>
     <div class="foldbody"><div id="proposals"></div></div>
   </details>
-  <details class="fold" id="bandCard">
-    <summary>Verdeling per band <span class="foldhint">alle 5 banden + streefwaarden</span></summary>
-    <div class="foldbody"><div id="bandBar"></div></div>
+  <details class="deep" data-an="loopbasal"><summary>Loop-basaal <span class="foldhint">wat je loop echt levert vs. je profiel</span></summary><div class="body"><div class="loading">Openklappen om te berekenen…</div></div></details>
+  <details class="deep" data-an="dagpatroon"><summary>Dagpatroon <span class="foldhint">vaste uren waarop je wegdrijft (basaal)</span></summary><div class="body"><div class="loading">Openklappen om te berekenen…</div></div></details>
+  <details class="fold" id="secInsulin" hidden>
+    <summary>Insuline &amp; koolhydraten <span class="foldhint">dagdosis en verhouding</span></summary>
+    <div class="foldbody">
+      <div class="kpis" id="insKpis"></div>
+      <div class="muted" id="insObs" style="margin-top:.5rem"></div>
+    </div>
   </details>
+  <details class="fold" id="secProfile" hidden>
+    <summary>Profiel <span class="foldhint">je ingestelde schema's + piektijd</span></summary>
+    <div class="foldbody"><div id="profile"></div></div>
+  </details>
+
+  <div class="h3">Maaltijden</div>
+  <details class="deep" data-an="meals"><summary>Maaltijdrespons <span class="foldhint">opname, piek &amp; dagdelen</span></summary><div class="body"><div class="loading">Openklappen om te berekenen…</div></div></details>
   <details class="fold" id="secAgp" hidden>
     <summary>Dagprofiel (AGP) <span class="foldhint">je typische dag als band</span></summary>
     <div class="foldbody">
@@ -558,6 +568,8 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
       <div class="obs" id="agpObs"></div>
     </div>
   </details>
+
+  <div class="h3">Veiligheid &amp; bereik</div>
   <details class="fold" id="secSafety" hidden>
     <summary>Veiligheid — hypo's <span class="foldhint">episodes, dips, patronen</span></summary>
     <div class="foldbody">
@@ -568,17 +580,12 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
       <details class="deep" data-an="stacking" style="margin-top:.8rem"><summary>Wat gaat vooraf aan je hypo's? <span>— gestapelde correcties</span></summary><div class="body"><div class="loading">Openklappen om te berekenen…</div></div></details>
     </div>
   </details>
-  <details class="fold" id="secInsulin" hidden>
-    <summary>Insuline &amp; koolhydraten <span class="foldhint">dagdosis en verhouding</span></summary>
-    <div class="foldbody">
-      <div class="kpis" id="insKpis"></div>
-      <div class="muted" id="insObs" style="margin-top:.5rem"></div>
-    </div>
+  <details class="fold" id="bandCard">
+    <summary>Verdeling per band <span class="foldhint">alle 5 banden + streefwaarden</span></summary>
+    <div class="foldbody"><div id="bandBar"></div></div>
   </details>
-  <details class="fold" id="secProfile" hidden>
-    <summary>Profiel <span class="foldhint">je ingestelde schema's</span></summary>
-    <div class="foldbody"><div id="profile"></div></div>
-  </details>
+
+  <div class="h3">Voortgang</div>
   <details class="fold" id="secTrend" hidden>
     <summary>Weektrend <span class="foldhint">tijd in bereik per week</span></summary>
     <div class="foldbody">
@@ -601,6 +608,7 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
       <div id="logList"></div>
     </div>
   </details>
+  <div class="h3">Over de app</div>
   <details class="fold" id="secMethode">
     <summary>Methode &amp; berekeningen <span class="foldhint">hoe elk getal tot stand komt</span></summary>
     <div class="foldbody meth">
@@ -661,12 +669,6 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
     </div>
   </details>
 
-  <div id="secDeep" hidden>
-    <div class="h3">Verdieping — voor wie wil sleutelen</div>
-    <details class="deep" data-an="dagpatroon"><summary>Dagpatroon <span>— vaste uren waarop je wegdrijft (basaal)</span></summary><div class="body"><div class="loading">Openklappen om te berekenen…</div></div></details>
-    <details class="deep" data-an="loopbasal"><summary>Loop-basaal <span>— wat je loop echt levert vs. je profiel</span></summary><div class="body"><div class="loading">Openklappen om te berekenen…</div></div></details>
-    <details class="deep" data-an="meals"><summary>Maaltijdrespons <span>— hoe snel koolhydraten opnemen</span></summary><div class="body"><div class="loading">Openklappen om te berekenen…</div></div></details>
-  </div>
   </div>
 
   <!-- CONSULT -->
@@ -1536,7 +1538,7 @@ function render(glucose, treatments, timeline){
   if (!g.length){
     document.getElementById("findToday").innerHTML =
       `<div class="f"><div class="fh"><span class="fdot n"></span><span class="ftxt">Nog te weinig dagen met voldoende sensordekking (≥70%) voor betrouwbare cijfers. Synchroniseer meer historie.</span></div></div>`;
-    for (const id of ["secDay","secAware","secTrend","secLog","secWatch","mvsCard","secAgp","secSafety","secInsulin","secProfile","secDeep"]) document.getElementById(id).hidden = true;
+    for (const id of ["secDay","secAware","secTrend","secLog","secWatch","mvsCard","secAgp","secSafety","secInsulin","secProfile"]) document.getElementById(id).hidden = true;
     document.getElementById("kpis").innerHTML = "";
     return;
   }
@@ -1667,7 +1669,6 @@ function render(glucose, treatments, timeline){
       document.getElementById("proposals").innerHTML = proposalsHtml(drift, oi, MR, pi, glucose, treatments, q, timeline); } }
   document.getElementById("epMaand").classList.toggle("warned",
     (!watch.few && watch.alerts.length>0) || !!document.querySelector("#tune .wad"));
-  document.getElementById("secDeep").hidden = false;
 
   // ── samenvatting (delen) ──
   const opp = opportunity(m, ag, hy, tr);
@@ -2668,20 +2669,7 @@ function showTab(tab){
 document.querySelectorAll("#tabbar .tab").forEach(b=>b.onclick=()=>showTab(b.dataset.tab));
 
 // De index: élke analyse bij naam, één tik — geen zoeken
-const ANA_TILES=[
-  ["secProposals","Bespreekwaarden","concrete getallen voor je team"],
-  ["secSafety","Veiligheid","hypo's & patronen"],
-  ["secAgp","Dagprofiel (AGP)","je typische dag"],
-  ["bandCard","Banden","verdeling + streef"],
-  ["secProfile","Profiel","je schema's"],
-  ["secInsulin","Insuline & KH","dagdosis"],
-  ["an:dagpatroon","Dagpatroon","basaaldrift per uur"],
-  ["an:loopbasal","Loop-basaal","loop vs. profiel (closed loop)"],
-  ["an:meals","Maaltijdrespons","opname & dagdelen"],
-  ["secTrend","Weektrend","word je beter?"],
-  ["secLog","Logboek","markeer & vergelijk"],
-  ["secAware","Hypo-gevoel","voelgrens volgen","overzicht"],
-];
+// Sprong vanuit Overzicht-links naar een analyse: open de sectie en scrol erheen.
 function goTo(target, view){
   showTab(view||"analyses");
   const el = target.startsWith("an:")
@@ -2691,9 +2679,6 @@ function goTo(target, view){
   if(el.tagName==="DETAILS") el.open=true;
   setTimeout(()=>el.scrollIntoView({behavior:"smooth",block:"start"}),60);
 }
-document.getElementById("anaTiles").innerHTML =
-  ANA_TILES.map(([t,l,h,v])=>`<button class="tile" data-target="${t}" data-view="${v||"analyses"}"><b>${l}</b><span>${h}</span></button>`).join("");
-document.querySelectorAll("#anaTiles .tile").forEach(b=>b.onclick=()=>goTo(b.dataset.target,b.dataset.view));
 document.querySelectorAll("[data-goto]").forEach(el=>el.onclick=()=>showTab("analyses"));
 
 // stickyhoogte van de kop voor de Nu-strip
