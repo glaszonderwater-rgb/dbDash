@@ -3421,28 +3421,15 @@ const FATPR={
 // Doorwerkingsduur van het vet-eiwit-deel (Warschau-methode).
 function fatHrs(vee){ return vee<1.5?3 : vee<2.5?4 : vee<3.5?5 : 8; }
 const FAT_MIN=0.5;   // vanaf ~0,5 VEE is het vet-eiwit-effect de moeite van vermelden waard
-// Trage koolhydraten (lage glykemische index): het zetmeel komt langzaam vrij,
-// de glucosepiek komt later — een andere reden dan vet/eiwit.
-const SLOW=new Set(["Pasta (gekookt)","Volkoren pasta (gekookt)","Zilvervliesrijst (gekookt)",
-  "Roggebrood","Volkorenbrood","Meergranenbrood","Speltbrood",
-  "Bruine bonen (gekookt)","Kidneybonen","Kikkererwten","Linzen (gekookt)","Doperwten",
-  "Witte bonen (gekookt)","Zwarte bonen (gekookt)","Kapucijners",
-  "Havermout (droog)","Havermoutpap (bereid)","Muesli","Zoete aardappel (gekookt)",
-  "Quinoa (gekookt)","Bulgur (gekookt)","Boekweit (gekookt)","Spelt (gekookt)","Gierst (gekookt)"]);
-const SLOW_TIP=`<b>Trage koolhydraten</b> (lage GI) — komen langzaam vrij, de piek komt later. `+
-  `Een lange prebolus is meestal niet nodig; soms past een verdeelde bolus.`;
-// Korte bolus-tip: vet/eiwit (verlengd deel in grammen) óf trage koolhydraten.
+// Korte bolus-tip voor een vet/eiwitrijke portie. Het verlengde deel = het
+// vet-eiwit-equivalent (1 VEE ≈ 10 g koolhydraten), direct in grammen.
 function cbFatHtml(food, grams){
-  const fp=FATPR[food.n];
-  if(fp){
-    const vee=(grams*fp[0]/100*9 + grams*fp[1]/100*4)/100;
-    if(vee<FAT_MIN) return "";
-    const hrs=fatHrs(vee), carbsR=Math.round(grams*food.per/100), extG=Math.round(vee*10);
-    return `<b>Vette maaltijd</b> · ~${nl1(vee)} vet-eiwit-eenheden, werkt ~${hrs} u door. `+
-      `Bolus ~<b>${carbsR} g</b> direct + ~<b>${extG} g</b> verlengd over ~${hrs} u (dual-wave).`;
-  }
-  if(SLOW.has(food.n)) return SLOW_TIP;
-  return "";
+  const fp=FATPR[food.n]; if(!fp) return "";
+  const vee=(grams*fp[0]/100*9 + grams*fp[1]/100*4)/100;
+  if(vee<FAT_MIN) return "";
+  const hrs=fatHrs(vee), carbsR=Math.round(grams*food.per/100), extG=Math.round(vee*10);
+  return `<b>Vette maaltijd</b> · ~${nl1(vee)} vet-eiwit-eenheden, werkt ~${hrs} u door. `+
+    `Bolus ~<b>${carbsR} g</b> direct + ~<b>${extG} g</b> verlengd over ~${hrs} u (dual-wave).`;
 }
 // Totale vet-eiwit-eenheden over het hele bord (op naam-lookup).
 function plateVEE(){ let fat=0,pro=0; for(const it of _cbPlate){ const fp=FATPR[it.n]; if(fp){ fat+=it.g*fp[0]/100; pro+=it.g*fp[1]/100; } } return (fat*9+pro*4)/100; }
@@ -3506,8 +3493,7 @@ function renderCbPlate(){
     if(vee>=FAT_MIN){ const hrs=fatHrs(vee), extG=Math.round(vee*10);
       pf.innerHTML=`<b>Vette maaltijd</b> · ~${nl1(vee)} vet-eiwit-eenheden, werkt ~${hrs} u door. `+
         `Bolus je ~<b>${total} g</b> direct + ~<b>${extG} g</b> verlengd over ~${hrs} u (dual-wave).`;
-    } else if(_cbPlate.some(it=>SLOW.has(it.n))) pf.innerHTML=SLOW_TIP;
-    else pf.innerHTML=""; }
+    } else pf.innerHTML=""; }
   items.querySelectorAll(".ci-x").forEach(b=>b.onclick=()=>{ _cbPlate.splice(+b.dataset.i,1); renderCbPlate(); });
 }
 function initCarb(){
