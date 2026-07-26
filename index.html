@@ -3421,15 +3421,24 @@ const FATPR={
 // Doorwerkingsduur van het vet-eiwit-deel (Warschau-methode).
 function fatHrs(vee){ return vee<1.5?3 : vee<2.5?4 : vee<3.5?5 : 8; }
 const FAT_MIN=0.5;   // vanaf ~0,5 VEE is het vet-eiwit-effect de moeite van vermelden waard
-// Korte bolus-tip voor een vet/eiwitrijke portie. Het verlengde deel = het
-// vet-eiwit-equivalent (1 VEE ≈ 10 g koolhydraten), direct in grammen.
+// Verdeel de koolhydraten in een direct en een verlengd deel: hoe vetter/
+// eiwitrijker (hogere VEE t.o.v. de koolhydraten), hoe groter het verlengde
+// deel. Direct + verlengd = het totaal aantal koolhydraten.
+function fatSplit(carbs, vee){
+  let ext = carbs+vee*10>0 ? vee*10/(carbs+vee*10) : 0;
+  ext = Math.max(0.2, Math.min(0.6, ext));   // 20–60% verlengd
+  const extG = Math.round(carbs*ext);
+  return { hrs:fatHrs(vee), extG, directG:carbs-extG };
+}
+// Korte bolus-tip voor een vet/eiwitrijke portie (verdeling van de KH).
 function cbFatHtml(food, grams){
   const fp=FATPR[food.n]; if(!fp) return "";
   const vee=(grams*fp[0]/100*9 + grams*fp[1]/100*4)/100;
-  if(vee<FAT_MIN) return "";
-  const hrs=fatHrs(vee), carbsR=Math.round(grams*food.per/100), extG=Math.round(vee*10);
-  return `<b>Vette maaltijd</b> · ~${nl1(vee)} vet-eiwit-eenheden, werkt ~${hrs} u door. `+
-    `Bolus ~<b>${carbsR} g</b> direct + ~<b>${extG} g</b> verlengd over ~${hrs} u (dual-wave).`;
+  const carbs=Math.round(grams*food.per/100);
+  if(vee<FAT_MIN || carbs<5) return "";
+  const s=fatSplit(carbs, vee);
+  return `<b>Vette maaltijd</b> — werkt ~${s.hrs} u door. Van je ~${carbs} g koolhydraten: `+
+    `~<b>${s.directG} g</b> direct + ~<b>${s.extG} g</b> verlengd over ~${s.hrs} u (dual-wave).`;
 }
 // Totale vet-eiwit-eenheden over het hele bord (op naam-lookup).
 function plateVEE(){ let fat=0,pro=0; for(const it of _cbPlate){ const fp=FATPR[it.n]; if(fp){ fat+=it.g*fp[0]/100; pro+=it.g*fp[1]/100; } } return (fat*9+pro*4)/100; }
@@ -3490,9 +3499,9 @@ function renderCbPlate(){
   document.getElementById("cbTotal").textContent=`${total} g`;
   const pf=document.getElementById("cbPlateFat");
   if(pf){ const vee=plateVEE();
-    if(vee>=FAT_MIN){ const hrs=fatHrs(vee), extG=Math.round(vee*10);
-      pf.innerHTML=`<b>Vette maaltijd</b> · ~${nl1(vee)} vet-eiwit-eenheden, werkt ~${hrs} u door. `+
-        `Bolus je ~<b>${total} g</b> direct + ~<b>${extG} g</b> verlengd over ~${hrs} u (dual-wave).`;
+    if(vee>=FAT_MIN && total>=5){ const s=fatSplit(total, vee);
+      pf.innerHTML=`<b>Vette maaltijd</b> — werkt ~${s.hrs} u door. Van je ~${total} g koolhydraten: `+
+        `~<b>${s.directG} g</b> direct + ~<b>${s.extG} g</b> verlengd over ~${s.hrs} u (dual-wave).`;
     } else pf.innerHTML=""; }
   items.querySelectorAll(".ci-x").forEach(b=>b.onclick=()=>{ _cbPlate.splice(+b.dataset.i,1); renderCbPlate(); });
 }

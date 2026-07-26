@@ -32,16 +32,21 @@ const friet=await pick('Friet');
 // 3) Banaan (geen vet/eiwit) → geen tip
 const banaan=await pick('Banaan');
 
-const okPizza = /vet-eiwit-eenheden/.test(pizza) && /u door/.test(pizza)
-  && /\bg\s*direct/.test(pizza) && /\bg\s*verlengd/.test(pizza) && !/bespreek/i.test(pizza) && !/%/.test(pizza);
-const okPlate = /vet-eiwit-eenheden/.test(plate) && /\bg\s*direct/.test(plate) && /\bg\s*verlengd/.test(plate);
+// direct + verlengd moet optellen tot de koolhydraten in de tip
+function sumOk(txt){
+  const m=txt.match(/Van je ~(\d+) g koolhydraten:\s*~(\d+) g direct \+ ~(\d+) g verlengd/);
+  if(!m) return false; const [,kh,d,e]=m.map(Number); return d+e===kh;
+}
+const okPizza = /koolhydraten/.test(pizza) && /g direct/.test(pizza) && /g verlengd/.test(pizza)
+  && !/bespreek/i.test(pizza) && !/%/.test(pizza) && sumOk(pizza);
+const okPlate = /koolhydraten/.test(plate) && /g direct/.test(plate) && /g verlengd/.test(plate) && sumOk(plate);
 const okBanaan = banaan==='' ;
-console.log('pizza-tip (met %-verdeling, geen "bespreek"):', okPizza?'JA':'NEE');
+console.log('pizza-tip (verdeling telt op tot KH):', okPizza?'JA':'NEE');
 console.log('  →', pizza.slice(0,130));
-console.log('bord-tip (totaal over het bord):', okPlate?'JA':'NEE');
+console.log('bord-tip (verdeling telt op tot KH):', okPlate?'JA':'NEE');
 console.log('  →', plate.slice(0,130));
-const okLoempia = /verlengd/.test(loempia), okFriet = /verlengd/.test(friet);
-console.log('loempia toont nu tip:', okLoempia?'JA':'NEE', '| friet:', okFriet?'JA':'NEE');
+const okLoempia = /verlengd/.test(loempia)&&sumOk(loempia), okFriet = /verlengd/.test(friet)&&sumOk(friet);
+console.log('loempia telt op:', okLoempia?'JA':'NEE', '| friet:', okFriet?'JA':'NEE');
 console.log('banaan (geen tip):', okBanaan?'JA':'NEE', banaan?('("'+banaan.slice(0,40)+'")'):'');
 console.log('errors:', errors.length?errors:'geen');
 const ok = okPizza && okPlate && okLoempia && okFriet && okBanaan && !errors.length;
