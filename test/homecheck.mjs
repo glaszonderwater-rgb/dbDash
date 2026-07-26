@@ -22,30 +22,31 @@ const home=await page.evaluate(()=>({
   greetShown:!document.getElementById('homeGreet').hidden,
   greetHi:document.getElementById('greetHi').textContent.trim(),
   heroShown:!document.getElementById('homeHero').hidden,
-  ringVal:document.getElementById('ringVal').textContent.trim(),
-  ringOffset:document.getElementById('ringArc').style.strokeDashoffset,
-  ringStatus:document.getElementById('ringStatus').textContent.trim(),
-  actsShown:!document.getElementById('homeActs').hidden,
+  heroVal:document.getElementById('ringVal').textContent.trim(),
+  heroArrow:document.getElementById('heroArrow').textContent.trim(),
+  heroSide:document.getElementById('ringMeta').textContent.trim(),
   kpiCount:document.querySelectorAll('.chome .kpis .kpi').length,
+  aandacht:/Aandacht/i.test(document.getElementById('epVandaag').textContent),
+  findings:document.querySelectorAll('#findToday .f, #findWeek .f').length,
+  noRing:!document.getElementById('ringArc'),
+  noActs:!document.getElementById('homeActs'),
   nuHidden:document.getElementById('secNow').classList.contains('hideOnHome'),
 }));
-// Snelactie: Koolhydraten → Eten-tab
-await page.click('#actEten'); await page.waitForTimeout(150);
-const etenShown=await page.evaluate(()=>!document.querySelector('.view[data-view="eten"]').hidden);
-// Terug naar overzicht: Nu-balk weer verborgen op home
+// Nu-balk terug zichtbaar op een andere tab
+await page.click('#tabbar .tab[data-tab="analyses"]'); await page.waitForTimeout(120);
+const nuOnOther=await page.evaluate(()=>!document.getElementById('secNow').classList.contains('hideOnHome'));
 await page.click('#tabbar .tab[data-tab="overzicht"]'); await page.waitForTimeout(120);
 const backHidden=await page.evaluate(()=>document.getElementById('secNow').classList.contains('hideOnHome'));
 
 console.log('begroeting:',home.greetShown?home.greetHi:'NEE');
-console.log('ring waarde:',home.ringVal,'| status:',home.ringStatus,'| arc-offset gezet:',home.ringOffset!==''?'JA':'NEE');
-console.log('snelacties zichtbaar:',home.actsShown?'JA':'NEE');
-console.log('kerncijfer-tegels:',home.kpiCount);
-console.log('Nu-balk verborgen op home:',home.nuHidden?'JA':'NEE','| na terugkeer:',backHidden?'JA':'NEE');
-console.log('Koolhydraten-knop → Eten-tab:',etenShown?'JA':'NEE');
+console.log('waarde-kaart:',home.heroVal,home.heroArrow,'| side:',home.heroSide.slice(0,40));
+console.log('geen ring / geen actieknoppen:',home.noRing&&home.noActs?'JA':'NEE');
+console.log('kerncijfer-tegels:',home.kpiCount,'| Aandacht-kop:',home.aandacht?'JA':'NEE','| bevindingen:',home.findings);
+console.log('Nu-balk verborgen op home:',home.nuHidden?'JA':'NEE','| zichtbaar elders:',nuOnOther?'JA':'NEE','| na terugkeer verborgen:',backHidden?'JA':'NEE');
 console.log('errors:',errors.length?errors:'geen');
-const ok = home.greetShown && /Goede/.test(home.greetHi) && home.heroShown && /^\d/.test(home.ringVal)
-  && home.ringOffset!=='' && home.actsShown && home.kpiCount===4 && home.nuHidden
-  && etenShown && backHidden && !errors.length;
+const ok = home.greetShown && /Goede/.test(home.greetHi) && home.heroShown && /^\d/.test(home.heroVal)
+  && home.noRing && home.noActs && home.kpiCount===4 && home.aandacht && home.findings>0
+  && home.nuHidden && nuOnOther && backHidden && !errors.length;
 console.log('\nRESULTAAT:',ok?'OK':'FOUT');
 if(!ok) process.exitCode=1;
 await browser.close();

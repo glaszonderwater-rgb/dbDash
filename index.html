@@ -297,9 +297,18 @@ details.fold>.foldbody{padding:0 1.05rem 1.05rem}
 .lecarb{font-size:.82rem;color:var(--ink);margin-top:.25rem;font-weight:600}
 .lecarb .litems{font-weight:400;color:var(--muted)}
 /* ── Koolhydraat-schatter ──────────────────────────────────────────────────── */
-.cbNote{font-size:.76rem;line-height:1.5;color:var(--muted);background:var(--surface-2);border-radius:.55rem;padding:.5rem .6rem;margin-bottom:.6rem}
-#cbSearch{width:100%;box-sizing:border-box;font-size:.9rem;padding:.55rem .7rem;border:1px solid var(--line-2);border-radius:.6rem;background:var(--bg);color:var(--ink)}
-.cbCats{display:flex;flex-wrap:wrap;gap:.3rem;margin:.55rem 0}
+.cbNote{font-size:.72rem;line-height:1.45;color:var(--muted);background:var(--surface-2);border-radius:.6rem;padding:.5rem .65rem;margin-bottom:.7rem}
+#cbSearch{width:100%;box-sizing:border-box;font-size:.95rem;padding:.7rem .85rem;border:1px solid var(--line-2);border-radius:.7rem;background:var(--surface);color:var(--ink);box-shadow:var(--shadow-sm)}
+#cbSearch:focus{outline:none;border-color:var(--accent)}
+/* categorie-chips: één horizontale scroll-strip i.p.v. een muur */
+.cbCats{display:flex;flex-wrap:nowrap;gap:.4rem;margin:.6rem 0 .2rem;overflow-x:auto;padding-bottom:.35rem;
+  scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.cbCats::-webkit-scrollbar{display:none}
+.cbCats .chip{flex:none;white-space:nowrap}
+/* nette tab-titel voor de Eten-tab (i.p.v. de micro-epoch-kop) */
+.view[data-view="eten"] .eh{flex-wrap:wrap;margin-bottom:.5rem}
+.view[data-view="eten"] .eh h2{font-size:1.2rem;font-weight:750;letter-spacing:-.01em;text-transform:none;color:var(--ink)}
+.view[data-view="eten"] .eh .sub{font-size:.78rem;color:var(--muted)}
 .cbResults{display:flex;flex-direction:column}
 .cbRow{border-top:1px solid var(--line);padding:.5rem 0}
 .cbRow:first-child{border-top:0}
@@ -488,8 +497,14 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:-1px;bor
 .greet{margin:.5rem .2rem .1rem}
 .greet b{display:block;font-size:1.24rem;font-weight:750;letter-spacing:-.01em}
 .greet .sub{display:block;font-size:.88rem;color:var(--muted);margin-top:.22rem}
-.hero{display:flex;align-items:center;gap:1.1rem;background:var(--surface);border:1px solid var(--line);
-  border-radius:24px;padding:1.1rem 1.2rem;margin-top:.7rem;box-shadow:var(--shadow)}
+.hero{display:flex;align-items:baseline;gap:.5rem;background:var(--surface);border:1px solid var(--line);
+  border-radius:22px;padding:1.15rem 1.3rem;margin-top:.7rem;box-shadow:var(--shadow)}
+.hero .hv{font-family:var(--mono);font-size:3rem;line-height:.95;font-weight:700;color:var(--inRange);letter-spacing:-.03em}
+.hero .hu{font-size:.82rem;color:var(--dim);font-weight:600}
+.hero .harw{font-size:1.4rem;color:var(--muted);margin-left:.25rem}
+.hero .hside{margin-left:auto;align-self:center;text-align:right;font-size:.76rem;color:var(--muted);line-height:1.5;font-variant-numeric:tabular-nums}
+.hero .hside b{font-family:var(--mono);color:var(--ink);font-weight:600}
+.hero .hside .dim{color:var(--dim)}
 .ring{position:relative;width:112px;height:112px;flex:none}
 .ring svg{width:112px;height:112px;transform:rotate(-90deg);display:block}
 .ring .rbg{fill:none;stroke:var(--surface-2);stroke-width:10}
@@ -565,23 +580,9 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
     <div class="greet" id="homeGreet" hidden><b id="greetHi"></b><span class="sub" id="greetSub"></span></div>
 
     <div class="hero" id="homeHero" hidden>
-      <div class="ring">
-        <svg viewBox="0 0 116 116" aria-hidden="true">
-          <circle class="rbg" cx="58" cy="58" r="50"></circle>
-          <circle class="rarc" id="ringArc" cx="58" cy="58" r="50" pathLength="100" stroke-dasharray="100" stroke-dashoffset="100"></circle>
-        </svg>
-        <div class="lbl"><b id="ringVal">—</b><small id="ringUnit">mmol/L</small></div>
-      </div>
-      <div class="hinfo">
-        <div class="st" id="ringStatus">—</div>
-        <div class="meta" id="ringMeta"></div>
-      </div>
-    </div>
-
-    <div class="acts" id="homeActs" hidden>
-      <button class="act" id="actEten" type="button"><span class="cig a1"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 2v7c0 1.1.9 2 2 2a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/></svg></span>Koolhydraten</button>
-      <button class="act" id="actLog" type="button"><span class="cig a2"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 21v-7"/><path d="M4 10V3"/><circle cx="4" cy="12" r="2"/><path d="M12 21v-9"/><path d="M12 8V3"/><circle cx="12" cy="10" r="2"/><path d="M20 21v-5"/><path d="M20 12V3"/><circle cx="20" cy="14" r="2"/></svg></span>Loggen</button>
-      <button class="act" id="actSync" type="button"><span class="cig a3"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 3v6h-6"/></svg></span>Sync</button>
+      <span class="hv" id="ringVal">—</span><span class="hu">mmol/L</span>
+      <span class="harw" id="heroArrow"></span>
+      <span class="hside" id="ringMeta"></span>
     </div>
 
     <div class="chead" id="epMaand">Kerncijfers <span class="sub" id="monthSub"></span></div>
@@ -600,9 +601,9 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
       <div id="tune"></div>
     </div>
 
-    <div class="chead" id="epVandaag">Vandaag <span class="sub" id="todaySub"></span></div>
+    <div class="chead" id="epVandaag">Aandacht <span class="sub" id="todaySub"></span></div>
     <div id="findToday"></div>
-    <div class="chead" id="epWeek">Deze week <span class="sub" id="weekSub"></span></div>
+    <span id="epWeek" hidden><span id="weekSub"></span></span>
     <div id="findWeek"></div>
 
     <div class="chead">Meer</div>
@@ -802,7 +803,7 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
   <div class="view" data-view="eten" hidden>
   <section class="epoch" id="epEten" style="margin-left:0">
     <div class="eh"><h2>Koolhydraten schatten</h2><span class="sub">kies eten + portie → gram</span></div>
-    <div class="cbNote">Gemiddelde tabelwaarden als <b>hulpmiddel om te leren schatten</b> — geen exacte telling en <b>geen dosisadvies</b>. Merken en bereiding wisselen; jij blijft verantwoordelijk voor je bolus.</div>
+    <div class="cbNote">Gemiddelde tabelwaarden — een hulpmiddel om te leren schatten, <b>geen dosisadvies</b>. Jij blijft verantwoordelijk voor je bolus.</div>
     <input type="search" id="cbSearch" placeholder="zoek eten… (bijv. banaan, rijst, cola)" autocomplete="off">
     <div class="cbCats" id="cbCats"></div>
     <div class="cbResults" id="cbResults"></div>
@@ -1821,25 +1822,18 @@ function render(glucose, treatments, timeline){
       : high ? "Je zit nu boven bereik."
       : "Het gaat goed — je zit nu mooi in bereik.";
     document.getElementById("homeGreet").hidden=false;
-    // status-ring
+    // horizontale waarde-kaart
     const rv=document.getElementById("ringVal"); rv.textContent=nl1(last.bg); rv.style.color=colorOf(last.bg);
-    const tir = ts2 ? ts2.inr/ts2.n : m.tir;
-    const arc=document.getElementById("ringArc");
-    arc.style.strokeDashoffset = String(Math.max(0,Math.min(100, 100 - tir*100)));
-    arc.style.stroke = tir>=0.7 ? "var(--inRange)" : tir>=0.5 ? "var(--warn)" : "var(--low)";
-    const stEl=document.getElementById("ringStatus");
-    stEl.textContent = low?"Te laag":high?"Te hoog":"In bereik"; stEl.style.color=colorOf(last.bg);
+    document.getElementById("heroArrow").textContent = ARROWS[last.dir]||"→";
     let iobR=0,cobR=0; const hasTx=treatments.length||_dsRecent.length;
     if(hasTx){ const dsL=_dsRecent.length?_dsRecent[_dsRecent.length-1]:null;
       const dsF=dsL&&(Date.now()-dsL.ts)<15*60e3;
       iobR=(dsF&&dsL.iob!=null)?dsL.iob:reconstructIOB(treatments,Date.now(),PEAK_MIN,timeline);
       cobR=(dsF&&dsL.cob!=null)?dsL.cob:carbsOnBoard(treatments,Date.now()); }
     document.getElementById("ringMeta").innerHTML =
-      (hasTx?`IOB <b>${nl1(iobR)}</b> E · COB <b>${Math.round(cobR)}</b> g<br>`:"")+
-      `Bijgewerkt <b>${ageMin<90?ageMin+" min":Math.round(ageMin/60)+" u"}</b> geleden`+
-      (ts2?`<br>Vandaag <b>${pct0(ts2.inr/ts2.n)}</b> in bereik`:"");
+      (hasTx?`IOB <b>${nl1(iobR)}</b> · COB <b>${Math.round(cobR)}</b> g<br>`:"")+
+      `<span class="dim">bijgewerkt ${ageMin<90?ageMin+" min":Math.round(ageMin/60)+" u"} geleden</span>`;
     document.getElementById("homeHero").hidden=false;
-    document.getElementById("homeActs").hidden=false;
     const nu=document.getElementById("secNow");
     nu.classList.toggle("hideOnHome", (document.querySelector('#tabbar .tab.on')?.dataset.tab||"overzicht")==="overzicht");
   }
@@ -3165,6 +3159,7 @@ function renderCbCats(){
 function renderCbResults(){
   const el=document.getElementById("cbResults"); if(!el) return;
   const q=(document.getElementById("cbSearch").value||"").trim().toLowerCase();
+  if(!q && !_cbCat){ el.innerHTML=`<div class="cbNone">Zoek een product hierboven, of kies een categorie om te bladeren.</div>`; return; }
   let list=CARB_DB.filter(f=>(!_cbCat||f.k===_cbCat)&&(!q||f.n.toLowerCase().includes(q)));
   if(q) list=list.sort((a,b)=>a.n.toLowerCase().indexOf(q)-b.n.toLowerCase().indexOf(q));
   list=list.slice(0,40);
@@ -3247,10 +3242,6 @@ function showTab(tab){
   window.scrollTo({top:0});
 }
 document.querySelectorAll("#tabbar .tab").forEach(b=>b.onclick=()=>showTab(b.dataset.tab));
-// Companion-snelacties op de home
-document.getElementById("actEten").onclick=()=>showTab("eten");
-document.getElementById("actLog").onclick=()=>goTo("secLog","analyses");
-document.getElementById("actSync").onclick=()=>document.getElementById("btnSync").click();
 
 // De index: élke analyse bij naam, één tik — geen zoeken
 // Sprong vanuit Overzicht-links naar een analyse: open de sectie en scrol erheen.
