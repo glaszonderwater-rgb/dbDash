@@ -14,23 +14,25 @@ await page.fill('#inUrl','https://mock.nightscout.test');await page.fill('#inTok
 await page.click('#btnSave');
 await page.waitForFunction(()=>!document.getElementById('tabbar').hidden,{timeout:40000}).catch(()=>{});
 await page.click('#tabbar .tab[data-tab="eten"]'); await page.waitForTimeout(150);
-await page.evaluate(()=>document.getElementById('secFat').open=true); await page.waitForTimeout(120);
 
-// 1) Pizza-achtig: 30 g vet + 25 g eiwit = 270+100 = 370 kcal = 3,7 VEE → 8 u
-await page.fill('#fatG','30'); await page.fill('#proG','25'); await page.waitForTimeout(120);
-const big=await page.evaluate(()=>document.getElementById('fpuOut').textContent);
-// 2) Klein: 5 g vet + 5 g eiwit = 65 kcal = 0,65 VEE → geen aparte verlengde bolus
-await page.fill('#fatG','5'); await page.fill('#proG','5'); await page.waitForTimeout(120);
-const small=await page.evaluate(()=>document.getElementById('fpuOut').textContent);
+async function pick(name){
+  await page.fill('#cbSearch',name); await page.waitForTimeout(250);
+  await page.evaluate(n=>{const r=[...document.querySelectorAll('#cbResults .cbRhead')].find(x=>x.textContent.includes(n));if(r)r.click();},name);
+  await page.waitForTimeout(200);
+  return await page.evaluate(()=>{const f=document.getElementById('cbFat');return f?f.textContent.trim():'GEEN-ELEMENT';});
+}
+// 1) Pizza (vet/eiwitrijk) → korte tip met VEE + doorwerking + verlengen
+const pizza=await pick('Pizza');
+// 2) Banaan (geen vet/eiwit) → geen tip
+const banaan=await pick('Banaan');
 
-const ok1=/3,7\s*VEE/.test(big) && /37\s*g/.test(big) && /8\s*uur/.test(big) && /verlengen/i.test(big);
-const ok2=/0,7\s*VEE|0,6\s*VEE/.test(small) && /geen aparte verlengde bolus/i.test(small);
-console.log('pizza (3,7 VEE, 8u, verlengen):', ok1?'JA':'NEE');
-console.log('  →', big.slice(0,90));
-console.log('klein (<1 VEE, geen verlenging):', ok2?'JA':'NEE');
-console.log('  →', small.slice(0,90));
+const okPizza = /vet-eiwit-eenheden/.test(pizza) && /u door/.test(pizza) && /verleng/i.test(pizza);
+const okBanaan = banaan==='' ;
+console.log('pizza-tip:', okPizza?'JA':'NEE');
+console.log('  →', pizza.slice(0,120));
+console.log('banaan (geen tip):', okBanaan?'JA':'NEE', banaan?('("'+banaan.slice(0,40)+'")'):'');
 console.log('errors:', errors.length?errors:'geen');
-const ok = ok1 && ok2 && !errors.length;
+const ok = okPizza && okBanaan && !errors.length;
 console.log('\nRESULTAAT:', ok?'OK':'FOUT');
 if(!ok) process.exitCode=1;
 await browser.close();

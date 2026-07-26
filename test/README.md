@@ -27,7 +27,7 @@ Playwright-browserinstallatie.
 - `whycheck` — "waarom"-motor: reconstrueert de oorzaak van een nacht-hypo (SMB-stapeling) met bewijs (actieve insuline, daalsnelheid) en telt de oorzaken over de week op
 - `carbcheck` — koolhydraat-schatter: zoek eten → portie → gram KH (banaan 25 g, cola-blikje 36 g), bord-totaal en vastleggen als maaltijd in het logboek
 - `spikecheck` — "waarom"-motor voor pieken: herkent een te late bolus (geen prebolus) als oorzaak van hoge maaltijdpieken en telt de oorzaken op
-- `fatcheck` — vette/eiwitrijke maaltijden: VEE-schatter (Warschau-methode) rekent vet+eiwit → vet-eiwit-eenheden, koolhydraat-equivalent en geschatte doorwerkingsduur (verlengde bolus)
+- `fatcheck` — vette/eiwitrijke maaltijden: bij selectie van een vet product (pizza) verschijnt een korte inline bolus-tip (vet-eiwit-eenheden + doorwerkingsduur + verlengen); bij een niet-vet product (banaan) geen tip
 - `homecheck` — Companion-home: begroeting, status-ring (waarde + arc), snelacties (Koolhydraten → Eten-tab), 4 kerncijfer-tegels, Nu-balk verborgen op de home
 - `navcheck` — navigatie: onderbalk met 4 tabs (icoon + label, volgorde Overzicht/Eten/Analyses/Consult), Eten-tab opent de werkende schatter, dagcurve is een ingeklapte fold, Analyses staat op gebruiksvolgorde (Maaltijden/Veiligheid bovenaan)
 - `logcheck` / `exportcheck` — logboek, voor/na, back-up round-trip

@@ -310,29 +310,13 @@ details.fold>.foldbody{padding:0 1.05rem 1.05rem}
 .view[data-view="eten"] .eh{flex-wrap:wrap;margin-bottom:.5rem}
 .view[data-view="eten"] .eh h2{font-size:1.2rem;font-weight:750;letter-spacing:-.01em;text-transform:none;color:var(--ink)}
 .view[data-view="eten"] .eh .sub{font-size:.78rem;color:var(--muted)}
-/* Vette & eiwitrijke maaltijden */
-.fatlead{font-size:.86rem;line-height:1.55;color:var(--muted);margin-bottom:.9rem}
-.fatlead b{color:var(--ink)}
-.fpubox{background:var(--surface-2);border:1px solid var(--line);border-radius:.85rem;padding:.85rem .9rem}
-.fpuhead{font-size:.74rem;font-weight:750;letter-spacing:.02em;color:var(--ink)}
-.fpuhead span{font-weight:500;color:var(--dim);letter-spacing:0}
-.fpurow{display:flex;gap:.7rem;margin:.65rem 0}
-.fpurow label{flex:1;display:flex;align-items:center;gap:.45rem;font-size:.82rem;color:var(--muted)}
-.fpurow input{flex:1;min-width:0;font-family:var(--mono);font-size:.95rem;padding:.5rem .6rem;border:1px solid var(--line-2);border-radius:.6rem;background:var(--surface);color:var(--ink)}
-.fpurow input:focus{outline:none;border-color:var(--accent)}
-.fpuout{font-size:.9rem;color:var(--ink);line-height:1.5}
-.fpuout b{font-family:var(--mono);color:var(--accent)}
-.fpuhint{font-size:.77rem;color:var(--muted);margin-top:.4rem}
-.fpuhint b{color:var(--ink)}
-.fatlist{margin:.5rem 0 .85rem 1.1rem;font-size:.84rem;line-height:1.55;color:var(--muted)}
-.fatlist li{margin:.32rem 0} .fatlist b{color:var(--ink)}
-.fattable{display:grid;grid-template-columns:auto 1fr auto;gap:.12rem .9rem;font-size:.84rem;
-  font-variant-numeric:tabular-nums;border:1px solid var(--line);border-radius:.7rem;padding:.65rem .85rem}
-.fattable>div{display:contents}
-.fattable .fh span{font-size:.64rem;text-transform:uppercase;letter-spacing:.06em;color:var(--dim);font-weight:700;padding-bottom:.25rem}
-.fattable>div>span{padding:.16rem 0}
-.fattable>div:not(.fh)>span:first-child{font-weight:700;color:var(--ink)}
-.fattable>div>span:last-child{text-align:right;color:var(--muted)}
+/* Vette maaltijd — korte bolus-tip bij een portie */
+.fatTip{margin-top:.6rem;font-size:.8rem;line-height:1.5;color:var(--ink);
+  background:color-mix(in srgb,var(--warn) 12%,transparent);border:1px solid color-mix(in srgb,var(--warn) 30%,transparent);
+  border-radius:.6rem;padding:.5rem .65rem}
+.fatTip:empty{display:none}
+.fatTip b{font-weight:700} .fatTip .dim{color:var(--muted)}
+.cbFatNote{margin-top:1rem;font-size:.76rem;line-height:1.45;color:var(--dim)}
 .cbResults{display:flex;flex-direction:column}
 .cbRow{border-top:1px solid var(--line);padding:.5rem 0}
 .cbRow:first-child{border-top:0}
@@ -850,37 +834,7 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
       </div>
     </div>
 
-    <details class="fold" id="secFat" style="margin-top:1.1rem">
-      <summary>Vette &amp; eiwitrijke maaltijden <span class="foldhint">waarom ze laat &amp; lang doorwerken</span></summary>
-      <div class="foldbody">
-        <p class="fatlead">Vet en eiwit verhogen je glucose óók — maar <b>traag en laat</b>. Vet vertraagt de maagontlediging, dus je koolhydraatpiek komt later; eiwit wordt deels omgezet in glucose. Bij een vette of eiwitrijke maaltijd (pizza, friet, kaas, veel vlees) zie je daardoor vaak een <b>tweede stijging 3 tot 6 uur ná</b> het eten — de bekende "pizza-avond".</p>
-
-        <div class="fpubox">
-          <div class="fpuhead">Vet-eiwit-eenheden schatten <span>(VEE · Warschau-methode)</span></div>
-          <div class="fpurow">
-            <label>vet <input type="number" id="fatG" min="0" step="1" inputmode="decimal" placeholder="g"></label>
-            <label>eiwit <input type="number" id="proG" min="0" step="1" inputmode="decimal" placeholder="g"></label>
-          </div>
-          <div class="fpuout" id="fpuOut">Vul de gram vet en eiwit in.</div>
-        </div>
-
-        <div class="fpuhead" style="margin-top:1rem">Hoe hiermee te bolussen <span>— bespreekpunt, geen opdracht</span></div>
-        <ul class="fatlist">
-          <li>Bolus je <b>koolhydraten</b> zoals altijd (eventueel met een prebolus).</li>
-          <li>Geef de insuline voor het <b>vet-eiwit-deel</b> niet in één keer, maar <b>verlengd/verdeeld</b> (dual-wave of vierkante bolus) over de duur hieronder.</li>
-          <li>Vuistregel: meer vet/eiwit → langere staart. Hoge vet-eiwit-maaltijden kunnen een <b>tijdelijk hoger basaal</b> nodig hebben in plaats van (of naast) een verlengde bolus.</li>
-        </ul>
-        <div class="fattable">
-          <div class="fh"><span>VEE</span><span>KH-equivalent</span><span>verleng ±</span></div>
-          <div><span>1</span><span>~10 g</span><span>3 uur</span></div>
-          <div><span>2</span><span>~20 g</span><span>4 uur</span></div>
-          <div><span>3</span><span>~30 g</span><span>5 uur</span></div>
-          <div><span>4 +</span><span>~40 g +</span><span>8 uur</span></div>
-        </div>
-
-        <div class="cbNote" style="margin-top:.8rem">Algemene kennis om te leren en te bespreken — <b>geen dosisadvies</b>. Ieder lijf reageert anders; toets het met je eigen sensordata (zie ook de piek-verklaring in Analyses) en met je behandelteam. Overleg hoe je een verlengde bolus of tijdelijk basaal op je pomp/loop instelt.</div>
-      </div>
-    </details>
+    <div class="cbFatNote" id="cbFatNote">Kies een vet of eiwitrijk product (pizza, friet, kaas, noten…) en je krijgt bij de portie meteen een korte bolus-tip.</div>
   </section>
   </div>
 
@@ -3211,7 +3165,27 @@ const CARB_DB=[
   {n:"Appelmoes",k:"beleg",per:17,u:[["opscheplepel",75]]},
   {n:"Satésaus",k:"beleg",per:20,u:[["eetlepel",20]]},
 ];
-
+// Vet & eiwit per 100 g — alleen voor duidelijk vet/eiwitrijke producten.
+// Voor deze verschijnt bij selectie een korte bolus-tip (vet-eiwit-eenheden).
+const FATPR={
+  "Pizza margherita":[10,11],"Hamburger (met broodje)":[12,13],"Tosti":[13,14],
+  "Saucijzenbroodje":[22,7],"Loempia":[8,5],"Nasi / bami (bereid)":[6,6],
+  "Shoarma (met brood)":[10,12],"Kroket":[13,6],"Frikandel":[20,10],"Bitterbal":[14,7],"Kipnuggets":[14,15],
+  "Kaas":[33,25],"Ei":[11,13],"Pindakaas":[50,25],"Pinda's":[49,26],"Amandelen":[50,21],"Cashewnoten":[44,18],"Hummus":[15,8],
+  "Melkchocolade":[30,7],"Pure chocolade":[31,5],"Cake":[20,6],"Donut":[20,6],"Muffin":[20,5],
+  "Chips":[34,6],"Snickers":[24,9],"Mars":[17,4],"Gevulde koek":[18,5],"Stroopwafel":[16,4],"Appeltaart":[13,3],
+  "Nutella":[31,6],"Satésaus":[10,5]
+};
+// Korte bolus-tip voor een vet/eiwitrijke portie (educatief; geen dosis).
+function cbFatHtml(food, grams){
+  const fp=FATPR[food.n]; if(!fp) return "";
+  const vee=(grams*fp[0]/100*9 + grams*fp[1]/100*4)/100;
+  if(vee<1) return "";
+  const hrs = vee<1.5?3 : vee<2.5?4 : vee<3.5?5 : 8;
+  return `<b>Vette maaltijd</b> · ~${nl1(vee)} vet-eiwit-eenheden, werkt ~${hrs} u door. `+
+    `Bolus je koolhydraten normaal en <b>verleng de rest</b> (dual-wave) of tijdelijk hoger basaal. `+
+    `<span class="dim">Bespreek met je team — geen dosisadvies.</span>`;
+}
 let _cbCat="", _cbOpen=null, _cbUnit=0, _cbQty=1, _cbPlate=[];
 const cbGrams=(food)=> _cbUnit>=food.u.length ? _cbQty : food.u[_cbUnit][1]*_cbQty;   // laatste index = "gram"
 const cbCarbs=(food,g)=> Math.round(g*food.per/100);
@@ -3239,7 +3213,8 @@ function renderCbResults(){
       h+=`<div class="cbEdit"><div class="cbUnits">${units}</div>`+
         `<div class="cbQrow"><label>aantal</label><input type="number" id="cbQty" min="0" step="0.5" value="${_cbQty}">`+
         `<span class="cbEst" id="cbEst">≈ ${c} g KH</span>`+
-        `<button type="button" class="cbAdd" id="cbAddBtn">+ op bord</button></div></div>`;
+        `<button type="button" class="cbAdd" id="cbAddBtn">+ op bord</button></div>`+
+        `<div class="fatTip" id="cbFat">${cbFatHtml(f,g)}</div></div>`;
     }
     return h+`</div>`;
   }).join("");
@@ -3247,7 +3222,8 @@ function renderCbResults(){
     const n=r.dataset.n; _cbOpen=(_cbOpen===n?null:n); _cbUnit=0; _cbQty=1; renderCbResults(); });
   if(_cbOpen){
     const food=CARB_DB.find(f=>f.n===_cbOpen);
-    const est=()=>{ const g=cbGrams(food); document.getElementById("cbEst").textContent=`≈ ${cbCarbs(food,g)} g KH`; };
+    const est=()=>{ const g=cbGrams(food); document.getElementById("cbEst").textContent=`≈ ${cbCarbs(food,g)} g KH`;
+      const cf=document.getElementById("cbFat"); if(cf) cf.innerHTML=cbFatHtml(food,g); };
     el.querySelectorAll(".cbUnit").forEach(b=>b.onclick=()=>{ _cbUnit=+b.dataset.u;
       el.querySelectorAll(".cbUnit").forEach(x=>x.classList.toggle("sel",+x.dataset.u===_cbUnit)); est(); });
     const qi=document.getElementById("cbQty");
@@ -3267,25 +3243,9 @@ function renderCbPlate(){
   document.getElementById("cbTotal").textContent=`${total} g`;
   items.querySelectorAll(".ci-x").forEach(b=>b.onclick=()=>{ _cbPlate.splice(+b.dataset.i,1); renderCbPlate(); });
 }
-// Vet-eiwit-eenheden (Warschau-methode): 1 VEE = 100 kcal uit vet+eiwit,
-// werkt ~als 10 g koolhydraten maar uitgesmeerd over uren. Educatief; geen dosis.
-function renderFPU(){
-  const out=document.getElementById("fpuOut"); if(!out) return;
-  const gv=id=>{const el=document.getElementById(id);return el?(parseFloat((el.value||"").replace(",","."))||0):0;};
-  const fat=gv("fatG"), pro=gv("proG");
-  if(fat<=0 && pro<=0){ out.textContent="Vul de gram vet en eiwit in."; return; }
-  const kcal=fat*9+pro*4, fpu=kcal/100, ce=Math.round(fpu*10);
-  const hrs = fpu<1.5?3 : fpu<2.5?4 : fpu<3.5?5 : 8;
-  out.innerHTML = `≈ <b>${nl1(fpu)}</b> VEE · ~<b>${ce} g</b> koolhydraat-equivalent · werkt naar schatting <b>${hrs} uur</b> door.`
-    + (fpu>=1
-        ? `<div class="fpuhint">Overweeg de insuline voor dit vet-eiwit-deel te <b>verlengen</b> (dual-wave) over ~${hrs} uur — bespreek met je team.</div>`
-        : `<div class="fpuhint">Klein vet-eiwit-effect; meestal geen aparte verlengde bolus nodig.</div>`);
-}
 function initCarb(){
   if(!document.getElementById("cbCats")) return; // schatter woont sinds v5.2 in de Eten-tab
   renderCbCats(); renderCbResults();
-  const fg=document.getElementById("fatG"), pg=document.getElementById("proG");
-  if(fg) fg.oninput=renderFPU; if(pg) pg.oninput=renderFPU; renderFPU();
   const s=document.getElementById("cbSearch");
   if(s) s.oninput=()=>{ _cbOpen=null; renderCbResults(); };
   const d=document.getElementById("cbDate");
