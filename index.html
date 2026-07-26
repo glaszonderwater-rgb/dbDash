@@ -1836,7 +1836,7 @@ function render(glucose, treatments, timeline){
   { const hr=new Date().getHours();
     const hi = hr<6?"Goedenacht":hr<12?"Goedemorgen":hr<18?"Goedemiddag":"Goedenavond";
     const low=last.bg<3.9, high=last.bg>10;
-    document.getElementById("greetHi").textContent = hi+" 👋";
+    document.getElementById("greetHi").textContent = hi;
     document.getElementById("greetSub").textContent =
       low  ? "Je zit nu onder bereik — houd het in de gaten."
       : high ? "Je zit nu boven bereik."
