@@ -959,9 +959,13 @@ const LANGS = ["nl","en","pt"];
 // Standaard Nederlands; andere talen kies je in de instellingen (blijft bewaard).
 let LANG = LANGS.includes(cfg.lang) ? cfg.lang : "nl";
 const DECSEP = () => LANG==="en" ? "." : ",";
+const LOCALE = () => LANG==="en" ? "en-GB" : LANG==="pt" ? "pt-PT" : "nl-NL";
 function t(key, p){ const d=I18N[key]; let s = d ? (d[LANG]!=null?d[LANG]:(d.nl!=null?d.nl:key)) : key;
   if(p) for(const k in p) s = s.split("{"+k+"}").join(p[k]);
   return s; }
+// Inline drietalige tekst voor dynamisch gegenereerde (vaak geïnterpoleerde) zinnen:
+// het Nederlands blijft de bron, en/pt staan er direct naast. Terugval op nl.
+function TL(nl, en, pt){ return LANG==="en" ? (en!=null?en:nl) : LANG==="pt" ? (pt!=null?pt:nl) : nl; }
 // Vang de bestaande Nederlandse tekst uit de DOM als bron (nl), zodat het
 // woordenboek alleen en + pt hoeft te bevatten. Eén keer, vóór de eerste wissel.
 let _i18nSnapped=false;
@@ -1375,17 +1379,17 @@ async function startFrom(store, days, refetch){
 }
 async function syncAll(onProgress){
   const now = Date.now();
-  const say = (s,n,at)=>onProgress?.(`${s} · ${n.toLocaleString("nl")} · ${new Date(at).toLocaleDateString("nl-NL",{day:"2-digit",month:"short"})}`);
+  const say = (s,n,at)=>onProgress?.(`${s} · ${n.toLocaleString(LOCALE())} · ${new Date(at).toLocaleDateString(LOCALE(),{day:"2-digit",month:"short"})}`);
 
   // metingen (kern)
-  let rows = await NS.entries(await startFrom("entries", cfg.days, 24*36e5), now, (n,at)=>say("metingen",n,at));
+  let rows = await NS.entries(await startFrom("entries", cfg.days, 24*36e5), now, (n,at)=>say(TL("metingen","readings","leituras"),n,at));
   const E = rows.map(e=>({ _id:String(e._id), ts:parseTs(e.date)??parseTs(e.dateString), sgv:e.sgv, direction:e.direction }))
     .filter(e=>e.ts!=null && e.sgv>0);
   await DB.putMany("entries", E);
   if (E.length) await DB.meta("sync.entries", Math.max(...E.map(e=>e.ts)));
 
   // behandelingen (voor de verdieping) — volledig document bewaren
-  rows = await NS.treatments(await startFrom("treatments", cfg.days, 72*36e5), now, (n,at)=>say("behandelingen",n,at));
+  rows = await NS.treatments(await startFrom("treatments", cfg.days, 72*36e5), now, (n,at)=>say(TL("behandelingen","treatments","tratamentos"),n,at));
   const T = rows.map(t=>({ ...t, _id:String(t._id), ts:parseTs(t.created_at)??parseTs(t.mills) })).filter(t=>t.ts!=null);
   await DB.putMany("treatments", T);
   if (T.length) await DB.meta("sync.treatments", Math.max(...T.map(t=>t.ts)));
@@ -1639,7 +1643,7 @@ function profileHtml(pi, oi, ins, MR){
 
   const meta=[]; if(pi.name) meta.push(`profiel <b>${esc(pi.name)}</b>`);
   meta.push(`DIA ${nl1(pi.dia)} u`);
-  if(pi.source==="switch"&&pi.switchTs) meta.push(`profielwissel actief sinds ${new Date(pi.switchTs).toLocaleDateString("nl-NL",{day:"2-digit",month:"short"})}`);
+  if(pi.source==="switch"&&pi.switchTs) meta.push(`profielwissel actief sinds ${new Date(pi.switchTs).toLocaleDateString(LOCALE(),{day:"2-digit",month:"short"})}`);
   if(pi.pct!==100) meta.push(`<b>${pi.pct}%</b> ingesteld`);
   if(pi.shift) meta.push(`tijdverschuiving ${pi.shift} u (niet in tijden verwerkt)`);
 
@@ -1660,13 +1664,13 @@ function fineTuneData(drift, oi, MR, stack, pi){
   // 1 — Basaal
   { let st="na", read, dir=null, ev;
     if(!drift||!drift.stat){ read="Te weinig nuchtere vensters om basaaldrift te meten. Bij een closed loop maskeert temp-basaal de drift — zie <b>Loop-basaal</b> voor de betere ingang."; ev="drempel 0,3 mmol/L/u"; }
-    else if(!drift.up.length && !drift.down.length){ st="ok"; read="In stille vensters drijf je nergens structureel weg — je basaal lijkt over de dag in balans."; ev=`n = ${drift.total.toLocaleString("nl")} driftmetingen`; }
+    else if(!drift.up.length && !drift.down.length){ st="ok"; read="In stille vensters drijf je nergens structureel weg — je basaal lijkt over de dag in balans."; ev=`n = ${drift.total.toLocaleString(LOCALE())} driftmetingen`; }
     else { st="warn"; const parts=[], dirs=[];
       const eq = v => isfRef ? ` ≈ <b>${nl1(Math.abs(v)/isfRef)} E/u</b> verschil` : "";
       if(drift.up.length){ parts.push(`stijg je nuchter rond <b>${joinHrs(drift.up.map(s=>s.h)).join(", ")}</b> (tot ${nl1(drift.peakUp)} mmol/L/u${eq(drift.peakUp)})`); dirs.push(`iets hóger basaal rond ${joinHrs(drift.up.map(s=>s.h)).join(", ")}`); }
       if(drift.down.length){ parts.push(`zak je nuchter rond <b>${joinHrs(drift.down.map(s=>s.h)).join(", ")}</b> (tot ${nl1(drift.peakDown)} mmol/L/u${eq(drift.peakDown)})`); dirs.push(`iets láger basaal rond ${joinHrs(drift.down.map(s=>s.h)).join(", ")}`); }
       read=parts.join(" en ")+`.${isfRef?" Het E/u-getal is de gemeten omvang van de drift.":""}`;
-      dir=dirs.join("; ")+" — in AAPS pas je een blok ~1–2 u vóór het effect aan"; ev=`n = ${drift.total.toLocaleString("nl")} driftmetingen · omvang via ${oi&&oi.obs>0.5?"gemeten":"profiel-"}ISF`; }
+      dir=dirs.join("; ")+" — in AAPS pas je een blok ~1–2 u vóór het effect aan"; ev=`n = ${drift.total.toLocaleString(LOCALE())} driftmetingen · omvang via ${oi&&oi.obs>0.5?"gemeten":"profiel-"}ISF`; }
     rows.push({n:1,title:"Basaal",st,read,dir,ev}); }
 
   // 2 — ISF (correctiefactor)
@@ -1953,7 +1957,7 @@ function trendSvg(weeks){
     const col = w.tir>=0.70?"var(--inRange)":w.tir>=0.5?"var(--high)":"var(--low)";
     s+=`<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(0,h).toFixed(1)}" rx="3" fill="${col}"/>`+
       `<text x="${(x+bw/2).toFixed(1)}" y="${(y-3).toFixed(1)}" font-size="9" fill="var(--ink)" text-anchor="middle" font-weight="600">${pct0(w.tir)}</text>`+
-      `<text x="${(x+bw/2).toFixed(1)}" y="${H-16}" font-size="7.5" fill="var(--muted)" text-anchor="middle">${new Date(w.end).toLocaleDateString("nl-NL",{day:"2-digit",month:"2-digit"})}</text>`; }
+      `<text x="${(x+bw/2).toFixed(1)}" y="${H-16}" font-size="7.5" fill="var(--muted)" text-anchor="middle">${new Date(w.end).toLocaleDateString(LOCALE(),{day:"2-digit",month:"2-digit"})}</text>`; }
   );
   s+=`<text x="${PL}" y="${H-4}" font-size="7.5" fill="var(--dim)">balken = tijd in bereik per week · stippellijn = streef 70%</text>`;
   return s+"</svg>";
@@ -2123,7 +2127,7 @@ function render(glucose, treatments, timeline){
   const g = glucose.filter(x=>q.usableKeys.has(localDayKey(x.ts)));
   const lowCov = q.coverage>0 && q.coverage<MIN_COVERAGE+.05;
   document.getElementById("scope").innerHTML =
-    `<span><i>periode</i> <b>${q.from?new Date(q.from).toLocaleDateString("nl-NL",{day:"2-digit",month:"short"}):"—"} – ${q.to?new Date(q.to).toLocaleDateString("nl-NL",{day:"2-digit",month:"short"}):"—"}</b></span>`+
+    `<span><i>periode</i> <b>${q.from?new Date(q.from).toLocaleDateString(LOCALE(),{day:"2-digit",month:"short"}):"—"} – ${q.to?new Date(q.to).toLocaleDateString(LOCALE(),{day:"2-digit",month:"short"}):"—"}</b></span>`+
     `<span class="${lowCov?"warn":""}"><i>dekking</i> <b>${q.days.length?pct0(q.coverage):"—"}</b></span>`+
     `<span><i>dagen</i> <b>${q.usable.length}/${q.days.length}</b></span>`;
   document.getElementById("monthSub").textContent = `${q.usable.length} dagen · ${pct0(q.coverage)} dekking`;
@@ -2202,7 +2206,7 @@ function render(glucose, treatments, timeline){
     document.getElementById("trendTable").innerHTML =
       `<div style="display:grid;grid-template-columns:auto 1fr 1fr 1fr;gap:.15rem .8rem;font-variant-numeric:tabular-nums">`+
       `<b style="color:var(--muted)">week</b><b style="color:var(--muted)">TIR</b><b style="color:var(--muted)">hypo</b><b style="color:var(--muted)">CV</b>`+
-      tr.map(w=>`<span>${new Date(w.end).toLocaleDateString("nl-NL",{day:"2-digit",month:"2-digit"})}</span><span>${pct0(w.tir)}</span><span>${pct0(w.tbr)}</span><span>${pct0(w.cv)}</span>`).join("")+`</div>`;
+      tr.map(w=>`<span>${new Date(w.end).toLocaleDateString(LOCALE(),{day:"2-digit",month:"2-digit"})}</span><span>${pct0(w.tir)}</span><span>${pct0(w.tbr)}</span><span>${pct0(w.cv)}</span>`).join("")+`</div>`;
   }
   document.getElementById("secLog").hidden = false;
 
@@ -2249,7 +2253,7 @@ function render(glucose, treatments, timeline){
       `${hy.dips?`; plus ${hy.dips} korte dip${hy.dips===1?"":"s"}`:""}.`)
     + (hy.suspect?` <span class="muted">Bij ${hy.suspect} low${hy.suspect===1?"":"s"} past het patroon van <b>sensordruk</b> — mogelijk niet echt.</span>`:"");
   document.getElementById("safetyEv").textContent =
-    `n = ${m.n.toLocaleString("nl")} metingen over ${q.usable.length} dagen` + (enough?"":" · ≥14 dagen aanbevolen");
+    `n = ${m.n.toLocaleString(LOCALE())} metingen over ${q.usable.length} dagen` + (enough?"":" · ≥14 dagen aanbevolen");
 
   const ins = insulinCarbs(treatments, timeline, q);
   if (!treatments.length){ document.getElementById("secInsulin").hidden = true; }
@@ -2292,7 +2296,7 @@ function render(glucose, treatments, timeline){
 
   // ── samenvatting (delen) ──
   const opp = opportunity(m, ag, hy, tr);
-  const fd = t => t?new Date(t).toLocaleDateString("nl-NL",{day:"2-digit",month:"short",year:"numeric"}):"—";
+  const fd = t => t?new Date(t).toLocaleDateString(LOCALE(),{day:"2-digit",month:"short",year:"numeric"}):"—";
   const yn = ok => ok?"✓":"✗";
   _summary =
     `IDM — samenvatting\n`+
@@ -2444,19 +2448,19 @@ async function renderFindings(ctx){
       week.push({ id:"drift-ok", sev:"g", pos:true, seenable:false,
         title:`Je <b>basaal</b> hield je nuchtere uren vlak — geen drift.`,
         steps:[`Geen enkel uur met structurele stijging of daling in maaltijd- en bolusvrije vensters.`],
-        fine:`n = ${drift.total.toLocaleString("nl")} driftmetingen` });
+        fine:`n = ${drift.total.toLocaleString(LOCALE())} driftmetingen` });
     else week.push({ id:"drift", sev:"w", seenable:false, consultable:true,
         title:`Nuchter ${drift.up.length?`stijg je rond <b>${joinHrs(drift.up.map(x=>x.h)).join(", ")}</b>`:""}${drift.up.length&&drift.down.length?" en ":""}${drift.down.length?`zak je rond <b>${joinHrs(drift.down.map(x=>x.h)).join(", ")}</b>`:""}.`,
         steps:[`Drift tot ${nl1(Math.max(drift.peakUp||0,Math.abs(drift.peakDown||0)))} mmol/L per uur in stille vensters.`,
           `In AAPS pas je een basaalblok ~1–2 u vóór het effect aan — bespreek met je team.`],
-        fine:`n = ${drift.total.toLocaleString("nl")} driftmetingen` });
+        fine:`n = ${drift.total.toLocaleString(LOCALE())} driftmetingen` });
   }
   try{
     const anns=(await DB.all("annotations")).filter(a=>a.type==="wijziging" && a.ts>Date.now()-21*DAY).sort((a,b)=>b.ts-a.ts);
     if (anns.length){ const c=anns[0]; const ba=beforeAfter(glucose,q,c.ts,14);
       if (ba.before.ok && ba.after.ok){ const b=ba.before.m, a2=ba.after.m; const up=a2.tir-b.tir>=0.03 && a2.tbr-b.tbr<=0.01;
         week.push({ id:`wijz-${c.ts}`, sev: up?"g":"n", pos:up, seenable:true, consultable:true,
-          title:`Je wijziging van <b>${new Date(c.ts).toLocaleDateString("nl-NL",{day:"numeric",month:"long"})}</b>${up?" hield stand":""}: ${pct0(b.tir)} → ${pct0(a2.tir)} in bereik.`,
+          title:`Je wijziging van <b>${new Date(c.ts).toLocaleDateString(LOCALE(),{day:"numeric",month:"long"})}</b>${up?" hield stand":""}: ${pct0(b.tir)} → ${pct0(a2.tir)} in bereik.`,
           steps:[`Hypo-tijd ${pct0(b.tbr)} → ${pct0(a2.tbr)}.`,
             ba.dip?`⚠ De periode vóór de wijziging was zelf een dip — winst kan deels terugveer zijn.`:`Kanttekening: winst na een mindere periode kan deels terugveer zijn.`,
             `De komende weken maken het beeld hard.`],
@@ -2473,7 +2477,7 @@ async function renderFindings(ctx){
         title:`Deze week <b>${pct0(inR)}</b> in bereik${lo>=0.005?`, ${pct0(lo)} onder 3,9`:", nauwelijks hypo's"}.`,
         steps:[`Nog geen uitgesproken week-patroon om apart te melden.`,
           `Bij een closed loop maskeren SMB's en temp-basaal vaak de basaaldrift; maaltijdpatronen komen pas met genoeg geïsoleerde, geboluste maaltijden.`],
-        fine:`laatste 7 dagen · n = ${wk.length.toLocaleString("nl")}` });
+        fine:`laatste 7 dagen · n = ${wk.length.toLocaleString(LOCALE())}` });
     } else {
       week.push({ id:"week-none", sev:"n", seenable:false,
         title:`Nog te weinig data deze week voor patronen.`,
@@ -2495,7 +2499,7 @@ async function renderFindings(ctx){
     const f2=all.find(x=>x.id===b2.dataset.consult); if(!f2) return;
     const l2=(await DB.meta("consultlist"))||[];
     if(!l2.some(x=>x.id===f2.id)) l2.push({id:f2.id, title:f2.title.replace(/<[^>]+>/g,""), ts:Date.now()});
-    await DB.meta("consultlist",l2); toast("Op je consultlijst gezet."); renderFindings(ctx); renderConsult(); });
+    await DB.meta("consultlist",l2); toast(TL("Op je consultlijst gezet.","Added to your consult list.","Adicionado à sua lista de consulta.")); renderFindings(ctx); renderConsult(); });
   document.querySelectorAll("[data-goday]").forEach(b2=>b2.onclick=()=>{
     const i=_dayKeys.indexOf(b2.dataset.goday); if(i>=0){ _dayIdx=i; renderDay(); }
     document.getElementById("secDay").scrollIntoView({behavior:"smooth",block:"center"}); });
@@ -2582,7 +2586,7 @@ function anDagpatroon(glucose, treatments, q){
     if(up.length)parts.push(`stijg je rond <b>${joinHrs(up.map(s=>s.h)).join(", ")}</b> (tot ${nl1(peak(up))} mmol/L/u) — waar een iets hóger basaal in beeld komt`);
     if(down.length)parts.push(`zak je rond <b>${joinHrs(down.map(s=>s.h)).join(", ")}</b> (tot ${nl1(peak(down))} mmol/L/u) — waar een iets láger basaal hypo's kan schelen`);
     obs=`In stille vensters ${parts.join("; en ")}. In AAPS pas je een basaalblok doorgaans 1–2 uur vóór het effect aan. Observatie, geen instelwaarde — bespreek met je behandelteam.`; }
-  return driftSvg(stat)+`<div class="obs">${obs}</div><div class="muted" style="margin-top:.4rem">n = ${total.toLocaleString("nl")} driftmetingen in schone vensters · drempel 0,3 mmol/L/u · bij een closed loop kan temp-basaal een echt profielverschil maskeren</div>`;
+  return driftSvg(stat)+`<div class="obs">${obs}</div><div class="muted" style="margin-top:.4rem">n = ${total.toLocaleString(LOCALE())} driftmetingen in schone vensters · drempel 0,3 mmol/L/u · bij een closed loop kan temp-basaal een echt profielverschil maskeren</div>`;
 }
 
 // Loop-basaal: voor een closed loop werkt basaaldrift niet (de loop regelt de drift
@@ -2872,7 +2876,7 @@ function proposalEngine(drift, oi, MR, pi, glucose, treatments, q, timeline){
                 cands.push({tag, from:nl2(prof), to:nl2(C), risky:false,
                   eff:`loop leverde gem. ${nl2(act)} vs profiel ${nl2(prof)} E/u`,
                   dir:up?"loop levert méér — profiel mogelijk te laag":"loop levert minder — mogelijk te hoog"}); }
-              if(cands.length){ rows.push({label:d.label, dpKey:d.key, meta:`loop vs profiel · ${hrs.reduce((s,x)=>s+x.n,0).toLocaleString("nl")} metingen`, cands});
+              if(cands.length){ rows.push({label:d.label, dpKey:d.key, meta:`loop vs profiel · ${hrs.reduce((s,x)=>s+x.n,0).toLocaleString(LOCALE())} metingen`, cands});
                 const beh=cands.find(c=>c.tag==="behoudend"), gem=cands.find(c=>c.tag==="gemeten"), any=beh||gem;
                 grid[d.key]={status:"change", from:any.from, to:(beh&&gem&&beh.to!==gem.to)?`${beh.to}–${gem.to}`:(gem?gem.to:beh.to), risky:false}; continue; } }
             grid[d.key]={status:"ok"}; continue; } } }
@@ -3045,7 +3049,7 @@ function renderDay(){
   const readings=_ctx.glucose.filter(x=>localDayKey(x.ts)===key);
   const events=(_ctx.treatments||[]).filter(t=>localDayKey(t.ts)===key);
   const dt=new Date(key+"T12:00:00");
-  document.getElementById("dayLabel").textContent=dt.toLocaleDateString("nl-NL",{weekday:"short",day:"2-digit",month:"short"});
+  document.getElementById("dayLabel").textContent=dt.toLocaleDateString(LOCALE(),{weekday:"short",day:"2-digit",month:"short"});
   document.getElementById("dayChart").innerHTML=dayChartSvg(readings,events);
   document.getElementById("dayNarr").innerHTML=readings.length>=3?dayNarrative(readings,events):"Te weinig metingen op deze dag.";
   document.getElementById("dayPrev").disabled=_dayIdx<=0;
@@ -3116,7 +3120,7 @@ async function renderLog(){
   anns=anns.filter(a=>a.type!=="hypogevoel").sort((a,b)=>b.ts-a.ts);   // hypo-gevoel heeft z'n eigen sectie
   if(!anns.length){ list.innerHTML=`<div class="muted" style="padding-top:.3rem">Nog geen markeringen. Leg een instelling-wijziging of gebeurtenis vast — bij een wijziging vergelijkt de app vanzelf de periode ervóór en erná.</div>`; return; }
   list.innerHTML=anns.map(an=>{ const t=annotType(an.type);
-    const d=new Date(an.ts).toLocaleDateString("nl-NL",{day:"2-digit",month:"short",year:"numeric"});
+    const d=new Date(an.ts).toLocaleDateString(LOCALE(),{day:"2-digit",month:"short",year:"numeric"});
     return `<div class="logentry"><div class="leh"><span class="ic">${t.icon}</span><span class="lt">${esc(t.label)}</span><span class="ld">${d}</span><button class="del" data-id="${esc(an.id)}" title="verwijderen" aria-label="verwijderen">✕</button></div>`+
       (an.carbs!=null?`<div class="lecarb">≈ ${an.carbs} g koolhydraten${an.items&&an.items.length?`<span class="litems"> · ${esc(an.items.map(i=>i.n).join(", "))}</span>`:``}</div>`:``)+
       (an.note?`<div class="lenote">${esc(an.note)}</div>`:``)+
@@ -3124,7 +3128,7 @@ async function renderLog(){
   }).join("");
   list.querySelectorAll(".del").forEach(btn=>btn.onclick=async()=>{
     if(!confirm("Deze markering verwijderen?")) return;
-    try{ await DB.delRow("annotations",btn.dataset.id); }catch(e){ toast("Verwijderen mislukt."); return; }
+    try{ await DB.delRow("annotations",btn.dataset.id); }catch(e){ toast(TL("Verwijderen mislukt.","Delete failed.","Falha ao eliminar.")); return; }
     renderLog(); });
 }
 
@@ -3163,11 +3167,11 @@ async function renderAware(){
   out.innerHTML=awareHtml(aw, _ctx.hy);
   const recent=[...felt].sort((a,b)=>b.ts-a.ts).slice(0,6);
   list.innerHTML = recent.length ? `<div style="margin-top:.6rem">`+recent.map(f=>{
-    const d=new Date(f.ts).toLocaleString("nl-NL",{day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"});
+    const d=new Date(f.ts).toLocaleString(LOCALE(),{day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"});
     return `<div class="logentry"><div class="leh"><span class="ic">📉</span><span class="lt">${f.measured!=null?nl1(f.measured)+" mmol/L":"gevoeld"}</span><span class="ld">${esc(f.intensity||"")} · ${d}</span><button class="del" data-id="${esc(f.id)}" title="verwijderen" aria-label="verwijderen">✕</button></div></div>`;
   }).join("")+`</div>` : "";
   list.querySelectorAll(".del").forEach(btn=>btn.onclick=async()=>{
-    try{ await DB.delRow("annotations",btn.dataset.id); }catch(e){ toast("Verwijderen mislukt."); return; }
+    try{ await DB.delRow("annotations",btn.dataset.id); }catch(e){ toast(TL("Verwijderen mislukt.","Delete failed.","Falha ao eliminar.")); return; }
     renderAware(); });
 }
 
@@ -3191,7 +3195,7 @@ async function buildReport(){
   const aw=hypoAwareness(glucose,felt);
   const changes=anns.filter(a=>a.type==="wijziging").sort((a,b)=>b.ts-a.ts).slice(0,6);
   const findings=fineTuneData(drift,oi,MR,stack,pi).filter(r=>r.st==="warn");
-  const fd=t=>t?new Date(t).toLocaleDateString("nl-NL",{day:"2-digit",month:"short",year:"numeric"}):"—";
+  const fd=t=>t?new Date(t).toLocaleDateString(LOCALE(),{day:"2-digit",month:"short",year:"numeric"}):"—";
   const yn=ok=>ok?"✓":"✗", nl2=v=>v==null?"—":v.toFixed(2).replace(".",",");
   const icf=v=>{const r=Math.round(v*10)/10;return (r%1===0?String(r):r.toFixed(1)).replace(".",",");};
   const range=(arr,f)=>{if(!arr||!arr.length)return "—";const vs=arr.map(b=>b.value),mn=Math.min(...vs),mx=Math.max(...vs);return Math.abs(mx-mn)<1e-9?f(mn):`${f(mn)}–${f(mx)}`;};
@@ -3290,9 +3294,9 @@ function rerender(){
   try{ renderCbCats(); renderCbResults(); renderCbPlate(); renderEtenInsight(); }catch(_){}
 }
 async function doSync(){
-  const btn=document.getElementById("btnSync"); btn.disabled=true; setConn("busy","synchroniseren…");
-  try { await syncAll(msg=>setConn("busy",msg)); setConn("ok","bijgewerkt"); await refresh(); }
-  catch(e){ setConn("err","mislukt"); toast("Sync mislukt: "+e.message); console.error(e); }
+  const btn=document.getElementById("btnSync"); btn.disabled=true; setConn("busy",t("conn.syncing"));
+  try { await syncAll(msg=>setConn("busy",msg)); setConn("ok",t("conn.updated")); await refresh(); }
+  catch(e){ setConn("err",t("conn.failed")); toast(TL("Sync mislukt: ","Sync failed: ","Sincronização falhou: ")+e.message); console.error(e); }
   finally { btn.disabled=false; }
 }
 document.getElementById("btnSync").onclick = doSync;
@@ -3306,21 +3310,21 @@ document.getElementById("btnClose").onclick = closeDlg;
 document.getElementById("btnSave").onclick = async ()=>{
   const err=document.getElementById("cfgErr");
   const url=document.getElementById("inUrl").value.trim().replace(/\/+$/,"");
-  if (!/^https:\/\/.+/.test(url)){ err.textContent="Adres moet met https:// beginnen."; err.hidden=false; return; }
+  if (!/^https:\/\/.+/.test(url)){ err.textContent=TL("Adres moet met https:// beginnen.","Address must start with https://.","O endereço deve começar por https://."); err.hidden=false; return; }
   cfg.url=url; cfg.token=document.getElementById("inTok").value.trim();
   cfg.days=Math.min(365,Math.max(7,+document.getElementById("inDays").value||30));
   cfg.peak=[45,55,75].includes(+document.getElementById("inInsulin").value)?+document.getElementById("inInsulin").value:75;
   PEAK_MIN=cfg.peak;
-  setConn("busy","controleren…");
+  setConn("busy",t("conn.checking"));
   try { await NS.get("/api/v1/status.json"); saveCfg(); document.getElementById("btnSync").disabled=false; closeDlg(); await doSync(); }
-  catch(e){ setConn("err","geen verbinding"); err.textContent=e.message; err.hidden=false; }
+  catch(e){ setConn("err",t("conn.noconn")); err.textContent=e.message; err.hidden=false; }
 };
 document.getElementById("btnShare").onclick = async ()=>{
   if (!_summary) return;
-  try { if (navigator.share){ await navigator.share({ title:"IDM-samenvatting", text:_summary }); return; } }
+  try { if (navigator.share){ await navigator.share({ title:TL("IDM-samenvatting","IDM summary","Resumo IDM"), text:_summary }); return; } }
   catch(e){ if (e.name==="AbortError") return; /* gebruiker annuleerde */ }
-  try { await navigator.clipboard.writeText(_summary); toast("Samenvatting gekopieerd — plak het in een bericht of e-mail aan je team."); }
-  catch(_){ toast("Kopiëren lukte niet. Selecteer de tekst handmatig of gebruik Print/PDF."); }
+  try { await navigator.clipboard.writeText(_summary); toast(TL("Samenvatting gekopieerd — plak het in een bericht of e-mail aan je team.","Summary copied — paste it into a message or email to your team.","Resumo copiado — cole-o numa mensagem ou e-mail para a sua equipa.")); }
+  catch(_){ toast(TL("Kopiëren lukte niet. Selecteer de tekst handmatig of gebruik Print/PDF.","Copy failed. Select the text manually or use Print/PDF.","A cópia falhou. Selecione o texto manualmente ou use Imprimir/PDF.")); }
 };
 document.getElementById("btnReport").onclick = openReport;
 document.getElementById("dayPrev").onclick = ()=>{ _dayIdx--; renderDay(); };
@@ -3328,12 +3332,12 @@ document.getElementById("dayNext").onclick = ()=>{ _dayIdx++; renderDay(); };
 // Logboek-back-up: exporteer/importeer annotaties (de lokale geheugenlaag).
 document.getElementById("btnExport").onclick = async ()=>{
   let anns=[]; try{ anns=await DB.all("annotations"); }catch(_){}
-  if(!anns.length){ toast("Nog niets in je logboek om te exporteren."); return; }
+  if(!anns.length){ toast(TL("Nog niets in je logboek om te exporteren.","Nothing in your logbook to export yet.","Ainda não há nada no diário para exportar.")); return; }
   const data=JSON.stringify({app:"IDM",kind:"logbook",version:1,exported:new Date().toISOString(),annotations:anns},null,2);
   const url=URL.createObjectURL(new Blob([data],{type:"application/json"}));
   const a=document.createElement("a"); a.href=url; a.download=`diametric-logboek-${new Date().toISOString().slice(0,10)}.json`;
   document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),1000);
-  toast(`${anns.length} markeringen geëxporteerd.`);
+  toast(TL(`${anns.length} markeringen geëxporteerd.`,`${anns.length} marks exported.`,`${anns.length} marcas exportadas.`));
 };
 document.getElementById("btnImport").onclick = ()=>document.getElementById("fileImport").click();
 document.getElementById("fileImport").onchange = async (e)=>{
@@ -3343,14 +3347,14 @@ document.getElementById("fileImport").onchange = async (e)=>{
     const obj=JSON.parse(await file.text());
     const list=Array.isArray(obj)?obj:(obj.annotations||[]);
     const valid=list.filter(a=>a&&a.id&&a.ts&&a.type);
-    if(!valid.length){ toast("Geen geldige markeringen in dit bestand."); return; }
+    if(!valid.length){ toast(TL("Geen geldige markeringen in dit bestand.","No valid marks in this file.","Sem marcas válidas neste ficheiro.")); return; }
     await DB.putMany("annotations",valid);
-    toast(`${valid.length} markeringen geïmporteerd.`);
+    toast(TL(`${valid.length} markeringen geïmporteerd.`,`${valid.length} marks imported.`,`${valid.length} marcas importadas.`));
     renderLog(); renderAware();
-  }catch(err){ toast("Importeren mislukt: geen geldig back-up-bestand."); }
+  }catch(err){ toast(TL("Importeren mislukt: geen geldig back-up-bestand.","Import failed: not a valid backup file.","Importação falhou: ficheiro de cópia inválido.")); }
 };
 document.getElementById("btnWipe").onclick = async ()=>{
-  if (!confirm("Cache wissen? De data wordt bij de volgende sync opnieuw opgehaald.")) return;
+  if (!confirm(TL("Cache wissen? De data wordt bij de volgende sync opnieuw opgehaald.","Clear cache? The data will be re-fetched on the next sync.","Limpar a cache? Os dados serão obtidos novamente na próxima sincronização."))) return;
   await DB.wipe(); closeDlg(); await refresh(); };
 
 // Logboek
@@ -3358,12 +3362,12 @@ buildChips();
 document.getElementById("logDate").value = (()=>{ const d=new Date();
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; })();
 document.getElementById("logAdd").onclick = async ()=>{
-  const dv=document.getElementById("logDate").value; if(!dv){ toast("Kies een datum."); return; }
+  const dv=document.getElementById("logDate").value; if(!dv){ toast(TL("Kies een datum.","Pick a date.","Escolha uma data.")); return; }
   const ts=new Date(dv+"T12:00:00").getTime();
   const note=document.getElementById("logNote").value.trim();
   const an={ id:"a"+Date.now()+"-"+Math.random().toString(36).slice(2,7), ts, type:_logSel, note, created:Date.now() };
-  try{ await DB.putMany("annotations",[an]); }catch(e){ toast("Opslaan mislukt: "+e.message); return; }
-  document.getElementById("logNote").value=""; toast("Markering toegevoegd.");
+  try{ await DB.putMany("annotations",[an]); }catch(e){ toast(TL("Opslaan mislukt: ","Save failed: ","Falha ao guardar: ")+e.message); return; }
+  document.getElementById("logNote").value=""; toast(TL("Markering toegevoegd.","Mark added.","Marca adicionada."));
   renderLog(); };
 
 /* ── Koolhydraat-schatter ────────────────────────────────────────────────────
@@ -3864,10 +3868,10 @@ function renderCbResults(){
     const qi=document.getElementById("cbQty");
     if(qi) qi.oninput=()=>{ _cbQty=parseNum(qi.value)||0; est(); };
     const ab=document.getElementById("cbAddBtn");
-    if(ab) ab.onclick=()=>{ const g=cbGrams(food); if(!(g>0)){ toast("Vul een aantal in."); return; }
+    if(ab) ab.onclick=()=>{ const g=cbGrams(food); if(!(g>0)){ toast(TL("Vul een aantal in.","Enter an amount.","Introduza uma quantidade.")); return; }
       const label=_cbUnit>=food.u.length?`${_cbQty}× gram`:`${_cbQty}× ${food.u[_cbUnit][0]}`;
       _cbPlate.push({n:food.n,label,g:Math.round(g),c:cbCarbs(food,g)});
-      _cbOpen=null; renderCbResults(); renderCbPlate(); toast("Toegevoegd aan je bord."); };
+      _cbOpen=null; renderCbResults(); renderCbPlate(); toast(TL("Toegevoegd aan je bord.","Added to your plate.","Adicionado ao seu prato.")); };
   }
 }
 function renderCbPlate(){
@@ -3893,15 +3897,15 @@ function initCarb(){
   if(d) d.value=(()=>{ const x=new Date(); return `${x.getFullYear()}-${String(x.getMonth()+1).padStart(2,"0")}-${String(x.getDate()).padStart(2,"0")}`; })();
   const save=document.getElementById("cbSave");
   if(save) save.onclick=async()=>{
-    if(!_cbPlate.length){ toast("Nog niets op je bord."); return; }
-    const dv=document.getElementById("cbDate").value; if(!dv){ toast("Kies een datum."); return; }
+    if(!_cbPlate.length){ toast(TL("Nog niets op je bord.","Nothing on your plate yet.","Ainda nada no seu prato.")); return; }
+    const dv=document.getElementById("cbDate").value; if(!dv){ toast(TL("Kies een datum.","Pick a date.","Escolha uma data.")); return; }
     const ts=new Date(dv+"T12:00:00").getTime();
     const carbs=_cbPlate.reduce((s,x)=>s+x.c,0);
     const an={ id:"m"+Date.now()+"-"+Math.random().toString(36).slice(2,7), ts, type:"maaltijd",
       carbs, items:_cbPlate.map(x=>({n:x.n,g:x.g,c:x.c})),
       note:_cbPlate.map(x=>`${x.n} (${x.label})`).join(", "), created:Date.now() };
-    try{ await DB.putMany("annotations",[an]); }catch(e){ toast("Opslaan mislukt: "+e.message); return; }
-    _cbPlate=[]; renderCbPlate(); toast(`Maaltijd van ${carbs} g vastgelegd.`); renderLog();
+    try{ await DB.putMany("annotations",[an]); }catch(e){ toast(TL("Opslaan mislukt: ","Save failed: ","Falha ao guardar: ")+e.message); return; }
+    _cbPlate=[]; renderCbPlate(); toast(TL(`Maaltijd van ${carbs} g vastgelegd.`,`Meal of ${carbs} g logged.`,`Refeição de ${carbs} g registada.`)); renderLog();
   };
 }
 initCarb();
@@ -3947,14 +3951,14 @@ const localNow=()=>{ const d=new Date(), p=n=>String(n).padStart(2,"0");
   return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`; };
 document.getElementById("awTime").value = localNow();
 document.getElementById("awAdd").onclick = async ()=>{
-  const tv=document.getElementById("awTime").value; if(!tv){ toast("Kies een moment."); return; }
-  const ts=new Date(tv).getTime(); if(!isFinite(ts)){ toast("Ongeldig moment."); return; }
+  const tv=document.getElementById("awTime").value; if(!tv){ toast(TL("Kies een moment.","Pick a moment.","Escolha um momento.")); return; }
+  const ts=new Date(tv).getTime(); if(!isFinite(ts)){ toast(TL("Ongeldig moment.","Invalid moment.","Momento inválido.")); return; }
   const measured=parseNum(document.getElementById("awBg").value);
-  if(measured!=null && (measured<2||measured>25)){ toast("Meterwaarde buiten bereik (2–25 mmol/L) — mmol, geen mg/dL."); return; }
+  if(measured!=null && (measured<2||measured>25)){ toast(TL("Meterwaarde buiten bereik (2–25 mmol/L) — mmol, geen mg/dL.","Reading out of range (2–25 mmol/L) — mmol, not mg/dL.","Leitura fora do intervalo (2–25 mmol/L) — mmol, não mg/dL.")); return; }
   const an={ id:"h"+Date.now()+"-"+Math.random().toString(36).slice(2,7), ts, type:"hypogevoel", measured, intensity:_awSel, created:Date.now() };
-  try{ await DB.putMany("annotations",[an]); }catch(e){ toast("Opslaan mislukt: "+e.message); return; }
+  try{ await DB.putMany("annotations",[an]); }catch(e){ toast(TL("Opslaan mislukt: ","Save failed: ","Falha ao guardar: ")+e.message); return; }
   document.getElementById("awBg").value=""; document.getElementById("awTime").value=localNow();
-  toast("Hypo-gevoel vastgelegd."); renderAware(); };
+  toast(TL("Hypo-gevoel vastgelegd.","Hypo awareness logged.","Perceção de hipo registada.")); renderAware(); };
 
 initDeep();
 snapshotI18n(); applyStaticI18n();   // NL vastleggen, daarna vaste teksten in de gekozen taal
