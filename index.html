@@ -3165,6 +3165,45 @@ const CARB_DB=[
   {n:"Ketchup",k:"beleg",per:25,u:[["eetlepel",15]]},
   {n:"Appelmoes",k:"beleg",per:17,u:[["opscheplepel",75]]},
   {n:"Satésaus",k:"beleg",per:20,u:[["eetlepel",20]]},
+  {n:"Peer",k:"fruit",per:12,u:[["stuk",150]]},
+  {n:"Sinaasappel",k:"fruit",per:9,u:[["stuk",130]]},
+  {n:"Mandarijn",k:"fruit",per:9,u:[["stuk",70]]},
+  {n:"Druiven",k:"fruit",per:16,u:[["handvol",80],["tros",150]]},
+  {n:"Framboos",k:"fruit",per:5,u:[["schaaltje",125]]},
+  {n:"Abrikoos",k:"fruit",per:9,u:[["stuk",35]]},
+  {n:"Spinazie (gekookt)",k:"groente",per:2,u:[["opscheplepel",80]]},
+  {n:"Courgette",k:"groente",per:2,u:[["opscheplepel",80]]},
+  {n:"Champignons",k:"groente",per:1,u:[["opscheplepel",60]]},
+  {n:"Prei",k:"groente",per:3,u:[["opscheplepel",80]]},
+  {n:"Spruitjes",k:"groente",per:5,u:[["opscheplepel",80]]},
+  {n:"Rode kool",k:"groente",per:5,u:[["opscheplepel",100]]},
+  {n:"Zuurkool",k:"groente",per:1,u:[["opscheplepel",100]]},
+  {n:"Rijstwafel",k:"graan",per:80,u:[["stuk",9]]},
+  {n:"Pannenkoek",k:"graan",per:26,u:[["stuk",100]]},
+  {n:"Poffertjes",k:"graan",per:35,u:[["portie",100]]},
+  {n:"Macaroni (bereid)",k:"graan",per:15,u:[["bord",300]]},
+  {n:"Drinkyoghurt",k:"zuivel",per:12,u:[["flesje",250]]},
+  {n:"Milkshake",k:"zuivel",per:18,u:[["beker",300]]},
+  {n:"Slagroom",k:"zuivel",per:3,u:[["eetlepel",15]]},
+  {n:"Energiedrank (Red Bull)",k:"drank",per:11,u:[["blikje",250]]},
+  {n:"Smoothie",k:"drank",per:12,u:[["beker",250]]},
+  {n:"M&M's",k:"snoep",per:68,u:[["zakje",45]]},
+  {n:"KitKat",k:"snoep",per:60,u:[["reep",40]]},
+  {n:"Twix",k:"snoep",per:64,u:[["reep",50]]},
+  {n:"Bounty",k:"snoep",per:58,u:[["reep",57]]},
+  {n:"Oreo",k:"snoep",per:69,u:[["koekje",11]]},
+  {n:"Gummybeertjes",k:"snoep",per:77,u:[["handvol",25]]},
+  {n:"Roze koek",k:"snoep",per:60,u:[["stuk",50]]},
+  {n:"Kapsalon",k:"hartig",per:13,u:[["portie",400]]},
+  {n:"Broodje döner / kebab",k:"hartig",per:22,u:[["stuk",250]]},
+  {n:"Lasagne",k:"hartig",per:12,u:[["portie",300]]},
+  {n:"Pasta bolognese",k:"hartig",per:14,u:[["bord",350]]},
+  {n:"Falafel",k:"hartig",per:20,u:[["balletje",25]]},
+  {n:"Kaassoufflé",k:"hartig",per:20,u:[["stuk",70]]},
+  {n:"Kipcorn",k:"hartig",per:15,u:[["stuk",70]]},
+  {n:"Quiche",k:"hartig",per:18,u:[["punt",120]]},
+  {n:"Smeerkaas",k:"beleg",per:3,u:[["portie (snee)",15]]},
+  {n:"Chocopasta",k:"beleg",per:60,u:[["portie (snee)",15]]},
 ];
 // Vet & eiwit per 100 g — alleen voor duidelijk vet/eiwitrijke producten.
 // Voor deze verschijnt bij selectie een korte bolus-tip (vet-eiwit-eenheden).
@@ -3175,24 +3214,23 @@ const FATPR={
   "Kaas":[33,25],"Ei":[11,13],"Pindakaas":[50,25],"Pinda's":[49,26],"Amandelen":[50,21],"Cashewnoten":[44,18],"Hummus":[15,8],
   "Melkchocolade":[30,7],"Pure chocolade":[31,5],"Cake":[20,6],"Donut":[20,6],"Muffin":[20,5],
   "Chips":[34,6],"Snickers":[24,9],"Mars":[17,4],"Gevulde koek":[18,5],"Stroopwafel":[16,4],"Appeltaart":[13,3],
-  "Nutella":[31,6],"Satésaus":[10,5]
+  "Nutella":[31,6],"Satésaus":[10,5],
+  "Pannenkoek":[8,6],"Poffertjes":[9,6],"Macaroni (bereid)":[4,5],"Milkshake":[3,3],"Slagroom":[35,2],
+  "M&M's":[20,4],"KitKat":[30,6],"Twix":[24,4],"Bounty":[26,4],"Oreo":[20,5],"Roze koek":[15,4],
+  "Kapsalon":[9,8],"Broodje döner / kebab":[10,12],"Lasagne":[8,7],"Pasta bolognese":[6,6],"Falafel":[15,7],
+  "Kaassoufflé":[20,8],"Kipcorn":[16,10],"Quiche":[14,7],"Smeerkaas":[25,10],"Chocopasta":[30,5]
 };
-// Verdeling direct/verlengd uit de verhouding koolhydraten (snel) vs.
-// vet-eiwit-equivalent (traag), begrensd op 20–80% en afgerond op 5%.
-function fatSplit(carbs, vee){
-  const hrs = vee<1.5?3 : vee<2.5?4 : vee<3.5?5 : 8, veeCarb=vee*10;
-  let ext = carbs+veeCarb>0 ? Math.round(veeCarb/(carbs+veeCarb)*20)*5 : 40;
-  ext = Math.max(20, Math.min(80, ext));
-  return { hrs, ext, now:100-ext };
-}
-// Korte bolus-tip voor een vet/eiwitrijke portie.
+// Doorwerkingsduur van het vet-eiwit-deel (Warschau-methode).
+function fatHrs(vee){ return vee<1.5?3 : vee<2.5?4 : vee<3.5?5 : 8; }
+// Korte bolus-tip voor een vet/eiwitrijke portie. Het verlengde deel = het
+// vet-eiwit-equivalent (1 VEE ≈ 10 g koolhydraten), direct in grammen.
 function cbFatHtml(food, grams){
   const fp=FATPR[food.n]; if(!fp) return "";
   const vee=(grams*fp[0]/100*9 + grams*fp[1]/100*4)/100;
   if(vee<1) return "";
-  const s=fatSplit(grams*food.per/100, vee);
-  return `<b>Vette maaltijd</b> · ~${nl1(vee)} vet-eiwit-eenheden, werkt ~${s.hrs} u door. `+
-    `Geef ~<b>${s.now}%</b> direct en ~<b>${s.ext}%</b> verlengd over ~${s.hrs} u (dual-wave).`;
+  const hrs=fatHrs(vee), carbsR=Math.round(grams*food.per/100), extG=Math.round(vee*10);
+  return `<b>Vette maaltijd</b> · ~${nl1(vee)} vet-eiwit-eenheden, werkt ~${hrs} u door. `+
+    `Bolus ~<b>${carbsR} g</b> direct + ~<b>${extG} g</b> verlengd over ~${hrs} u (dual-wave).`;
 }
 // Totale vet-eiwit-eenheden over het hele bord (op naam-lookup).
 function plateVEE(){ let fat=0,pro=0; for(const it of _cbPlate){ const fp=FATPR[it.n]; if(fp){ fat+=it.g*fp[0]/100; pro+=it.g*fp[1]/100; } } return (fat*9+pro*4)/100; }
@@ -3253,9 +3291,9 @@ function renderCbPlate(){
   document.getElementById("cbTotal").textContent=`${total} g`;
   const pf=document.getElementById("cbPlateFat");
   if(pf){ const vee=plateVEE();
-    if(vee>=1){ const s=fatSplit(total,vee);
-      pf.innerHTML=`<b>Vette maaltijd</b> · ~${nl1(vee)} vet-eiwit-eenheden, werkt ~${s.hrs} u door. `+
-        `Geef ~<b>${s.now}%</b> van je bolus direct en ~<b>${s.ext}%</b> verlengd over ~${s.hrs} u (dual-wave).`;
+    if(vee>=1){ const hrs=fatHrs(vee), extG=Math.round(vee*10);
+      pf.innerHTML=`<b>Vette maaltijd</b> · ~${nl1(vee)} vet-eiwit-eenheden, werkt ~${hrs} u door. `+
+        `Bolus je ~<b>${total} g</b> direct + ~<b>${extG} g</b> verlengd over ~${hrs} u (dual-wave).`;
     } else pf.innerHTML=""; }
   items.querySelectorAll(".ci-x").forEach(b=>b.onclick=()=>{ _cbPlate.splice(+b.dataset.i,1); renderCbPlate(); });
 }

@@ -30,8 +30,8 @@ const plate=await page.evaluate(()=>document.getElementById('cbPlateFat').textCo
 const banaan=await pick('Banaan');
 
 const okPizza = /vet-eiwit-eenheden/.test(pizza) && /u door/.test(pizza)
-  && /%\s*direct/.test(pizza) && /%\s*verlengd/.test(pizza) && !/bespreek/i.test(pizza);
-const okPlate = /vet-eiwit-eenheden/.test(plate) && /%\s*van je bolus direct/.test(plate) && /%\s*verlengd/.test(plate);
+  && /\bg\s*direct/.test(pizza) && /\bg\s*verlengd/.test(pizza) && !/bespreek/i.test(pizza) && !/%/.test(pizza);
+const okPlate = /vet-eiwit-eenheden/.test(plate) && /\bg\s*direct/.test(plate) && /\bg\s*verlengd/.test(plate);
 const okBanaan = banaan==='' ;
 console.log('pizza-tip (met %-verdeling, geen "bespreek"):', okPizza?'JA':'NEE');
 console.log('  →', pizza.slice(0,130));
