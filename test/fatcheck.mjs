@@ -29,7 +29,9 @@ const plate=await page.evaluate(()=>document.getElementById('cbPlateFat').textCo
 // 2) Loempia & friet (eerder geen tip door te strenge drempel) → nu wel
 const loempia=await pick('Loempia');
 const friet=await pick('Friet');
-// 3) Banaan (geen vet/eiwit) → geen tip
+// 3) Pasta = trage koolhydraten (lage GI), geen vet → aparte trage-tip
+const pasta=await pick('Pasta (gekookt)');
+// 4) Banaan (snelle koolhydraten) → geen tip
 const banaan=await pick('Banaan');
 
 const okPizza = /vet-eiwit-eenheden/.test(pizza) && /u door/.test(pizza)
@@ -41,10 +43,13 @@ console.log('  →', pizza.slice(0,130));
 console.log('bord-tip (totaal over het bord):', okPlate?'JA':'NEE');
 console.log('  →', plate.slice(0,130));
 const okLoempia = /verlengd/.test(loempia), okFriet = /verlengd/.test(friet);
+const okPasta = /Trage koolhydraten/i.test(pasta) && !/verlengd/.test(pasta);
 console.log('loempia toont nu tip:', okLoempia?'JA':'NEE', '| friet:', okFriet?'JA':'NEE');
+console.log('pasta = trage-koolhydraten-tip:', okPasta?'JA':'NEE');
+console.log('  →', pasta.slice(0,90));
 console.log('banaan (geen tip):', okBanaan?'JA':'NEE', banaan?('("'+banaan.slice(0,40)+'")'):'');
 console.log('errors:', errors.length?errors:'geen');
-const ok = okPizza && okPlate && okLoempia && okFriet && okBanaan && !errors.length;
+const ok = okPizza && okPlate && okLoempia && okFriet && okPasta && okBanaan && !errors.length;
 console.log('\nRESULTAAT:', ok?'OK':'FOUT');
 if(!ok) process.exitCode=1;
 await browser.close();
