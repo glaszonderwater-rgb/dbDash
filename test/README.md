@@ -35,3 +35,4 @@ Playwright-browserinstallatie.
 - `pcheck` / `insulincheck` / `iobcheck` / `dscheck` — profiel, insulinetype, IOB/COB, devicestatus
 - `reportcheck` / `watchcheck` / `daycheck` / `foldcheck` / `tabcheck` / `themecheck` — rapport, signalen, dag-detail, lay-out, thema
 - `navshot` / `shot_redesign` — screenshots licht/donker · `perf` — rekentijd-meting
+- `a11ycheck` — toegankelijkheid: verbindingsstatus en toast zijn aria-live-regio's, instellingen-knop heeft een label, reduced-motion- en summary-focus-regels aanwezig, chip-tap-hoogte ≥ 34px

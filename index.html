@@ -28,7 +28,7 @@
    én donker via tokens. ─────────────────────────────────────────────────── */
 :root{
   --bg:#F3F4F1; --surface:#FFFFFF; --surface-2:#F7F8F5; --raised:#FFFFFF;
-  --ink:#20272E; --muted:#5E6A75; --dim:#8A95A0;
+  --ink:#20272E; --muted:#5E6A75; --dim:#7B8590;
   --line:#E7E9E4; --line-2:#DCDFD9;
   --accent:#2E7BD6; --accent-soft:#E7F0FB; --on-accent:#FFFFFF;
   --veryLow:#B23A3A; --low:#DB5F5A; --inRange:#1FA877; --high:#D2942A; --veryHigh:#C86A2A; --carb:#7E6BC8;
@@ -44,7 +44,7 @@
    én altijd bij handmatig "donker". De data-theme-keuze wint van het systeem. */
 @media (prefers-color-scheme:dark){ :root:not([data-theme="light"]){
     --bg:#141A22; --surface:#1C2530; --surface-2:#222D3A; --raised:#222D3A;
-    --ink:#E8EEF5; --muted:#9AA8B8; --dim:#71808F;
+    --ink:#E8EEF5; --muted:#9AA8B8; --dim:#8895A3;
     --line:#28323F; --line-2:#33404F;
     --accent:#5AA0EA; --accent-soft:#17293D; --on-accent:#081827;
     --inRange:#35C08C; --high:#E0A94A; --low:#E76B66; --veryHigh:#DE8A43; --veryLow:#C0554E; --carb:#A99BE0;
@@ -54,7 +54,7 @@
 } }
 :root[data-theme="dark"]{
     --bg:#141A22; --surface:#1C2530; --surface-2:#222D3A; --raised:#222D3A;
-    --ink:#E8EEF5; --muted:#9AA8B8; --dim:#71808F;
+    --ink:#E8EEF5; --muted:#9AA8B8; --dim:#8895A3;
     --line:#28323F; --line-2:#33404F;
     --accent:#5AA0EA; --accent-soft:#17293D; --on-accent:#081827;
     --inRange:#35C08C; --high:#E0A94A; --low:#E76B66; --veryHigh:#DE8A43; --veryLow:#C0554E; --carb:#A99BE0;
@@ -540,6 +540,19 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:-1px;bor
 .chome .kpis{display:grid;grid-template-columns:1fr 1fr;gap:.6rem}
 .chome .kpis .kpi{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:.8rem .9rem;box-shadow:var(--shadow-sm)}
 .nu.hideOnHome{display:none}
+
+/* ══════════════ Toegankelijkheid ══════════════ */
+/* Zichtbare toetsenbord-focus op álle interactieve elementen (niet alleen buttons) */
+summary:focus-visible,a:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:8px}
+details.fold>summary:focus-visible,details.deep>summary:focus-visible{outline-offset:-2px}
+.nav .tab:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+/* Grotere aanraakvlakken voor kleine chips/knopjes (WCAG 2.5.8) */
+.chip,.cbUnit,.act{min-height:34px;display:inline-flex;align-items:center}
+/* Respecteer 'verminder beweging': schakel animaties, transities en smooth-scroll uit */
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;
+    transition-duration:.001ms!important;scroll-behavior:auto!important}
+}
 </style>
 </head>
 <body>
@@ -570,9 +583,9 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
         <path fill="url(#idmbl)" d="M160,110 V20 H182 L205,66 L228,20 H250 V110 H229 V58 L212,92 H198 L181,58 V110 Z"/>
       </svg></div>
       <div class="grow"></div>
-      <div class="conn"><i class="dot" id="dot"></i><span id="connTxt">niet ingesteld</span></div>
+      <div class="conn" role="status" aria-live="polite"><i class="dot" id="dot" aria-hidden="true"></i><span id="connTxt">niet ingesteld</span></div>
       <button id="btnSync" disabled>Sync</button>
-      <button class="ghost" id="btnCfg" title="Instellingen">⚙</button>
+      <button class="ghost" id="btnCfg" title="Instellingen" aria-label="Instellingen">⚙</button>
     </div>
     <div class="scope" id="scope"><span><i>periode</i> <b>—</b></span></div>
   </div>
@@ -2722,7 +2735,7 @@ function renderDay(){
   renderDayJump();
 }
 function toast(msg){ let t=document.getElementById("toast");
-  if(!t){ t=document.createElement("div"); t.id="toast"; document.body.appendChild(t); }
+  if(!t){ t=document.createElement("div"); t.id="toast"; t.setAttribute("role","status"); t.setAttribute("aria-live","polite"); document.body.appendChild(t); }
   t.textContent=msg; t.classList.add("show"); clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove("show"),3200); }
 function initDeep(){
   document.querySelectorAll("details.deep").forEach(d=>{
