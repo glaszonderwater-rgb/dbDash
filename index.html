@@ -1100,6 +1100,152 @@ Object.assign(I18N, {
   "cfg.export":{ en:"⭳ Export logbook", pt:"⭳ Exportar diário" },
   "cfg.import":{ en:"⭱ Import", pt:"⭱ Importar" },
 });
+// Uitleg-sectie ("Uitleg & leren") — één sleutel met de volledige HTML per taal.
+Object.assign(I18N, { "meth.body":{
+  en:`
+      <p class="mlead">New to diabetes or a loop? Below, first the concepts in plain language, then how the app calculates each number. None of this is a dose or prescription — it helps you understand and have the conversation with your team.</p>
+
+      <div class="mpart">Diabetes in short</div>
+      <p>The basics, in plain language. Already know this? Feel free to skip.</p>
+      <div class="mterm"><b>Blood glucose (blood sugar)</b> — too <b>low</b> (below 3.9) is a <b>hypo</b>: acute, you take fast carbs. Too <b>high</b> (above 10) is a <b>hyper</b>. Goal: as much time as possible between 3.9 and 10.0.</div>
+      <div class="mterm"><b>Basal</b> — your "background" insulin that runs around the clock and keeps your glucose stable <b>without</b> food. Set right, you stay flat when fasting (no meal).</div>
+      <div class="mterm"><b>Bolus</b> — the insulin you give separately on top: for a <b>meal</b>, or to lower a high value (a <b>correction</b>).</div>
+      <div class="mterm"><b>Carb ratio (ICR)</b> — how many grams of carbs 1 unit of insulin covers. Determines your meal bolus. A <i>lower</i> number = stronger (more insulin per meal).</div>
+      <div class="mterm"><b>ISF</b> (correction factor) — how much 1 unit lowers your glucose. Determines your correction bolus. A <i>higher</i> number = you're more sensitive, you need less insulin.</div>
+      <div class="mterm"><b>Prebolus</b> — giving your bolus about fifteen minutes before eating, so the insulin works in time and your post-meal peak stays lower.</div>
+      <div class="mterm"><b>IOB</b> (insulin on board) — how much previously given insulin is still working. Important to avoid <b>stacking</b>: correcting again too soon can cause a hypo.</div>
+      <div class="mterm"><b>Peak time &amp; DIA</b> — when your insulin works hardest (peak) and how long it keeps acting (DIA). Together they form the IOB curve.</div>
+      <div class="mterm"><b>Closed loop (AAPS/Loop)</b> — your system adjusts itself: it temporarily raises or lowers your basal (<b>temp basal</b>) and gives small automatic boluses (<b>SMBs</b>) to keep you in range.</div>
+      <div class="mterm"><b>TIR · GMI · CV</b> — your period summarized: TIR = % time in range (higher better), GMI = estimated HbA1c, CV = how erratic your values are (lower = steadier).</div>
+
+      <div class="mpart">How the app calculates</div>
+      <p>Every number comes from your own measurements. Here's exactly how, per part.</p>
+
+      <h4 class="mh">1 · Privacy &amp; setup</h4>
+      <p>One HTML file, no build, works offline. Your data lives <b>only on this device</b>: measurements in IndexedDB, your address and token in localStorage. Nothing goes to a server except <b>read</b> requests to your own Nightscout (with your token: <code>?token=…</code>). After the first time everything works from the local cache; syncing only fetches the new part.</p>
+
+      <h4 class="mh">2 · Glucose &amp; units</h4>
+      <p>Nightscout stores glucose in mg/dL; IDM converts everything in exactly one place to <b>mmol/L</b> (÷ 18.018) and never shows mg/dL. Target range <b>3.9–10.0</b> mmol/L (international consensus, Battelino 2019).</p>
+
+      <h4 class="mh">3 · Key figures (month)</h4>
+      <ul class="mul">
+        <li><b>TIR</b> (time in range 3.9–10.0) — share of readings in range. Aim &gt; 70%.</li>
+        <li><b>Low time</b> — &lt; 3.9 (aim &lt; 4%) and &lt; 3.0 (aim &lt; 1%).</li>
+        <li><b>Above range</b> — &gt; 10.0 (aim &lt; 25%) and &gt; 13.9 (&lt; 5%).</li>
+        <li><b>CV</b> (variability) = standard deviation ÷ mean. Aim ≤ 36% — the measure of how erratic your values are.</li>
+        <li><b>GMI</b> (estimated HbA1c) = 3.31 + 0.02392 × mean glucose in mg/dL (Bergenstal). An estimate, not a lab value.</li>
+      </ul>
+      <p class="mnote">A day only counts from ~70% coverage (≈ 200 readings), so half-days don't skew the figures.</p>
+
+      <h4 class="mh">4 · Lows: episode, dip or sensor pressure</h4>
+      <p>A <b>real hypo</b> (in the international definition: an episode) = ≥ 15 minutes continuously below 3.9; that counts in your figures. Shorter = a <b>dip</b> (early signal, no alarm). A <b>sensor-pressure pattern</b> is a fast dive and fast recovery — too fast for insulin, often because you lay on the sensor; probably not a real hypo.</p>
+
+      <h4 class="mh">5 · Insulin model (oref)</h4>
+      <p>The exponential oref curve with an adjustable <b>peak time</b> (75 min Novorapid/Humalog/Apidra · 55 Fiasp · 45 Lyumjev) and your <b>DIA</b> from the profile. From these follow <b>IOB</b> (insulin still active) and the <b>activity</b> at each moment — the basis under all insulin calculations and what your loop steers on. IOB preferably comes live from devicestatus; otherwise the app reconstructs it from your boluses.</p>
+      <p><b>Peak-time check.</b> After a clean correction your glucose falls fastest around the insulin peak. From that moment of steepest fall (median over your corrections) the app estimates your real peak time and compares it with your setting — a check of whether your insulin-type setting is right. The measurement reads ~10–15 min on the early side (due to the curve shape and because your body counteracts a threatening hypo itself), so the band is wider there. <b>DIA</b> itself can't be measured reliably (too small, too noisy a tail); ≥ 5 h is the safe default.</p>
+
+      <h4 class="mh">6 · SMB vs. manual bolus</h4>
+      <p>An SMB (Super Micro Bolus) is your loop dosing automatically in micro amounts; a manual bolus you give. The app recognizes SMBs by the field <code>type:"SMB"</code> (or <code>isSMB</code>, or "SMB" in the labels). Everywhere it's about <i>your</i> behavior — measured ISF, prebolus timing, carb ratio, bolus counting — SMBs do <b>not</b> count.</p>
+
+      <h4 class="mh">7 · Measured ISF (correction factor)</h4>
+      <p>How much did 1 U really lower your glucose? The app takes <b>clean, carb-free corrections</b> (no food within the window, hardly any other insulin, raised start, ≥ 0.5 U, no SMB) and measures the fall over 3 hours. That fall is corrected for the fraction of insulin absorbed within the window (window &lt; DIA), otherwise you underestimate the ISF. Failed corrections count too — averaging only the successful ones would overestimate your sensitivity. Result: the <b>median</b> (middle value) with the spread (IQR = the middle half of your measurements) and n (the count). From 8 corrections.</p>
+
+      <h4 class="mh">8 · Basal drift</h4>
+      <p>In <b>meal- and bolus-free windows</b> (≥ 5 h since the last event) your glucose should run flat. The app measures the median slope per hour of the day (mmol/L per hour); structural drift (≥ 0.3 /h, with p25 and p75 the same direction) points to too much or too little basal there. <b>Note:</b> with a closed loop, SMBs and temp basal break these clean windows, so drift is often not measurable — the loop masks the problem by regulating it away in real time.</p>
+      <p><b>Loop basal</b> (for closed-loop users). Where basal drift stalls, you better read what the <b>loop</b> did: per hour of the day the basal actually delivered (from your temp-basal history, with your profile as fallback where no temp is active) next to your profile basal. If your loop delivers <b>more</b> than your profile around a certain hour day after day → your profile basal may be too low there; consistently <b>less</b> → too high. Meal hours (3 h after carbs) are filtered out so it's about fasting need; SMBs count as correction, not as basal. This <i>does</i> work through the loop (like Autotune). Direction, not a setting value.</p>
+
+      <h4 class="mh">9 · Meals</h4>
+      <p>A "meal" = ≥ 30 g carbs, isolated (no other carbs in −2…+4 h) and <b>with a manual meal bolus</b> around it. Carbs without a bolus (hypo rescue, loose entry) don't count. Per meal the app computes the absorption curve by subtracting the <i>expected</i> insulin fall from the measured glucose rise; from that follow <b>t50</b> (after how many minutes half is absorbed), the <b>peak</b> and the <b>prebolus timing</b> = your manual bolus relative to your carb entry (negative = before). Note: the entry time is your bolus moment, not necessarily when you started eating.</p>
+
+      <h4 class="mh">10 · Discussion values</h4>
+      <p>Per part of day (night/morning/afternoon/evening) the app puts your <b>measured</b> value next to your <b>set</b> one, and if that deviates &gt; 20%, a concrete <b>candidate number</b>: a conservative half step and the full measured value. The effect is computed with a simple simulation on your own data (extra insulin × your sensitivity, via the insulin's action curve). A <b class="lok">✓</b> = measured aligns; <b>—</b> = too little data (no judgment); the <b>arrow</b> = a discussion value. <span class="prisk">Red</span> = the simulation sees more lows. That your body counteracts a threatening hypo itself is not in it — so "low" is a warning, not an exact count.</p>
+
+      <h4 class="mh">11 · Before/after a change</h4>
+      <p>If you mark a setting change in the logbook, the app compares 14 days before with 14 days after (only days with ≥ 70% coverage). <b>Note:</b> gains after a poorer period may partly be regression to the mean — a comparison is not proof of cause.</p>
+
+      <h4 class="mh">12 · Hypo awareness</h4>
+      <p>Note at which value you <b>feel</b> a hypo; the app tracks the <b>median of your feel-threshold</b> over time. A falling threshold may indicate declining hypo awareness — pure observation.</p>
+
+      <h4 class="mh">13 · Timeline &amp; findings</h4>
+      <p>The Overview builds a story: <b>Now</b> (last value, IOB/COB) → <b>Today</b> (the night, day curve) → <b>This week</b> (meal, basal and change patterns; never falls back empty) → <b>This month</b> (key figures + measured-vs-set). Each finding carries its evidence (n + caveat) and you can put it on your <b>consult list</b> for the report.</p>
+
+      <h4 class="mh">14 · What this explicitly is not</h4>
+      <p>No dose, no prescription, no medical advice. Everything is an <b>observation</b> or a <b>discussion point for your care team</b>. Don't compute anything on your pump yourself; change settings only in consultation, and one thing at a time.</p>
+
+      <p class="mnote" style="margin-top:1rem">Source thresholds follow the international consensus (Battelino et al., 2019, <i>Diabetes Care</i>); the insulin model and sensitivity calculations follow the oref/AndroidAPS reference.</p>
+    `,
+  pt:`
+      <p class="mlead">Novo na diabetes ou num loop? Abaixo, primeiro os conceitos em linguagem simples, depois como a app calcula cada número. Nada disto é uma dose ou prescrição — ajuda-o a compreender e a conversar com a sua equipa.</p>
+
+      <div class="mpart">A diabetes em resumo</div>
+      <p>O básico, em linguagem simples. Já sabe isto? Fique à vontade para saltar.</p>
+      <div class="mterm"><b>Glicose no sangue (açúcar no sangue)</b> — demasiado <b>baixa</b> (abaixo de 3,9) é uma <b>hipo</b>: aguda, toma então hidratos rápidos. Demasiado <b>alta</b> (acima de 10) é uma <b>hiper</b>. Objetivo: o máximo de tempo possível entre 3,9 e 10,0.</div>
+      <div class="mterm"><b>Basal</b> — a sua insulina de "fundo" que corre 24 horas por dia e mantém a glicose estável <b>sem</b> comida. Bem definida, mantém-se plano em jejum (sem refeição).</div>
+      <div class="mterm"><b>Bólus</b> — a insulina que dá à parte, por cima: para uma <b>refeição</b>, ou para baixar um valor alto (uma <b>correção</b>).</div>
+      <div class="mterm"><b>Rácio de hidratos (ICR)</b> — quantos gramas de hidratos 1 unidade de insulina cobre. Determina o bólus da refeição. Um número <i>menor</i> = mais forte (mais insulina por refeição).</div>
+      <div class="mterm"><b>ISF</b> (fator de correção) — quanto 1 unidade baixa a sua glicose. Determina o bólus de correção. Um número <i>maior</i> = é mais sensível, precisa de menos insulina.</div>
+      <div class="mterm"><b>Prebólus</b> — dar o bólus cerca de quinze minutos antes de comer, para a insulina agir a tempo e o pico após a refeição ficar mais baixo.</div>
+      <div class="mterm"><b>IOB</b> (insulina ativa) — quanta insulina dada anteriormente ainda está a atuar. Importante para evitar <b>acumular</b>: corrigir de novo cedo demais pode causar uma hipo.</div>
+      <div class="mterm"><b>Tempo de pico &amp; DIA</b> — quando a insulina atua com mais força (pico) e quanto tempo continua a atuar (DIA). Juntos formam a curva de IOB.</div>
+      <div class="mterm"><b>Closed loop (AAPS/Loop)</b> — o seu sistema ajusta-se sozinho: sobe ou desce temporariamente a basal (<b>basal temporária</b>) e dá pequenos bólus automáticos (<b>SMB</b>) para o manter no alvo.</div>
+      <div class="mterm"><b>TIR · GMI · CV</b> — o seu período resumido: TIR = % de tempo no alvo (maior é melhor), GMI = HbA1c estimada, CV = quão irregulares são os seus valores (menor = mais estável).</div>
+
+      <div class="mpart">Como a app calcula</div>
+      <p>Cada número vem das suas próprias medições. Aqui está exatamente como, por secção.</p>
+
+      <h4 class="mh">1 · Privacidade &amp; conceção</h4>
+      <p>Um único ficheiro HTML, sem build, funciona offline. Os seus dados existem <b>apenas neste dispositivo</b>: medições no IndexedDB, o seu endereço e token no localStorage. Nada vai para um servidor exceto pedidos de <b>leitura</b> ao seu próprio Nightscout (com o seu token: <code>?token=…</code>). Depois da primeira vez tudo funciona a partir da cache local; sincronizar só obtém a parte nova.</p>
+
+      <h4 class="mh">2 · Glicose &amp; unidades</h4>
+      <p>O Nightscout guarda a glicose em mg/dL; o IDM converte tudo num único sítio para <b>mmol/L</b> (÷ 18,018) e nunca mostra mg/dL. Alvo <b>3,9–10,0</b> mmol/L (consenso internacional, Battelino 2019).</p>
+
+      <h4 class="mh">3 · Números-chave (mês)</h4>
+      <ul class="mul">
+        <li><b>TIR</b> (tempo no alvo 3,9–10,0) — proporção de leituras no alvo. Meta &gt; 70%.</li>
+        <li><b>Tempo baixo</b> — &lt; 3,9 (meta &lt; 4%) e &lt; 3,0 (meta &lt; 1%).</li>
+        <li><b>Acima do alvo</b> — &gt; 10,0 (meta &lt; 25%) e &gt; 13,9 (&lt; 5%).</li>
+        <li><b>CV</b> (variabilidade) = desvio-padrão ÷ média. Meta ≤ 36% — a medida de quão irregulares são os seus valores.</li>
+        <li><b>GMI</b> (HbA1c estimada) = 3,31 + 0,02392 × glicose média em mg/dL (Bergenstal). Uma estimativa, não um valor laboratorial.</li>
+      </ul>
+      <p class="mnote">Um dia só conta a partir de ~70% de cobertura (≈ 200 leituras), para que meios-dias não distorçam os números.</p>
+
+      <h4 class="mh">4 · Hipos: episódio, queda ou pressão no sensor</h4>
+      <p>Uma <b>hipo real</b> (na definição internacional: um episódio) = ≥ 15 minutos seguidos abaixo de 3,9; essa conta nos seus números. Mais curta = uma <b>queda</b> (sinal precoce, sem alarme). Um <b>padrão de pressão no sensor</b> é um mergulho rápido e recuperação rápida — rápido demais para insulina, muitas vezes por ter deitado sobre o sensor; provavelmente não é uma hipo real.</p>
+
+      <h4 class="mh">5 · Modelo de insulina (oref)</h4>
+      <p>A curva exponencial oref com um <b>tempo de pico</b> ajustável (75 min Novorapid/Humalog/Apidra · 55 Fiasp · 45 Lyumjev) e o seu <b>DIA</b> do perfil. Daqui resultam o <b>IOB</b> (insulina ainda ativa) e a <b>atividade</b> a cada momento — a base de todos os cálculos de insulina e aquilo que o seu loop controla. O IOB vem de preferência ao vivo do devicestatus; caso contrário a app reconstrói-o a partir dos seus bólus.</p>
+      <p><b>Verificação do tempo de pico.</b> Após uma correção limpa a glicose desce mais depressa em torno do pico da insulina. A partir desse momento de descida mais acentuada (mediana das suas correções) a app estima o seu tempo de pico real e compara-o com a sua definição — uma verificação de se a definição do tipo de insulina está correta. A medição lê ~10–15 min mais cedo (pela forma da curva e porque o corpo contraria sozinho uma hipo iminente), por isso a faixa é mais larga aí. O <b>DIA</b> em si não é mensurável de forma fiável (cauda demasiado pequena e ruidosa); ≥ 5 h é o padrão seguro.</p>
+
+      <h4 class="mh">6 · SMB vs. bólus manual</h4>
+      <p>Um SMB (Super Micro Bolus) é o seu loop a dosear automaticamente em micro quantidades; um bólus manual é o que você dá. A app reconhece os SMB pelo campo <code>type:"SMB"</code> (ou <code>isSMB</code>, ou "SMB" nas etiquetas). Em tudo o que é sobre o <i>seu</i> comportamento — ISF medido, timing de prebólus, rácio de hidratos, contagem de bólus — os SMB <b>não</b> contam.</p>
+
+      <h4 class="mh">7 · ISF medido (fator de correção)</h4>
+      <p>Quanto é que 1 U baixou mesmo a sua glicose? A app pega em <b>correções limpas, sem hidratos</b> (sem comida na janela, quase nenhuma outra insulina, início elevado, ≥ 0,5 U, sem SMB) e mede a descida ao longo de 3 horas. Essa descida é corrigida pela fração de insulina absorvida dentro da janela (janela &lt; DIA), senão subestima o ISF. As correções falhadas também contam — fazer a média só das bem-sucedidas sobrestimaria a sua sensibilidade. Resultado: a <b>mediana</b> (valor central) com a dispersão (IQR = a metade central das suas medições) e n (a contagem). A partir de 8 correções.</p>
+
+      <h4 class="mh">8 · Deriva basal</h4>
+      <p>Em <b>janelas sem refeição e sem bólus</b> (≥ 5 h desde o último evento) a sua glicose deve correr plana. A app mede o declive mediano por hora do dia (mmol/L por hora); deriva estrutural (≥ 0,3 /h, com p25 e p75 no mesmo sentido) aponta para basal a mais ou a menos aí. <b>Nota:</b> num closed loop, os SMB e a basal temporária quebram estas janelas limpas, pelo que a deriva muitas vezes não é mensurável — o loop mascara o problema regulando-o em tempo real.</p>
+      <p><b>Basal do loop</b> (para utilizadores de closed loop). Onde a deriva basal falha, lê-se melhor o que o <b>loop</b> fez: por hora do dia a basal realmente entregue (do histórico de basal temporária, com o seu perfil como recurso onde não há temp ativa) ao lado da basal do perfil. Se o seu loop entrega <b>mais</b> do que o perfil em torno de uma certa hora dia após dia → a basal do perfil pode estar baixa demais aí; consistentemente <b>menos</b> → alta demais. As horas de refeição (3 h após hidratos) são filtradas para ser sobre a necessidade em jejum; os SMB contam como correção, não como basal. Isto <i>funciona</i> através do loop (como o Autotune). Direção, não um valor de definição.</p>
+
+      <h4 class="mh">9 · Refeições</h4>
+      <p>Uma "refeição" = ≥ 30 g de hidratos, isolada (sem outros hidratos em −2…+4 h) e <b>com um bólus de refeição manual</b> à volta. Hidratos sem bólus (resgate de hipo, entrada solta) não contam. Por refeição a app calcula a curva de absorção subtraindo a descida <i>esperada</i> da insulina à subida medida da glicose; daí resultam <b>t50</b> (ao fim de quantos minutos metade é absorvida), o <b>pico</b> e o <b>timing de prebólus</b> = o seu bólus manual relativamente à entrada de hidratos (negativo = antes). Nota: a hora de entrada é o momento do bólus, não necessariamente quando começou a comer.</p>
+
+      <h4 class="mh">10 · Valores para discussão</h4>
+      <p>Por período do dia (noite/manhã/tarde/noite) a app põe o seu valor <b>medido</b> ao lado do <b>definido</b>, e se este se desviar &gt; 20%, um <b>número candidato</b> concreto: um meio passo conservador e o valor medido completo. O efeito é calculado com uma simulação simples nos seus próprios dados (insulina extra × a sua sensibilidade, via a curva de ação da insulina). Um <b class="lok">✓</b> = medido alinha; <b>—</b> = dados a menos (sem juízo); a <b>seta</b> = um valor para discussão. <span class="prisk">Vermelho</span> = a simulação vê mais valores baixos. Que o corpo contraria sozinho uma hipo iminente não está incluído — por isso "baixo" é um aviso, não uma contagem exata.</p>
+
+      <h4 class="mh">11 · Antes/depois de uma alteração</h4>
+      <p>Se marcar uma alteração de definição no diário, a app compara 14 dias antes com 14 dias depois (só dias com ≥ 70% de cobertura). <b>Nota:</b> ganhos após um período pior podem em parte ser regressão à média — uma comparação não é prova de causa.</p>
+
+      <h4 class="mh">12 · Perceção de hipo</h4>
+      <p>Registe a que valor <b>sente</b> uma hipo; a app segue a <b>mediana do seu limiar de perceção</b> ao longo do tempo. Um limiar decrescente pode indicar perceção de hipo em declínio — pura observação.</p>
+
+      <h4 class="mh">13 · Cronologia &amp; achados</h4>
+      <p>O Resumo constrói uma narrativa: <b>Agora</b> (último valor, IOB/COB) → <b>Hoje</b> (a noite, curva do dia) → <b>Esta semana</b> (padrões de refeição, basal e alterações; nunca recua para vazio) → <b>Este mês</b> (números-chave + medido-vs-definido). Cada achado traz a sua evidência (n + ressalva) e pode colocá-lo na sua <b>lista de consulta</b> para o relatório.</p>
+
+      <h4 class="mh">14 · O que isto explicitamente não é</h4>
+      <p>Sem dose, sem prescrição, sem aconselhamento médico. Tudo é uma <b>observação</b> ou um <b>ponto de discussão para a sua equipa de tratamento</b>. Não calcule nada por si na sua bomba; altere definições apenas em consulta, e uma coisa de cada vez.</p>
+
+      <p class="mnote" style="margin-top:1rem">Os limiares de referência seguem o consenso internacional (Battelino et al., 2019, <i>Diabetes Care</i>); o modelo de insulina e os cálculos de sensibilidade seguem a referência oref/AndroidAPS.</p>
+    ` } });
 
 /* ── Eenheden + banden ──────────────────────────────────────────────────────
    Nightscout slaat glucose ALTIJD op in mg/dL. Conversie op precies één plek. */
