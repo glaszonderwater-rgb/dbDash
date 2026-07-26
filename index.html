@@ -144,7 +144,7 @@ h2.sect::after{content:"";flex:1;height:1px;background:var(--line)}
 .eh h2{font-size:.68rem;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--accent)}
 .epoch.warned .eh h2{color:var(--warn)}
 .eh .sub{font-size:.72rem;color:var(--dim)}
-.h3{font-size:.62rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--dim);margin:.9rem .1rem .5rem}
+.h3{font-size:.72rem;font-weight:750;letter-spacing:.11em;text-transform:uppercase;color:var(--muted);margin:1.4rem .2rem .55rem}
 
 /* bevinding-kaarten (inbox-stijl) */
 .f{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
@@ -307,6 +307,7 @@ details.fold>.foldbody{padding:0 1.05rem 1.05rem}
 .cbCats::-webkit-scrollbar{display:none}
 .cbCats .chip{flex:none;white-space:nowrap}
 /* nette tab-titel voor de Eten-tab (i.p.v. de micro-epoch-kop) */
+.view[data-view="consult"] .eh h2{color:var(--muted);letter-spacing:.11em;font-size:.72rem;font-weight:750}
 .view[data-view="eten"] .eh{flex-wrap:wrap;margin-bottom:.5rem}
 .view[data-view="eten"] .eh h2{font-size:1.2rem;font-weight:750;letter-spacing:-.01em;text-transform:none;color:var(--ink)}
 .view[data-view="eten"] .eh .sub{font-size:.78rem;color:var(--muted)}
@@ -437,15 +438,14 @@ body.reporting main>section, body.reporting main>.empty, body.reporting #tabbar,
 
 /* ── Verdieping ────────────────────────────────────────────────────────────── */
 .loading{font-family:var(--mono);font-size:.74rem;color:var(--dim);padding:.4rem 0}
-details.deep{background:var(--surface);border:1px solid var(--line);border-radius:14px;
-  padding:.85rem 1.05rem;margin-bottom:.7rem;box-shadow:var(--shadow-sm)}
-details.deep > summary{cursor:pointer;font-weight:650;font-size:.95rem;list-style:none;
-  user-select:none;display:flex;align-items:center;gap:.5rem}
+details.deep{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+  padding:.85rem 1.05rem;margin-bottom:.6rem;box-shadow:var(--shadow)}
+details.deep > summary{cursor:pointer;font-weight:650;font-size:.88rem;list-style:none;
+  user-select:none;display:flex;align-items:baseline;gap:.6rem}
 details.deep > summary::-webkit-details-marker{display:none}
-details.deep > summary::before{content:"";width:6px;height:6px;border-right:1.6px solid var(--dim);
-  border-bottom:1.6px solid var(--dim);transform:rotate(-45deg);transition:transform .15s;flex:none;margin-top:-2px}
-details.deep[open] > summary::before{transform:rotate(45deg)}
-details.deep > summary span{color:var(--muted);font-weight:400;font-size:.75rem}
+details.deep > summary::after{content:"▾";margin-left:auto;color:var(--dim);transition:transform .15s;align-self:center}
+details.deep[open] > summary::after{transform:rotate(180deg)}
+details.deep > summary span{color:var(--muted);font-weight:400;font-size:.7rem}
 details.deep > .body{padding-top:.8rem;margin-top:.6rem;border-top:1px solid var(--line)}
 #secSafety details.deep{box-shadow:none;border:none;border-top:1px solid var(--line);border-radius:0;padding:.7rem 0 0;margin-bottom:0}
 #secSafety details.deep > summary{font-size:.85rem}
