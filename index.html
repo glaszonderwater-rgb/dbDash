@@ -593,15 +593,15 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
       </svg></div>
       <div class="grow"></div>
       <div class="conn" role="status" aria-live="polite"><i class="dot" id="dot" aria-hidden="true"></i><span id="connTxt">niet ingesteld</span></div>
-      <button id="btnSync" disabled>Sync</button>
-      <button class="ghost" id="btnCfg" title="Instellingen" aria-label="Instellingen">⚙</button>
+      <button id="btnSync" data-i18n="btn.sync" disabled>Sync</button>
+      <button class="ghost" id="btnCfg" data-i18n-al="btn.settings" title="Instellingen" aria-label="Instellingen">⚙</button>
     </div>
     <div class="scope" id="scope"><span><i>periode</i> <b>—</b></span></div>
   </div>
 </header>
 
 <main class="wrap">
-  <div class="empty" id="empty">Nog geen data.<br>Stel je Nightscout in en synchroniseer om te beginnen.</div>
+  <div class="empty" id="empty" data-i18n="empty">Nog geen data.<br>Stel je Nightscout in en synchroniseer om te beginnen.</div>
 
   <!-- NU — altijd zichtbaar, 5-seconden-blik -->
   <div class="nu" id="secNow" hidden>
@@ -624,10 +624,10 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
       <span class="hside" id="ringMeta"></span>
     </div>
 
-    <div class="chead" id="epMaand">Kerncijfers <span class="sub" id="monthSub"></span></div>
+    <div class="chead" id="epMaand"><span data-i18n="home.kpiTitle">Kerncijfers</span> <span class="sub" id="monthSub"></span></div>
     <div class="kpis" id="kpis"></div>
-    <details class="mini"><summary>Wat betekenen deze cijfers?</summary>
-      <div class="minibody">
+    <details class="mini"><summary data-i18n="home.kpiExplainSummary">Wat betekenen deze cijfers?</summary>
+      <div class="minibody" data-i18n="home.kpiExplainBody">
         <div><b>In bereik (TIR)</b> — hoeveel % van de tijd je glucose tussen 3,9 en 10,0 zat. Je belangrijkste maat: hoe hoger, hoe stabieler je dag. Streef &gt; 70%.</div>
         <div><b>Hypo</b> — % tijd te laag (&lt; 3,9). Dit gaat over veiligheid — laag houden telt zwaarder dan een paar procent extra in bereik. Streef &lt; 4%.</div>
         <div><b>Variatie (CV)</b> — hoe grillig je waarden zijn. Lager = vlakker en voorspelbaarder, en meestal de grootste winst. Streef ≤ 36%.</div>
@@ -636,18 +636,18 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
     </details>
     <div id="secWatch" hidden><div id="watch" style="margin-top:.6rem"></div></div>
     <div class="card" id="mvsCard" style="margin-top:.6rem" hidden>
-      <div class="mvshead"><span>instelling</span><span>gemeten · ingesteld</span></div>
+      <div class="mvshead"><span data-i18n="home.mvsSetting">instelling</span><span data-i18n="home.mvsMeasured">gemeten · ingesteld</span></div>
       <div id="tune"></div>
     </div>
 
-    <div class="chead" id="epVandaag">Aandacht <span class="sub" id="todaySub"></span></div>
+    <div class="chead" id="epVandaag"><span data-i18n="home.attention">Aandacht</span> <span class="sub" id="todaySub"></span></div>
     <div id="findToday"></div>
     <span id="epWeek" hidden><span id="weekSub"></span></span>
     <div id="findWeek"></div>
 
-    <div class="chead">Meer</div>
+    <div class="chead" data-i18n="home.more">Meer</div>
     <details class="fold" id="secDay" hidden>
-      <summary>Dagcurve <span class="foldhint">je dag per uur — eten, bolus, hypo's</span></summary>
+      <summary><span data-i18n="home.dayCurve">Dagcurve</span> <span class="foldhint" data-i18n="home.dayCurveHint">je dag per uur — eten, bolus, hypo's</span></summary>
       <div class="foldbody">
         <div class="chips" id="dayJump" style="margin-bottom:.55rem"></div>
         <div class="daynav">
@@ -657,88 +657,88 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
         </div>
         <div id="dayChart"></div>
         <div class="legend">
-          <span><i style="background:var(--carb)"></i>koolhydraten</span>
-          <span><i style="background:var(--accent)"></i>bolus</span>
-          <span><i style="background:var(--low)"></i>hypo</span>
+          <span><i style="background:var(--carb)"></i><span data-i18n="legend.carbs">koolhydraten</span></span>
+          <span><i style="background:var(--accent)"></i><span data-i18n="legend.bolus">bolus</span></span>
+          <span><i style="background:var(--low)"></i><span data-i18n="legend.hypo">hypo</span></span>
         </div>
         <div class="obs" id="dayNarr"></div>
       </div>
     </details>
     <details class="fold" id="secAware" hidden>
-      <summary>Hypo-gevoel <span class="foldhint">voelde je iets? leg het vast</span></summary>
+      <summary><span data-i18n="aware.title">Hypo-gevoel</span> <span class="foldhint" data-i18n="aware.hint">voelde je iets? leg het vast</span></summary>
       <div class="foldbody">
         <div class="logform">
           <div class="chips" id="awChips"></div>
           <div class="logrow">
-            <input type="datetime-local" id="awTime" aria-label="moment">
-            <input type="text" id="awBg" inputmode="decimal" maxlength="4" placeholder="meting (mmol, optioneel)">
-            <button class="ghost" id="awAdd">Vastleggen</button>
+            <input type="datetime-local" id="awTime" data-i18n-al="aware.moment" aria-label="moment">
+            <input type="text" id="awBg" inputmode="decimal" maxlength="4" data-i18n-ph="aware.measurePh" placeholder="meting (mmol, optioneel)">
+            <button class="ghost" id="awAdd" data-i18n="btn.record">Vastleggen</button>
           </div>
         </div>
         <div id="awareOut"></div>
         <div id="awareList"></div>
       </div>
     </details>
-    <div class="tolink" data-goto="anaGrid">Alle analyses →</div>
+    <div class="tolink" data-goto="anaGrid" data-i18n="home.allAnalyses">Alle analyses →</div>
 
   </div>
   </div>
 
   <!-- ANALYSES — de bibliotheek: alles bij naam, één tik -->
   <div class="view" data-view="analyses" hidden>
-  <div class="h3" id="anaGrid" style="margin-top:.2rem">Maaltijden</div>
-  <details class="deep" data-an="meals"><summary>Maaltijdrespons <span class="foldhint">opname, piek &amp; dagdelen</span></summary><div class="body"><div class="loading">Openklappen om te berekenen…</div></div></details>
+  <div class="h3" id="anaGrid" style="margin-top:.2rem" data-i18n="an.meals">Maaltijden</div>
+  <details class="deep" data-an="meals"><summary><span data-i18n="an.mealResp">Maaltijdrespons</span> <span class="foldhint" data-i18n="an.mealRespHint">opname, piek &amp; dagdelen</span></summary><div class="body"><div class="loading" data-i18n="loading">Openklappen om te berekenen…</div></div></details>
   <details class="fold" id="secAgp" hidden>
-    <summary>Dagprofiel (AGP) <span class="foldhint">je typische dag als band</span></summary>
+    <summary><span data-i18n="an.agp">Dagprofiel (AGP)</span> <span class="foldhint" data-i18n="an.agpHint">je typische dag als band</span></summary>
     <div class="foldbody">
       <div id="agp"></div>
       <div class="legend">
-        <span><i style="background:var(--inRange)"></i>mediaan</span>
-        <span><i style="background:#bfe6d6"></i>middelste 50%</span>
+        <span><i style="background:var(--inRange)"></i><span data-i18n="legend.median">mediaan</span></span>
+        <span><i style="background:#bfe6d6"></i><span data-i18n="legend.mid50">middelste 50%</span></span>
         <span><i style="background:#e5f2ec"></i>10–90%</span>
       </div>
       <div class="obs" id="agpObs"></div>
     </div>
   </details>
 
-  <div class="h3">Veiligheid &amp; bereik</div>
+  <div class="h3" data-i18n="an.safetyRange">Veiligheid &amp; bereik</div>
   <details class="fold" id="secSafety" hidden>
-    <summary>Veiligheid — hypo's <span class="foldhint">episodes, dips, patronen</span></summary>
+    <summary><span data-i18n="an.safety">Veiligheid — hypo's</span> <span class="foldhint" data-i18n="an.safetyHint">episodes, dips, patronen</span></summary>
     <div class="foldbody">
       <div class="kpis" id="hypoKpis" style="margin-bottom:.8rem"></div>
       <div id="hypoBars"></div>
       <div class="obs" id="safetyObs"></div>
       <div class="muted" id="safetyEv" style="margin-top:.4rem"></div>
-      <details class="deep" data-an="stacking" style="margin-top:.8rem"><summary>Wat gaat vooraf aan je hypo's? <span>— gestapelde correcties</span></summary><div class="body"><div class="loading">Openklappen om te berekenen…</div></div></details>
+      <details class="deep" data-an="stacking" style="margin-top:.8rem"><summary><span data-i18n="an.stacking">Wat gaat vooraf aan je hypo's?</span> <span data-i18n="an.stackingHint">— gestapelde correcties</span></summary><div class="body"><div class="loading" data-i18n="loading">Openklappen om te berekenen…</div></div></details>
     </div>
   </details>
   <details class="fold" id="bandCard">
-    <summary>Verdeling per band <span class="foldhint">alle 5 banden + streefwaarden</span></summary>
+    <summary><span data-i18n="an.bands">Verdeling per band</span> <span class="foldhint" data-i18n="an.bandsHint">alle 5 banden + streefwaarden</span></summary>
     <div class="foldbody"><div id="bandBar"></div></div>
   </details>
 
-  <div class="h3">Insuline &amp; basaal</div>
+  <div class="h3" data-i18n="an.insulinBasal">Insuline &amp; basaal</div>
   <details class="fold" id="secProposals" hidden>
-    <summary>Bespreekwaarden <span class="foldhint">concrete getallen om met je team te bespreken</span></summary>
+    <summary><span data-i18n="an.proposals">Bespreekwaarden</span> <span class="foldhint" data-i18n="an.proposalsHint">concrete getallen om met je team te bespreken</span></summary>
     <div class="foldbody"><div id="proposals"></div></div>
   </details>
-  <details class="deep" data-an="loopbasal"><summary>Loop-basaal <span class="foldhint">wat je loop echt levert vs. je profiel</span></summary><div class="body"><div class="loading">Openklappen om te berekenen…</div></div></details>
-  <details class="deep" data-an="dagpatroon"><summary>Dagpatroon <span class="foldhint">vaste uren waarop je wegdrijft (basaal)</span></summary><div class="body"><div class="loading">Openklappen om te berekenen…</div></div></details>
+  <details class="deep" data-an="loopbasal"><summary><span data-i18n="an.loopBasal">Loop-basaal</span> <span class="foldhint" data-i18n="an.loopBasalHint">wat je loop echt levert vs. je profiel</span></summary><div class="body"><div class="loading" data-i18n="loading">Openklappen om te berekenen…</div></div></details>
+  <details class="deep" data-an="dagpatroon"><summary><span data-i18n="an.daypattern">Dagpatroon</span> <span class="foldhint" data-i18n="an.daypatternHint">vaste uren waarop je wegdrijft (basaal)</span></summary><div class="body"><div class="loading" data-i18n="loading">Openklappen om te berekenen…</div></div></details>
   <details class="fold" id="secInsulin" hidden>
-    <summary>Insuline &amp; koolhydraten <span class="foldhint">dagdosis en verhouding</span></summary>
+    <summary><span data-i18n="an.insulinCarbs">Insuline &amp; koolhydraten</span> <span class="foldhint" data-i18n="an.insulinCarbsHint">dagdosis en verhouding</span></summary>
     <div class="foldbody">
       <div class="kpis" id="insKpis"></div>
       <div class="muted" id="insObs" style="margin-top:.5rem"></div>
     </div>
   </details>
   <details class="fold" id="secProfile" hidden>
-    <summary>Profiel <span class="foldhint">je ingestelde schema's + piektijd</span></summary>
+    <summary><span data-i18n="an.profile">Profiel</span> <span class="foldhint" data-i18n="an.profileHint">je ingestelde schema's + piektijd</span></summary>
     <div class="foldbody"><div id="profile"></div></div>
   </details>
 
-  <div class="h3">Voortgang</div>
+  <div class="h3" data-i18n="an.progress">Voortgang</div>
   <details class="fold" id="secTrend" hidden>
-    <summary>Weektrend <span class="foldhint">tijd in bereik per week</span></summary>
+    <summary><span data-i18n="an.trend">Weektrend</span> <span class="foldhint" data-i18n="an.trendHint">tijd in bereik per week</span></summary>
     <div class="foldbody">
       <div id="trend"></div>
       <div class="obs" id="trendObs"></div>
@@ -746,23 +746,23 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
     </div>
   </details>
   <details class="fold" id="secLog" hidden>
-    <summary>Logboek <span class="foldhint">markeer een wijziging of gebeurtenis</span></summary>
+    <summary><span data-i18n="an.log">Logboek</span> <span class="foldhint" data-i18n="an.logHint">markeer een wijziging of gebeurtenis</span></summary>
     <div class="foldbody">
       <div class="logform">
         <div class="chips" id="logChips"></div>
         <div class="logrow">
-          <input type="date" id="logDate" aria-label="datum">
-          <input type="text" id="logNote" maxlength="80" placeholder="wat veranderde er? (optioneel)">
-          <button class="ghost" id="logAdd">Toevoegen</button>
+          <input type="date" id="logDate" data-i18n-al="log.date" aria-label="datum">
+          <input type="text" id="logNote" maxlength="80" data-i18n-ph="log.notePh" placeholder="wat veranderde er? (optioneel)">
+          <button class="ghost" id="logAdd" data-i18n="btn.add">Toevoegen</button>
         </div>
       </div>
       <div id="logList"></div>
     </div>
   </details>
-  <div class="h3">Over de app</div>
+  <div class="h3" data-i18n="an.aboutApp">Over de app</div>
   <details class="fold" id="secMethode">
-    <summary>Uitleg &amp; leren <span class="foldhint">je diabetes begrijpen + hoe de app rekent</span></summary>
-    <div class="foldbody meth">
+    <summary><span data-i18n="an.methode">Uitleg &amp; leren</span> <span class="foldhint" data-i18n="an.methodeHint">je diabetes begrijpen + hoe de app rekent</span></summary>
+    <div class="foldbody meth" data-i18n="meth.body">
       <p class="mlead">Nieuw met diabetes of een loop? Hieronder eerst de begrippen in gewone taal, daarna hoe de app elk getal berekent. Niets hiervan is een dosis of voorschrift — het helpt je begrijpen en het gesprek met je team voeren.</p>
 
       <div class="mpart">Diabetes in het kort</div>
@@ -841,35 +841,35 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
   <!-- ETEN — de koolhydraat-schatter als eigen, snel bereikbare bestemming -->
   <div class="view" data-view="eten" hidden>
   <section class="epoch" id="epEten" style="margin-left:0">
-    <div class="eh"><h2>Koolhydraten schatten</h2><span class="sub">kies eten + portie → gram</span></div>
-    <div class="cbNote">Gemiddelde tabelwaarden — een hulpmiddel om te leren schatten, <b>geen dosisadvies</b>. Jij blijft verantwoordelijk voor je bolus.</div>
+    <div class="eh"><h2 data-i18n="eten.title">Koolhydraten schatten</h2><span class="sub" data-i18n="eten.sub">kies eten + portie → gram</span></div>
+    <div class="cbNote" data-i18n="eten.note">Gemiddelde tabelwaarden — een hulpmiddel om te leren schatten, <b>geen dosisadvies</b>. Jij blijft verantwoordelijk voor je bolus.</div>
     <div id="cbMe"></div>
-    <input type="search" id="cbSearch" placeholder="zoek eten… (bijv. banaan, rijst, cola)" autocomplete="off">
+    <input type="search" id="cbSearch" data-i18n-ph="eten.searchPh" placeholder="zoek eten… (bijv. banaan, rijst, cola)" autocomplete="off">
     <div class="cbCats" id="cbCats"></div>
     <div class="cbResults" id="cbResults"></div>
     <div class="cbPlate" id="cbPlate" hidden>
-      <div class="cbPlateHead">Op je bord</div>
+      <div class="cbPlateHead" data-i18n="eten.plateHead">Op je bord</div>
       <div id="cbPlateItems"></div>
-      <div class="cbTotal">Totaal <b id="cbTotal">0 g</b> koolhydraten</div>
+      <div class="cbTotal"><span data-i18n="eten.total">Totaal</span> <b id="cbTotal">0 g</b> <span data-i18n="eten.carbsWord">koolhydraten</span></div>
       <div class="fatTip" id="cbPlateFat"></div>
       <div class="logrow">
-        <input type="date" id="cbDate" aria-label="datum">
-        <button class="ghost" id="cbSave">Vastleggen in logboek</button>
+        <input type="date" id="cbDate" data-i18n-al="log.date" aria-label="datum">
+        <button class="ghost" id="cbSave" data-i18n="eten.saveToLog">Vastleggen in logboek</button>
       </div>
     </div>
 
-    <div class="cbFatNote" id="cbFatNote">Kies een vet of eiwitrijk product (pizza, friet, kaas, noten…) en je krijgt bij de portie meteen een korte bolus-tip.</div>
+    <div class="cbFatNote" id="cbFatNote" data-i18n="eten.fatNote">Kies een vet of eiwitrijk product (pizza, friet, kaas, noten…) en je krijgt bij de portie meteen een korte bolus-tip.</div>
   </section>
   </div>
 
   <!-- CONSULT -->
   <div class="view" data-view="consult" hidden>
   <section class="epoch" id="epConsult" style="margin-left:0">
-    <div class="eh"><h2>Richting je consult</h2><span class="sub" id="consultSub"></span></div>
+    <div class="eh"><h2 data-i18n="consult.title">Richting je consult</h2><span class="sub" id="consultSub"></span></div>
     <div id="consultList"></div>
     <div id="shareRow" style="margin-top:.7rem;display:flex;gap:.5rem;flex-wrap:wrap">
-      <button id="btnReport" style="font-size:.8rem">📄 Consultrapport samenstellen</button>
-      <button class="ghost" id="btnShare" style="font-size:.78rem">📋 Samenvatting delen</button>
+      <button id="btnReport" style="font-size:.8rem" data-i18n="consult.report">📄 Consultrapport samenstellen</button>
+      <button class="ghost" id="btnShare" style="font-size:.78rem" data-i18n="consult.share">📋 Samenvatting delen</button>
     </div>
   </section>
   </div>
@@ -882,55 +882,61 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
 <nav id="tabbar" class="nav" hidden aria-label="Hoofdnavigatie">
   <button class="tab on" data-tab="overzicht">
     <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
-    <span>Overzicht</span></button>
+    <span data-i18n="tab.overview">Overzicht</span></button>
   <button class="tab" data-tab="eten">
     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 2v7c0 1.1.9 2 2 2a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/></svg>
-    <span>Eten</span></button>
+    <span data-i18n="tab.food">Eten</span></button>
   <button class="tab" data-tab="analyses">
     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg>
-    <span>Analyses</span></button>
+    <span data-i18n="tab.analyses">Analyses</span></button>
   <button class="tab" data-tab="consult">
     <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M9 12h6"/><path d="M9 16h6"/></svg>
-    <span>Consult</span><span class="cbadge" id="consultBadge" hidden></span></button>
+    <span data-i18n="tab.consult">Consult</span><span class="cbadge" id="consultBadge" hidden></span></button>
 </nav>
 
 
 <dialog id="cfgDlg">
   <h2>Nightscout</h2>
-  <p>Leesverbinding met je eigen site. Deze app schrijft nooit.</p>
-  <label for="inUrl">Adres</label>
+  <p data-i18n="cfg.intro">Leesverbinding met je eigen site. Deze app schrijft nooit.</p>
+  <label for="inUrl" data-i18n="cfg.address">Adres</label>
   <input id="inUrl" type="url" placeholder="https://jouw-site.nightscout.example" autocomplete="off" spellcheck="false">
-  <label for="inTok">Token</label>
+  <label for="inTok" data-i18n="cfg.token">Token</label>
   <input id="inTok" type="text" placeholder="dashboard-0123456789abcdef" autocomplete="off" spellcheck="false">
-  <div class="hint">Maak in Nightscout via Admin Tools een subject met alleen de rol
+  <div class="hint" data-i18n="cfg.tokenHint">Maak in Nightscout via Admin Tools een subject met alleen de rol
     <b>readable</b>. Gebruik nooit je API_SECRET.</div>
-  <label for="inDays">Historie ophalen (dagen)</label>
+  <label for="inDays" data-i18n="cfg.history">Historie ophalen (dagen)</label>
   <input id="inDays" type="number" min="7" max="365" value="30">
-  <label for="inTheme">Thema</label>
+  <label for="inLang" data-i18n="cfg.langLabel">Taal / Language / Idioma</label>
+  <select id="inLang">
+    <option value="nl">Nederlands</option>
+    <option value="en">English</option>
+    <option value="pt">Português</option>
+  </select>
+  <label for="inTheme" data-i18n="cfg.themeLabel">Thema</label>
   <select id="inTheme">
-    <option value="auto">Systeem volgen</option>
-    <option value="light">Licht</option>
-    <option value="dark">Donker</option>
+    <option value="auto" data-i18n="cfg.themeAuto">Systeem volgen</option>
+    <option value="light" data-i18n="cfg.themeLight">Licht</option>
+    <option value="dark" data-i18n="cfg.themeDark">Donker</option>
   </select>
-  <label for="inInsulin">Insulinetype</label>
+  <label for="inInsulin" data-i18n="cfg.insulinType">Insulinetype</label>
   <select id="inInsulin">
-    <option value="75">Snelwerkend — Novorapid / Humalog / Apidra</option>
-    <option value="55">Ultrasnel — Fiasp</option>
-    <option value="45">Ultrasnel — Lyumjev</option>
+    <option value="75" data-i18n="cfg.insFast">Snelwerkend — Novorapid / Humalog / Apidra</option>
+    <option value="55" data-i18n="cfg.insFiasp">Ultrasnel — Fiasp</option>
+    <option value="45" data-i18n="cfg.insLyumjev">Ultrasnel — Lyumjev</option>
   </select>
-  <div class="hint">Bepaalt de piektijd van het insulinemodel en verbetert alle insuline-analyses (IOB, waargenomen ISF, bespreekwaarden).</div>
+  <div class="hint" data-i18n="cfg.insulinHint">Bepaalt de piektijd van het insulinemodel en verbetert alle insuline-analyses (IOB, waargenomen ISF, bespreekwaarden).</div>
   <div class="err" id="cfgErr" hidden></div>
   <div class="actions">
-    <button id="btnSave">Bewaren</button>
-    <button class="ghost" id="btnClose">Annuleren</button>
+    <button id="btnSave" data-i18n="btn.save">Bewaren</button>
+    <button class="ghost" id="btnClose" data-i18n="btn.cancel">Annuleren</button>
     <div class="grow"></div>
-    <button class="ghost" id="btnWipe" title="Cache wissen">Cache wissen</button>
+    <button class="ghost" id="btnWipe" data-i18n="cfg.wipe" title="Cache wissen">Cache wissen</button>
   </div>
-  <label style="margin-top:1.1rem">Logboek — back-up</label>
-  <div class="hint">Je markeringen en hypo-gevoel-logs staan alléén op dit apparaat. Exporteer ze als back-up (bijv. vóór je de cache wist of van toestel wisselt).</div>
+  <label style="margin-top:1.1rem" data-i18n="cfg.logBackup">Logboek — back-up</label>
+  <div class="hint" data-i18n="cfg.logBackupHint">Je markeringen en hypo-gevoel-logs staan alléén op dit apparaat. Exporteer ze als back-up (bijv. vóór je de cache wist of van toestel wisselt).</div>
   <div class="actions" style="margin-top:.6rem">
-    <button class="ghost" id="btnExport">⭳ Exporteer logboek</button>
-    <button class="ghost" id="btnImport">⭱ Importeer</button>
+    <button class="ghost" id="btnExport" data-i18n="cfg.export">⭳ Exporteer logboek</button>
+    <button class="ghost" id="btnImport" data-i18n="cfg.import">⭱ Importeer</button>
     <input type="file" id="fileImport" accept="application/json,.json" hidden>
   </div>
 </dialog>
@@ -940,9 +946,160 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
 
 /* ── Config ─────────────────────────────────────────────────────────────── */
 const CFG_KEY = "dbdash.cfg";
-const cfg = Object.assign({ url:"", token:"", days:30, peak:75 },
+const cfg = Object.assign({ url:"", token:"", days:30, peak:75, lang:"" },
   JSON.parse(localStorage.getItem(CFG_KEY) || "{}"));
 const saveCfg = () => localStorage.setItem(CFG_KEY, JSON.stringify(cfg));
+
+/* ── Talen (nl · en · pt) ────────────────────────────────────────────────────
+   Alles is lokaal: de vertaling zit in één woordenboek (I18N). t(sleutel,params)
+   geeft de zin in de huidige taal; vaste HTML draagt data-i18n-attributen die
+   applyStaticI18n() invult. Getallen: Engels gebruikt een punt als decimaal,
+   Nederlands en (Braziliaans/Europees) Portugees een komma. */
+const LANGS = ["nl","en","pt"];
+// Standaard Nederlands; andere talen kies je in de instellingen (blijft bewaard).
+let LANG = LANGS.includes(cfg.lang) ? cfg.lang : "nl";
+const DECSEP = () => LANG==="en" ? "." : ",";
+function t(key, p){ const d=I18N[key]; let s = d ? (d[LANG]!=null?d[LANG]:(d.nl!=null?d.nl:key)) : key;
+  if(p) for(const k in p) s = s.split("{"+k+"}").join(p[k]);
+  return s; }
+// Vang de bestaande Nederlandse tekst uit de DOM als bron (nl), zodat het
+// woordenboek alleen en + pt hoeft te bevatten. Eén keer, vóór de eerste wissel.
+let _i18nSnapped=false;
+function snapshotI18n(){
+  if(_i18nSnapped) return; _i18nSnapped=true;
+  document.querySelectorAll("[data-i18n]").forEach(el=>{ const k=el.getAttribute("data-i18n"); (I18N[k]||(I18N[k]={})); if(I18N[k].nl==null) I18N[k].nl=el.innerHTML; });
+  document.querySelectorAll("[data-i18n-ph]").forEach(el=>{ const k=el.getAttribute("data-i18n-ph"); (I18N[k]||(I18N[k]={})); if(I18N[k].nl==null) I18N[k].nl=el.getAttribute("placeholder"); });
+  document.querySelectorAll("[data-i18n-al]").forEach(el=>{ const k=el.getAttribute("data-i18n-al"); (I18N[k]||(I18N[k]={})); if(I18N[k].nl==null) I18N[k].nl=el.getAttribute("aria-label"); });
+}
+function applyStaticI18n(root){
+  const R = root||document;
+  document.documentElement.lang = LANG;
+  R.querySelectorAll("[data-i18n]").forEach(el=>{ const d=I18N[el.getAttribute("data-i18n")]; if(d&&d[LANG]!=null) el.innerHTML=d[LANG]; });
+  R.querySelectorAll("[data-i18n-ph]").forEach(el=>{ const d=I18N[el.getAttribute("data-i18n-ph")]; if(d&&d[LANG]!=null) el.setAttribute("placeholder",d[LANG]); });
+  R.querySelectorAll("[data-i18n-al]").forEach(el=>{ const d=I18N[el.getAttribute("data-i18n-al")]; if(d&&d[LANG]!=null){ el.setAttribute("aria-label",d[LANG]); if(el.hasAttribute("title")) el.setAttribute("title",d[LANG]); } });
+}
+function setLang(l){ if(!LANGS.includes(l)) return; LANG=l; cfg.lang=l; saveCfg();
+  applyStaticI18n(); if(typeof rerender==="function") rerender(); }
+// Woordenboek — per sleutel {nl, en, pt}. Groeit per gebied via Object.assign.
+const I18N = {};
+Object.assign(I18N, {
+  loading:{ nl:"Openklappen om te berekenen…", en:"Expand to calculate…", pt:"Abrir para calcular…" },
+  // Verbindingsstatus (dynamisch gezet)
+  "conn.unset":{ nl:"niet ingesteld", en:"not set up", pt:"não configurado" },
+  "conn.set":{ nl:"ingesteld", en:"set up", pt:"configurado" },
+  "conn.checking":{ nl:"controleren…", en:"checking…", pt:"a verificar…" },
+  "conn.noconn":{ nl:"geen verbinding", en:"no connection", pt:"sem ligação" },
+  "conn.syncing":{ nl:"synchroniseren…", en:"syncing…", pt:"a sincronizar…" },
+  "conn.updated":{ nl:"bijgewerkt", en:"updated", pt:"atualizado" },
+  "conn.failed":{ nl:"mislukt", en:"failed", pt:"falhou" },
+  // Knoppen
+  "btn.sync":{ en:"Sync", pt:"Sincronizar" },
+  "btn.settings":{ en:"Settings", pt:"Definições" },
+  "btn.record":{ en:"Record", pt:"Registar" },
+  "btn.add":{ en:"Add", pt:"Adicionar" },
+  "btn.save":{ en:"Save", pt:"Guardar" },
+  "btn.cancel":{ en:"Cancel", pt:"Cancelar" },
+  // Lege staat
+  empty:{ en:"No data yet.<br>Set up your Nightscout and sync to get started.", pt:"Ainda sem dados.<br>Configure o seu Nightscout e sincronize para começar." },
+  // Home
+  "home.kpiTitle":{ en:"Key figures", pt:"Números-chave" },
+  "home.kpiExplainSummary":{ en:"What do these figures mean?", pt:"O que significam estes números?" },
+  "home.kpiExplainBody":{ en:`<div><b>In range (TIR)</b> — what % of the time your glucose was between 3.9 and 10.0. Your most important metric: the higher, the steadier your day. Aim &gt; 70%.</div><div><b>Low</b> — % of time too low (&lt; 3.9). This is about safety — keeping it low matters more than a few percent extra in range. Aim &lt; 4%.</div><div><b>Variability (CV)</b> — how erratic your values are. Lower = flatter and more predictable, usually the biggest gain. Aim ≤ 36%.</div><div><b>GMI</b> — an estimate of your HbA1c from your average glucose. A long-term indication, not a lab value.</div>`,
+    pt:`<div><b>No alvo (TIR)</b> — que % do tempo a sua glicose esteve entre 3,9 e 10,0. A sua métrica mais importante: quanto maior, mais estável o seu dia. Meta &gt; 70%.</div><div><b>Hipo</b> — % de tempo demasiado baixo (&lt; 3,9). Isto é segurança — mantê-lo baixo pesa mais do que uns pontos percentuais extra no alvo. Meta &lt; 4%.</div><div><b>Variabilidade (CV)</b> — quão irregulares são os seus valores. Menor = mais plano e previsível, normalmente o maior ganho. Meta ≤ 36%.</div><div><b>GMI</b> — uma estimativa da sua HbA1c a partir da glicose média. Uma indicação de longo prazo, não um valor laboratorial.</div>` },
+  "home.mvsSetting":{ en:"setting", pt:"parâmetro" },
+  "home.mvsMeasured":{ en:"measured · set", pt:"medido · definido" },
+  "home.attention":{ en:"Attention", pt:"Atenção" },
+  "home.more":{ en:"More", pt:"Mais" },
+  "home.dayCurve":{ en:"Day curve", pt:"Curva do dia" },
+  "home.dayCurveHint":{ en:"your day by the hour — food, bolus, lows", pt:"o seu dia hora a hora — comida, bólus, hipos" },
+  "home.allAnalyses":{ en:"All analyses →", pt:"Todas as análises →" },
+  // Legenda
+  "legend.carbs":{ en:"carbs", pt:"hidratos" },
+  "legend.bolus":{ en:"bolus", pt:"bólus" },
+  "legend.hypo":{ en:"low", pt:"hipo" },
+  "legend.median":{ en:"median", pt:"mediana" },
+  "legend.mid50":{ en:"middle 50%", pt:"50% central" },
+  // Hypo-gevoel
+  "aware.title":{ en:"Hypo awareness", pt:"Perceção de hipo" },
+  "aware.hint":{ en:"felt something? note it", pt:"sentiu algo? registe" },
+  "aware.moment":{ en:"moment", pt:"momento" },
+  "aware.measurePh":{ en:"reading (mmol, optional)", pt:"leitura (mmol, opcional)" },
+  // Analyses-koppen
+  "an.meals":{ en:"Meals", pt:"Refeições" },
+  "an.mealResp":{ en:"Meal response", pt:"Resposta às refeições" },
+  "an.mealRespHint":{ en:"absorption, peak &amp; times of day", pt:"absorção, pico e períodos do dia" },
+  "an.agp":{ en:"Daily profile (AGP)", pt:"Perfil diário (AGP)" },
+  "an.agpHint":{ en:"your typical day as a band", pt:"o seu dia típico como faixa" },
+  "an.safetyRange":{ en:"Safety &amp; range", pt:"Segurança e alvo" },
+  "an.safety":{ en:"Safety — lows", pt:"Segurança — hipos" },
+  "an.safetyHint":{ en:"episodes, dips, patterns", pt:"episódios, quedas, padrões" },
+  "an.stacking":{ en:"What precedes your lows?", pt:"O que precede as suas hipos?" },
+  "an.stackingHint":{ en:"— stacked corrections", pt:"— correções acumuladas" },
+  "an.bands":{ en:"Distribution by band", pt:"Distribuição por faixa" },
+  "an.bandsHint":{ en:"all 5 bands + targets", pt:"as 5 faixas + metas" },
+  "an.insulinBasal":{ en:"Insulin &amp; basal", pt:"Insulina e basal" },
+  "an.proposals":{ en:"Discussion values", pt:"Valores para discussão" },
+  "an.proposalsHint":{ en:"concrete numbers to discuss with your team", pt:"números concretos para discutir com a sua equipa" },
+  "an.loopBasal":{ en:"Loop basal", pt:"Basal do loop" },
+  "an.loopBasalHint":{ en:"what your loop really delivers vs. your profile", pt:"o que o seu loop realmente entrega vs. o seu perfil" },
+  "an.daypattern":{ en:"Day pattern", pt:"Padrão diário" },
+  "an.daypatternHint":{ en:"fixed hours when you drift (basal)", pt:"horas fixas em que deriva (basal)" },
+  "an.insulinCarbs":{ en:"Insulin &amp; carbs", pt:"Insulina e hidratos" },
+  "an.insulinCarbsHint":{ en:"daily dose and ratio", pt:"dose diária e rácio" },
+  "an.profile":{ en:"Profile", pt:"Perfil" },
+  "an.profileHint":{ en:"your set schedules + peak time", pt:"os seus horários definidos + tempo de pico" },
+  "an.progress":{ en:"Progress", pt:"Progresso" },
+  "an.trend":{ en:"Weekly trend", pt:"Tendência semanal" },
+  "an.trendHint":{ en:"time in range per week", pt:"tempo no alvo por semana" },
+  "an.log":{ en:"Logbook", pt:"Diário" },
+  "an.logHint":{ en:"mark a change or event", pt:"marque uma alteração ou evento" },
+  "an.aboutApp":{ en:"About the app", pt:"Sobre a aplicação" },
+  "an.methode":{ en:"Explanation &amp; learning", pt:"Explicação e aprendizagem" },
+  "an.methodeHint":{ en:"understand your diabetes + how the app calculates", pt:"compreender a sua diabetes + como a app calcula" },
+  // Logboek-formulier
+  "log.date":{ en:"date", pt:"data" },
+  "log.notePh":{ en:"what changed? (optional)", pt:"o que mudou? (opcional)" },
+  // Eten
+  "eten.title":{ en:"Estimate carbs", pt:"Estimar hidratos" },
+  "eten.sub":{ en:"pick food + portion → grams", pt:"escolha alimento + porção → gramas" },
+  "eten.note":{ en:"Average table values — a tool to learn estimating, <b>not dosing advice</b>. You stay responsible for your bolus.", pt:"Valores médios de tabela — uma ferramenta para aprender a estimar, <b>não um conselho de dose</b>. A responsabilidade do bólus é sua." },
+  "eten.searchPh":{ en:"search food… (e.g. banana, rice, cola)", pt:"procurar alimento… (ex. banana, arroz, cola)" },
+  "eten.plateHead":{ en:"On your plate", pt:"No seu prato" },
+  "eten.total":{ en:"Total", pt:"Total" },
+  "eten.carbsWord":{ en:"carbs", pt:"hidratos" },
+  "eten.saveToLog":{ en:"Save to logbook", pt:"Guardar no diário" },
+  "eten.fatNote":{ en:"Pick a fatty or protein-rich item (pizza, fries, cheese, nuts…) and you'll get a short bolus tip with the portion.", pt:"Escolha um alimento gordo ou rico em proteína (pizza, batata frita, queijo, frutos secos…) e receberá uma dica curta de bólus com a porção." },
+  // Consult
+  "consult.title":{ en:"Toward your consult", pt:"Rumo à sua consulta" },
+  "consult.report":{ en:"📄 Build consult report", pt:"📄 Montar relatório de consulta" },
+  "consult.share":{ en:"📋 Share summary", pt:"📋 Partilhar resumo" },
+  // Tabbladen
+  "tab.overview":{ en:"Overview", pt:"Resumo" },
+  "tab.food":{ en:"Food", pt:"Comida" },
+  "tab.analyses":{ en:"Analyses", pt:"Análises" },
+  "tab.consult":{ en:"Consult", pt:"Consulta" },
+  // Instellingen
+  "cfg.langLabel":{ nl:"Taal", en:"Language", pt:"Idioma" },
+  "cfg.themeLabel":{ en:"Theme", pt:"Tema" },
+  "cfg.themeAuto":{ en:"Follow system", pt:"Seguir o sistema" },
+  "cfg.themeLight":{ en:"Light", pt:"Claro" },
+  "cfg.themeDark":{ en:"Dark", pt:"Escuro" },
+  "cfg.intro":{ en:"Read-only connection to your own site. This app never writes.", pt:"Ligação só de leitura ao seu próprio site. Esta app nunca escreve." },
+  "cfg.address":{ en:"Address", pt:"Endereço" },
+  "cfg.token":{ nl:"Token", en:"Token", pt:"Token" },
+  "cfg.tokenHint":{ en:"In Nightscout, use Admin Tools to create a subject with only the <b>readable</b> role. Never use your API_SECRET.", pt:"No Nightscout, use as Admin Tools para criar um subject apenas com o papel <b>readable</b>. Nunca use o seu API_SECRET." },
+  "cfg.history":{ en:"Fetch history (days)", pt:"Obter histórico (dias)" },
+  "cfg.insulinType":{ en:"Insulin type", pt:"Tipo de insulina" },
+  "cfg.insFast":{ en:"Rapid — Novorapid / Humalog / Apidra", pt:"Rápida — Novorapid / Humalog / Apidra" },
+  "cfg.insFiasp":{ en:"Ultra-rapid — Fiasp", pt:"Ultrarrápida — Fiasp" },
+  "cfg.insLyumjev":{ en:"Ultra-rapid — Lyumjev", pt:"Ultrarrápida — Lyumjev" },
+  "cfg.insulinHint":{ en:"Sets the peak time of the insulin model and improves all insulin analyses (IOB, observed ISF, discussion values).", pt:"Define o tempo de pico do modelo de insulina e melhora todas as análises de insulina (IOB, ISF observado, valores para discussão)." },
+  "cfg.wipe":{ en:"Clear cache", pt:"Limpar cache" },
+  "cfg.logBackup":{ en:"Logbook — backup", pt:"Diário — cópia de segurança" },
+  "cfg.logBackupHint":{ en:"Your marks and hypo-awareness logs live only on this device. Export them as a backup (e.g. before clearing the cache or switching devices).", pt:"As suas marcas e registos de perceção de hipo existem apenas neste dispositivo. Exporte-os como cópia de segurança (ex. antes de limpar a cache ou mudar de dispositivo)." },
+  "cfg.export":{ en:"⭳ Export logbook", pt:"⭳ Exportar diário" },
+  "cfg.import":{ en:"⭱ Import", pt:"⭱ Importar" },
+});
 
 /* ── Eenheden + banden ──────────────────────────────────────────────────────
    Nightscout slaat glucose ALTIJD op in mg/dL. Conversie op precies één plek. */
@@ -956,11 +1113,15 @@ const BANDS = [
   { id:"veryHigh", lo:13.9,      hi:Infinity, label:"> 13,9",      css:"--veryHigh" },
 ];
 const bandOf = bg => BANDS.find(b => bg >= b.lo && bg < b.hi) || BANDS[4];
+// Bandgrens-label met locale-decimaal (herberekend bij taalwissel).
+const bandLabel = b => !isFinite(b.lo) ? "< "+num(b.hi) : !isFinite(b.hi) ? "> "+num(b.lo) : num(b.lo)+" – "+num(b.hi);
 const cssVar = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 const colorOf = bg => cssVar(bandOf(bg).css);
-const nl1 = v => (v==null||!isFinite(v)) ? "—" : v.toFixed(1).replace(".", ",");
-const nl2 = v => (v==null||!isFinite(v)) ? "—" : v.toFixed(2).replace(".", ",");
+const nl1 = v => (v==null||!isFinite(v)) ? "—" : v.toFixed(1).replace(".", DECSEP());
+const nl2 = v => (v==null||!isFinite(v)) ? "—" : v.toFixed(2).replace(".", DECSEP());
 const pct0 = v => Math.round(v*100) + "%";
+// Getal met locale-decimaal (voor vaste labels als bandgrenzen).
+const num = (v,dec=1) => (v==null||!isFinite(v)) ? "—" : v.toFixed(dec).replace(".", DECSEP());
 const TZ = "Europe/Amsterdam";
 // Tijdzone-afhankelijke afleidingen (dag-sleutel, minuut-van-de-dag) zijn duur
 // (Intl), en dezelfde meting wordt per render meermaals opgevraagd. Daarom via een
@@ -1598,7 +1759,7 @@ function bandBarHtml(m){
   const top=[...BANDS].reverse();
   const badge=id=> id==="inRange"?tick(m.tir>=0.70) : id==="veryHigh"?tick(m.veryHigh<0.05) : id==="veryLow"?tick(m.veryLow<0.01) : "";
   const bar=top.map(b=>`<span style="flex:${(m.share(b.id)*1000).toFixed(0)} 0 auto;background:var(${b.css})"></span>`).join("");
-  const rows=top.map(b=>`<div class="trow"><i class="sw" style="background:var(${b.css})"></i><span class="lbl">${b.label}</span><b>${pct0(m.share(b.id))}</b>${badge(b.id)}</div>`).join("");
+  const rows=top.map(b=>`<div class="trow"><i class="sw" style="background:var(${b.css})"></i><span class="lbl">${bandLabel(b)}</span><b>${pct0(m.share(b.id))}</b>${badge(b.id)}</div>`).join("");
   return `<div class="tirbar">${bar}</div><div class="tirrows">${rows}</div>`+
     `<div class="hypoline">Hypo-tijd (&lt;3,9): <b>${pct0(m.tbr)}</b> · streef &lt;4% ${tick(m.tbr<0.04)}</div>`;
 }
@@ -1831,7 +1992,7 @@ function render(glucose, treatments, timeline){
 
   _ctx = { glucose, q, treatments, timeline };
   document.querySelectorAll("details.deep").forEach(d=>{ d.open=false; delete d.dataset.done;
-    d.querySelector(".body").innerHTML = '<div class="loading">Openklappen om te berekenen…</div>'; });
+    d.querySelector(".body").innerHTML = '<div class="loading">'+t("loading")+'</div>'; });
 
   const m = metrics(g), ag = agp(g), hy = hypoStats(g), tr = weeklyTrend(glucose, q);
   _ctx.hy = hy;
@@ -2977,6 +3138,11 @@ async function refresh(){
   _dsRecent = glucose.length ? await loadDeviceStatus() : [];
   render(glucose, treatments, timeline);
 }
+// Hertekent alles in de huidige taal (na een taalwissel), zonder opnieuw te syncen.
+function rerender(){
+  if(_ctx && _ctx.glucose) render(_ctx.glucose, _ctx.treatments, _ctx.timeline);
+  try{ renderCbCats(); renderCbResults(); renderCbPlate(); renderEtenInsight(); }catch(_){}
+}
 async function doSync(){
   const btn=document.getElementById("btnSync"); btn.disabled=true; setConn("busy","synchroniseren…");
   try { await syncAll(msg=>setConn("busy",msg)); setConn("ok","bijgewerkt"); await refresh(); }
@@ -2987,7 +3153,9 @@ document.getElementById("btnSync").onclick = doSync;
 document.getElementById("btnCfg").onclick = ()=>{
   document.getElementById("inUrl").value=cfg.url; document.getElementById("inTok").value=cfg.token;
   document.getElementById("inDays").value=cfg.days; document.getElementById("inInsulin").value=String(cfg.peak||75);
+  document.getElementById("inLang").value=LANG;
   document.getElementById("cfgErr").hidden=true; openDlg(); };
+document.getElementById("inLang").onchange=e=>setLang(e.target.value);   // direct effect, geen "Bewaren" nodig
 document.getElementById("btnClose").onclick = closeDlg;
 document.getElementById("btnSave").onclick = async ()=>{
   const err=document.getElementById("cfgErr");
@@ -3643,9 +3811,10 @@ document.getElementById("awAdd").onclick = async ()=>{
   toast("Hypo-gevoel vastgelegd."); renderAware(); };
 
 initDeep();
+snapshotI18n(); applyStaticI18n();   // NL vastleggen, daarna vaste teksten in de gekozen taal
 (async function init(){
-  if (!cfg.url){ setConn("","niet ingesteld"); openDlg(); }
-  else { setConn("ok","ingesteld"); document.getElementById("btnSync").disabled=false; }
+  if (!cfg.url){ setConn("",t("conn.unset")); openDlg(); }
+  else { setConn("ok",t("conn.set")); document.getElementById("btnSync").disabled=false; }
   try { await refresh(); } catch(e){ console.error(e); }
 })();
 
