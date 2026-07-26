@@ -26,7 +26,10 @@ const pizza=await pick('Pizza');
 // pizza op het bord zetten → bord-tip
 await page.click('#cbAddBtn'); await page.waitForTimeout(150);
 const plate=await page.evaluate(()=>document.getElementById('cbPlateFat').textContent.trim());
-// 2) Banaan (geen vet/eiwit) → geen tip
+// 2) Loempia & friet (eerder geen tip door te strenge drempel) → nu wel
+const loempia=await pick('Loempia');
+const friet=await pick('Friet');
+// 3) Banaan (geen vet/eiwit) → geen tip
 const banaan=await pick('Banaan');
 
 const okPizza = /vet-eiwit-eenheden/.test(pizza) && /u door/.test(pizza)
@@ -37,9 +40,11 @@ console.log('pizza-tip (met %-verdeling, geen "bespreek"):', okPizza?'JA':'NEE')
 console.log('  →', pizza.slice(0,130));
 console.log('bord-tip (totaal over het bord):', okPlate?'JA':'NEE');
 console.log('  →', plate.slice(0,130));
+const okLoempia = /verlengd/.test(loempia), okFriet = /verlengd/.test(friet);
+console.log('loempia toont nu tip:', okLoempia?'JA':'NEE', '| friet:', okFriet?'JA':'NEE');
 console.log('banaan (geen tip):', okBanaan?'JA':'NEE', banaan?('("'+banaan.slice(0,40)+'")'):'');
 console.log('errors:', errors.length?errors:'geen');
-const ok = okPizza && okPlate && okBanaan && !errors.length;
+const ok = okPizza && okPlate && okLoempia && okFriet && okBanaan && !errors.length;
 console.log('\nRESULTAAT:', ok?'OK':'FOUT');
 if(!ok) process.exitCode=1;
 await browser.close();

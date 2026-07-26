@@ -3414,16 +3414,19 @@ const FATPR={
   "Marsepein":[12,6],"Chocoladekoekje":[25,6],"Belgische wafel":[18,6],"Kinderreep":[33,8],"Kinder Bueno":[36,8],"Kokosmakroon":[20,4],"Boterkoek":[25,5],"Bonbon":[30,4],"Ferrero Rocher":[38,7],"Tony Chocolonely":[30,7],
   "Latte macchiato":[3,3],"IJskoffie":[3,2],"Baileys":[13,3],
   "Pizza hawaii":[10,11],"Pizza pepperoni":[13,12],"Broodje kroket":[12,7],"Broodje frikandel":[14,8],"Kaassticks":[16,8],"Mini loempia":[10,4],"Bapao":[7,8],"Nasibal":[8,6],"Bamischijf":[10,5],"Taco":[10,8],"Quesadilla":[14,11],"Ramen":[6,8],"Kippensoep":[3,4],"Broodje bal":[12,11],"Pasta pesto":[9,7],"Vissticks":[10,12],"Kibbeling":[12,15],"Ovenschotel":[7,7],"Kroepoek":[30,3],
-  "Speculaaspasta":[27,3],"Tahini":[54,17],"Mayonaise":[79,1],"Fritessaus":[40,1],"Knoflooksaus":[40,2],"Pesto":[45,4]
+  "Speculaaspasta":[27,3],"Tahini":[54,17],"Mayonaise":[79,1],"Fritessaus":[40,1],"Knoflooksaus":[40,2],"Pesto":[45,4],
+  "Friet / patat":[15,3],"Gebakken aardappel":[6,2],"Croissant":[21,8],"Roomijs (vanille)":[11,4],
+  "Koekje":[23,6],"Speculaas":[16,6],"Pepernoten":[10,5],"Chocoladevla":[3,3],"Chocolademelk":[3,3],"Sushi":[3,5]
 };
 // Doorwerkingsduur van het vet-eiwit-deel (Warschau-methode).
 function fatHrs(vee){ return vee<1.5?3 : vee<2.5?4 : vee<3.5?5 : 8; }
+const FAT_MIN=0.5;   // vanaf ~0,5 VEE is het vet-eiwit-effect de moeite van vermelden waard
 // Korte bolus-tip voor een vet/eiwitrijke portie. Het verlengde deel = het
 // vet-eiwit-equivalent (1 VEE ≈ 10 g koolhydraten), direct in grammen.
 function cbFatHtml(food, grams){
   const fp=FATPR[food.n]; if(!fp) return "";
   const vee=(grams*fp[0]/100*9 + grams*fp[1]/100*4)/100;
-  if(vee<1) return "";
+  if(vee<FAT_MIN) return "";
   const hrs=fatHrs(vee), carbsR=Math.round(grams*food.per/100), extG=Math.round(vee*10);
   return `<b>Vette maaltijd</b> · ~${nl1(vee)} vet-eiwit-eenheden, werkt ~${hrs} u door. `+
     `Bolus ~<b>${carbsR} g</b> direct + ~<b>${extG} g</b> verlengd over ~${hrs} u (dual-wave).`;
@@ -3487,7 +3490,7 @@ function renderCbPlate(){
   document.getElementById("cbTotal").textContent=`${total} g`;
   const pf=document.getElementById("cbPlateFat");
   if(pf){ const vee=plateVEE();
-    if(vee>=1){ const hrs=fatHrs(vee), extG=Math.round(vee*10);
+    if(vee>=FAT_MIN){ const hrs=fatHrs(vee), extG=Math.round(vee*10);
       pf.innerHTML=`<b>Vette maaltijd</b> · ~${nl1(vee)} vet-eiwit-eenheden, werkt ~${hrs} u door. `+
         `Bolus je ~<b>${total} g</b> direct + ~<b>${extG} g</b> verlengd over ~${hrs} u (dual-wave).`;
     } else pf.innerHTML=""; }
