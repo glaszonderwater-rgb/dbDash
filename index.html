@@ -299,6 +299,15 @@ details.fold>.foldbody{padding:0 1.05rem 1.05rem}
 .lecarb .litems{font-weight:400;color:var(--muted)}
 /* ── Koolhydraat-schatter ──────────────────────────────────────────────────── */
 .cbNote{font-size:.72rem;line-height:1.45;color:var(--muted);background:var(--surface-2);border-radius:.6rem;padding:.5rem .65rem;margin-bottom:.7rem}
+/* "Zo reageert jóuw lijf" — persoonlijke maaltijdrespons uit eigen data */
+.cbMe{border:1px solid var(--line-2);border-left:3px solid var(--accent);border-radius:.7rem;background:var(--surface);box-shadow:var(--shadow-sm);padding:.6rem .75rem;margin-bottom:.7rem}
+.cbMe .cbMeH{font-size:.72rem;font-weight:700;letter-spacing:.02em;color:var(--ink);margin-bottom:.35rem;display:flex;align-items:center;gap:.35rem}
+.cbMe .cbMeH .cbMeN{font-weight:400;color:var(--dim);font-size:.68rem}
+.cbMe .cbMeRow{font-size:.78rem;line-height:1.5;color:var(--muted);display:flex;gap:.45rem;align-items:baseline;padding:.12rem 0}
+.cbMe .cbMeRow b{color:var(--ink)}
+.cbMe .cbMeK{flex:none;color:var(--dim);width:5.4rem;font-size:.72rem}
+.cbMe.thin{border-left-color:var(--line-2)}
+.cbMe.thin .cbMeRow{color:var(--dim)}
 #cbSearch{width:100%;box-sizing:border-box;font-size:.95rem;padding:.7rem .85rem;border:1px solid var(--line-2);border-radius:.7rem;background:var(--surface);color:var(--ink);box-shadow:var(--shadow-sm)}
 #cbSearch:focus{outline:none;border-color:var(--accent)}
 /* categorie-chips: één horizontale scroll-strip i.p.v. een muur */
@@ -834,6 +843,7 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
   <section class="epoch" id="epEten" style="margin-left:0">
     <div class="eh"><h2>Koolhydraten schatten</h2><span class="sub">kies eten + portie → gram</span></div>
     <div class="cbNote">Gemiddelde tabelwaarden — een hulpmiddel om te leren schatten, <b>geen dosisadvies</b>. Jij blijft verantwoordelijk voor je bolus.</div>
+    <div id="cbMe"></div>
     <input type="search" id="cbSearch" placeholder="zoek eten… (bijv. banaan, rijst, cola)" autocomplete="off">
     <div class="cbCats" id="cbCats"></div>
     <div class="cbResults" id="cbResults"></div>
@@ -1957,6 +1967,7 @@ function render(glucose, treatments, timeline){
   const pi = timeline ? profileInfo(timeline, q.to || Date.now()) : null;
   const oi = observedISF(glucose, treatments, timeline);
   const MR = mealResults(glucose, treatments, timeline);
+  _MR = MR; renderEtenInsight();   // deel de gemeten respons met de Eten-tab
   const drift = basalDrift(glucose, treatments, q);
   const stack = hypoStacking(glucose, treatments, q);
   if (!pi){ document.getElementById("secProfile").hidden = true; }
@@ -3456,6 +3467,47 @@ function cbFatHtml(food, grams){
 // Totale vet-eiwit-eenheden over het hele bord (op naam-lookup).
 function plateVEE(){ let fat=0,pro=0; for(const it of _cbPlate){ const fp=FATPR[it.n]; if(fp){ fat+=it.g*fp[0]/100; pro+=it.g*fp[1]/100; } } return (fat*9+pro*4)/100; }
 let _cbCat="", _cbOpen=null, _cbUnit=0, _cbQty=1, _cbPlate=[];
+// Persoonlijke maaltijdrespons, gedeeld met de Eten-tab (gevuld door render()).
+let _MR=null;
+// "Zo reageert jóuw lijf" — vertaalt de gemeten respons naar de schatter.
+function etenInsightHtml(MR){
+  const n = MR && MR.results ? MR.results.length : 0;
+  if(n < MEAL_MIN){
+    return `<div class="cbMe thin"><div class="cbMeH">Zo reageert jóuw lijf <span class="cbMeN">nog te weinig data</span></div>`+
+      `<div class="cbMeRow">Zodra je ~${MEAL_MIN} geïsoleerde maaltijden met een handmatige bolus hebt (nu ${n}), lees ik hier uit jóuw curves af hoe snel je piekt en hoe goed je koolhydraten kloppen. Tot dan zijn de tabelwaarden je richtlijn.</div></div>`;
+  }
+  const tpk = MR.mtpk!=null?Math.round(MR.mtpk):null;
+  const t50 = MR.mt50!=null?Math.round(MR.mt50):null;
+  const off = MR.moffset;             // handmatige bolus t.o.v. maaltijd (min); <0 = prebolus
+  const nOff = MR.results.filter(r=>r.bolusOffset!=null).length;
+  const pct = MR.mfrac!=null?Math.round(MR.mfrac*100):null;
+  const rows=[];
+  // 1) piektiming → prebolus-timing
+  if(tpk!=null){
+    const speed = t50==null?"" : t50>60?" — vrij traag, past bij grote of vette maaltijden" : t50<35?" — snel, dan telt prebolus-timing zwaar mee" : "";
+    rows.push(`<div class="cbMeRow"><span class="cbMeK">Piek</span><span>mediaan <b>~${tpk} min</b> na het eten${speed}.</span></div>`);
+  }
+  // 2) prebolus-moment (alleen als er handmatige-bolus-timing is)
+  if(off!=null){
+    const txt = off<-5 ? `je bolust mediaan <b>~${Math.round(-off)} min vóór</b> het eten`
+              : off>5  ? `je bolust mediaan <b>~${Math.round(off)} min ná</b> het eten — eerder bolussen dempt de piek zónder meer insuline`
+              : `je bolust <b>rond</b> het eetmoment — een paar minuten eerder dempt de piek vaak nog`;
+    rows.push(`<div class="cbMeRow"><span class="cbMeK">Timing</span><span>${txt}. <span style="color:var(--dim)">(n=${nOff})</span></span></div>`);
+  }
+  // 3) koolhydraat-kalibratie
+  if(pct!=null){
+    const cal = pct>=85&&pct<=115 ? `je schatting sluit goed aan bij wat je glucose laat zien`
+              : pct<85 ? `je ziet <b>minder</b> terug dan ingevoerd — mogelijk tel je wat hoog, of dekt je insuline ruim`
+              : `je ziet <b>meer</b> terug dan ingevoerd — mogelijk onderschat je de koolhydraten`;
+    rows.push(`<div class="cbMeRow"><span class="cbMeK">Koolhydraten</span><span>je ziet mediaan <b>~${pct}%</b> terug: ${cal}.</span></div>`);
+  }
+  if(!rows.length) return "";
+  return `<div class="cbMe"><div class="cbMeH">Zo reageert jóuw lijf <span class="cbMeN">n=${n} maaltijden · geen dosisadvies</span></div>${rows.join("")}</div>`;
+}
+function renderEtenInsight(){
+  const el=document.getElementById("cbMe"); if(!el) return;
+  el.innerHTML = etenInsightHtml(_MR);
+}
 const cbGrams=(food)=> _cbUnit>=food.u.length ? _cbQty : food.u[_cbUnit][1]*_cbQty;   // laatste index = "gram"
 const cbCarbs=(food,g)=> Math.round(g*food.per/100);
 function renderCbCats(){
@@ -3520,7 +3572,7 @@ function renderCbPlate(){
 }
 function initCarb(){
   if(!document.getElementById("cbCats")) return; // schatter woont sinds v5.2 in de Eten-tab
-  renderCbCats(); renderCbResults();
+  renderCbCats(); renderCbResults(); renderEtenInsight();
   const s=document.getElementById("cbSearch");
   if(s) s.oninput=()=>{ _cbOpen=null; renderCbResults(); };
   const d=document.getElementById("cbDate");
