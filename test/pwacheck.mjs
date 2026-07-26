@@ -62,7 +62,7 @@ await context.setOffline(true);
 let offlineOk=false, offErr='';
 try{
   await page.reload({waitUntil:'load'});
-  offlineOk=await page.evaluate(()=>!!document.getElementById('kpis') || /DiaMetric/.test(document.title));
+  offlineOk=await page.evaluate(()=>!!document.getElementById('kpis') || /IDM/.test(document.title));
 }catch(e){ offErr=e.message; }
 console.log('offline herladen werkt:', offlineOk?'JA':'NEE', offErr?('('+offErr+')'):'');
 await context.setOffline(false);

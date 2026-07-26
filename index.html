@@ -3,23 +3,23 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#F5F7F6" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#0E1311" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#F3F4F1" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#141A22" media="(prefers-color-scheme: dark)">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>DiaMetric</title>
+<title>IDM</title>
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon.svg">
-<meta name="application-name" content="DiaMetric">
-<meta name="apple-mobile-web-app-title" content="DiaMetric">
+<meta name="application-name" content="IDM">
+<meta name="apple-mobile-web-app-title" content="IDM">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <style>
 /* ══════════════════════════════════════════════════════════════════════════
-   DiaMetric — lichte herbouw. Geen Plotly: alle grafieken zijn zelfgebouwde,
+   IDM — lichte herbouw. Geen Plotly: alle grafieken zijn zelfgebouwde,
    schaalbare SVG (viewBox → passen zich vanzelf aan de breedte aan, zonder
    JavaScript-resize). Systeemletters voor maximale snelheid. Mobiel eerst.
    ══════════════════════════════════════════════════════════════════════════ */
@@ -27,40 +27,40 @@
    klinische glucose-groen). Band-kleuren zijn de enige gekleurde data. Licht
    én donker via tokens. ─────────────────────────────────────────────────── */
 :root{
-  --bg:#F5F7F6; --surface:#FFFFFF; --surface-2:#F0F3F2; --raised:#FBFCFC;
-  --ink:#141C18; --muted:#5B6A63; --dim:#67766F;
-  --line:#E7ECE9; --line-2:#D9E0DC;
-  --accent:#0E7C6B; --accent-soft:#E5F2EF; --on-accent:#FFFFFF;
-  --veryLow:#B03A3A; --low:#E2504B; --inRange:#3FBF8F; --high:#E8B33C; --veryHigh:#D9772F; --carb:#7E6BC8;
-  --warn:#B0781A; --risk-bg:#FCF3F1; --risk-line:#F0D9D4;
+  --bg:#F3F4F1; --surface:#FFFFFF; --surface-2:#F7F8F5; --raised:#FFFFFF;
+  --ink:#20272E; --muted:#5E6A75; --dim:#8A95A0;
+  --line:#E7E9E4; --line-2:#DCDFD9;
+  --accent:#2E7BD6; --accent-soft:#E7F0FB; --on-accent:#FFFFFF;
+  --veryLow:#B23A3A; --low:#DB5F5A; --inRange:#1FA877; --high:#D2942A; --veryHigh:#C86A2A; --carb:#7E6BC8;
+  --warn:#C08320; --risk-bg:#FBF1EC; --risk-line:#EFDCCC;
   --sans:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",sans-serif;
   --mono:ui-monospace,"SF Mono","Roboto Mono","DejaVu Sans Mono",Menlo,monospace;
   --serif:Charter,Georgia,"Times New Roman",serif;
-  --radius:16px;
-  --shadow:0 1px 2px rgba(16,32,26,.05), 0 10px 26px -14px rgba(16,32,26,.14);
-  --shadow-sm:0 1px 2px rgba(16,32,26,.05);
+  --radius:20px;
+  --shadow:0 1px 2px rgba(40,55,75,.05), 0 14px 30px -20px rgba(40,55,75,.28);
+  --shadow-sm:0 1px 2px rgba(40,55,75,.06);
 }
 /* Donkere waarden: automatisch bij systeem-donker (tenzij handmatig "licht"),
    én altijd bij handmatig "donker". De data-theme-keuze wint van het systeem. */
 @media (prefers-color-scheme:dark){ :root:not([data-theme="light"]){
-    --bg:#0E1311; --surface:#161D19; --surface-2:#1B2320; --raised:#1E2723;
-    --ink:#E9EFEB; --muted:#96A69F; --dim:#8A9A92;
-    --line:#242D29; --line-2:#303A35;
-    --accent:#37C6AC; --accent-soft:#12332C; --on-accent:#08201B;
-    --inRange:#43C795; --high:#EABB4A; --low:#E85F59; --veryHigh:#E08843; --veryLow:#C05149; --carb:#A99BE0;
-    --warn:#D9A441; --risk-bg:#241816; --risk-line:#43241F;
-    --shadow:0 1px 2px rgba(0,0,0,.35), 0 12px 30px -16px rgba(0,0,0,.6);
-    --shadow-sm:0 1px 2px rgba(0,0,0,.35);
+    --bg:#141A22; --surface:#1C2530; --surface-2:#222D3A; --raised:#222D3A;
+    --ink:#E8EEF5; --muted:#9AA8B8; --dim:#71808F;
+    --line:#28323F; --line-2:#33404F;
+    --accent:#5AA0EA; --accent-soft:#17293D; --on-accent:#081827;
+    --inRange:#35C08C; --high:#E0A94A; --low:#E76B66; --veryHigh:#DE8A43; --veryLow:#C0554E; --carb:#A99BE0;
+    --warn:#E0A94A; --risk-bg:#241A16; --risk-line:#43281F;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 16px 34px -18px rgba(0,0,0,.66);
+    --shadow-sm:0 1px 2px rgba(0,0,0,.4);
 } }
 :root[data-theme="dark"]{
-    --bg:#0E1311; --surface:#161D19; --surface-2:#1B2320; --raised:#1E2723;
-    --ink:#E9EFEB; --muted:#96A69F; --dim:#8A9A92;
-    --line:#242D29; --line-2:#303A35;
-    --accent:#37C6AC; --accent-soft:#12332C; --on-accent:#08201B;
-    --inRange:#43C795; --high:#EABB4A; --low:#E85F59; --veryHigh:#E08843; --veryLow:#C05149; --carb:#A99BE0;
-    --warn:#D9A441; --risk-bg:#241816; --risk-line:#43241F;
-    --shadow:0 1px 2px rgba(0,0,0,.35), 0 12px 30px -16px rgba(0,0,0,.6);
-    --shadow-sm:0 1px 2px rgba(0,0,0,.35);
+    --bg:#141A22; --surface:#1C2530; --surface-2:#222D3A; --raised:#222D3A;
+    --ink:#E8EEF5; --muted:#9AA8B8; --dim:#71808F;
+    --line:#28323F; --line-2:#33404F;
+    --accent:#5AA0EA; --accent-soft:#17293D; --on-accent:#081827;
+    --inRange:#35C08C; --high:#E0A94A; --low:#E76B66; --veryHigh:#DE8A43; --veryLow:#C0554E; --carb:#A99BE0;
+    --warn:#E0A94A; --risk-bg:#241A16; --risk-line:#43281F;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 16px 34px -18px rgba(0,0,0,.66);
+    --shadow-sm:0 1px 2px rgba(0,0,0,.4);
 }
 *{box-sizing:border-box;margin:0;padding:0}
 html{-webkit-text-size-adjust:100%}
@@ -74,11 +74,7 @@ header{position:sticky;top:0;z-index:20;
   border-bottom:1px solid var(--line)}
 .topbar{display:flex;align-items:center;gap:.55rem;padding:.7rem 0}
 .brand{display:flex;align-items:center;gap:.5rem;font-weight:700;font-size:1.18rem;letter-spacing:-.02em}
-.brand .mark{width:22px;height:22px;border-radius:7px;flex:none;
-  background:linear-gradient(145deg,var(--accent),color-mix(in srgb,var(--accent) 70%,#000));
-  position:relative;box-shadow:inset 0 0 0 1px rgba(255,255,255,.12)}
-.brand .mark::after{content:"";position:absolute;left:50%;top:52%;width:7px;height:7px;
-  transform:translate(-50%,-50%);border-radius:50%;background:var(--on-accent);opacity:.9}
+.brand .mark{width:26px;height:26px;flex:none;display:block}
 .grow{flex:1}
 .conn{display:flex;align-items:center;gap:.35rem;font-size:.7rem;color:var(--muted);white-space:nowrap}
 .dot{width:7px;height:7px;border-radius:50%;background:var(--dim);flex:none}
@@ -484,8 +480,43 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:-1px;bor
   body:not(.reporting) .kpi{background:#fff}
   body:not(.reporting) section{break-inside:avoid}
   body:not(.reporting) main{padding-top:0}
-  body:not(.reporting) main::before{content:"DiaMetric — samenvatting voor het behandelteam";display:block;font-size:1.1rem;font-weight:700;margin:0 0 .6rem}
+  body:not(.reporting) main::before{content:"IDM — samenvatting voor het behandelteam";display:block;font-size:1.1rem;font-weight:700;margin:0 0 .6rem}
 }
+
+/* ══════════════ Companion-home (v6) ══════════════ */
+.chome{padding-top:.2rem}
+.greet{margin:.5rem .2rem .1rem}
+.greet b{display:block;font-size:1.24rem;font-weight:750;letter-spacing:-.01em}
+.greet .sub{display:block;font-size:.88rem;color:var(--muted);margin-top:.22rem}
+.hero{display:flex;align-items:center;gap:1.1rem;background:var(--surface);border:1px solid var(--line);
+  border-radius:24px;padding:1.1rem 1.2rem;margin-top:.7rem;box-shadow:var(--shadow)}
+.ring{position:relative;width:112px;height:112px;flex:none}
+.ring svg{width:112px;height:112px;transform:rotate(-90deg);display:block}
+.ring .rbg{fill:none;stroke:var(--surface-2);stroke-width:10}
+.ring .rarc{fill:none;stroke:var(--inRange);stroke-width:10;stroke-linecap:round;transition:stroke-dashoffset .5s ease}
+.ring .lbl{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.ring .lbl b{font-family:var(--mono);font-size:1.9rem;font-weight:700;letter-spacing:-.02em;line-height:1;color:var(--inRange)}
+.ring .lbl small{font-size:.54rem;color:var(--dim);text-transform:uppercase;letter-spacing:.1em;margin-top:.22rem}
+.hinfo .st{font-size:1.02rem;font-weight:750}
+.hinfo .meta{font-size:.79rem;color:var(--muted);margin-top:.42rem;line-height:1.65}
+.hinfo .meta b{font-family:var(--mono);color:var(--ink);font-weight:600}
+.acts{display:grid;grid-template-columns:1fr 1fr 1fr;gap:.55rem;margin-top:.7rem}
+.acts .act{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:.85rem .4rem;
+  font:inherit;font-size:.75rem;font-weight:650;color:var(--ink);cursor:pointer;box-shadow:var(--shadow-sm);
+  display:flex;flex-direction:column;align-items:center;gap:.45rem;transition:border-color .12s,transform .1s}
+.acts .act:hover:not(:disabled){border-color:var(--line-2);opacity:1}
+.acts .act:active{transform:translateY(.5px)}
+.acts .act .cig{width:42px;height:42px;border-radius:13px;display:grid;place-items:center}
+.acts .act .cig svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.acts .act .a1{background:var(--accent-soft);color:var(--accent)}
+.acts .act .a2{background:color-mix(in srgb,var(--inRange) 15%,transparent);color:var(--inRange)}
+.acts .act .a3{background:color-mix(in srgb,var(--warn) 18%,transparent);color:var(--warn)}
+.chead{display:flex;align-items:baseline;gap:.5rem;margin:1.6rem .2rem .55rem;
+  font-size:.72rem;text-transform:uppercase;letter-spacing:.11em;color:var(--muted);font-weight:750}
+.chead .sub{font-size:.64rem;letter-spacing:.02em;text-transform:none;color:var(--dim);font-weight:500;margin-left:auto}
+.chome .kpis{display:grid;grid-template-columns:1fr 1fr;gap:.6rem}
+.chome .kpis .kpi{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:.8rem .9rem;box-shadow:var(--shadow-sm)}
+.nu.hideOnHome{display:none}
 </style>
 </head>
 <body>
@@ -505,7 +536,7 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
 <header>
   <div class="wrap">
     <div class="topbar">
-      <div class="brand"><span class="mark" aria-hidden="true"></span>DiaMetric</div>
+      <div class="brand"><svg class="mark" viewBox="0 0 130 130" aria-hidden="true"><path fill="#3E86C8" fill-rule="evenodd" d="M40,26 H74 A39,39 0 0 1 74,104 H40 Z M56,45 H74 A22,22 0 0 1 74,89 H56 Z"/><path fill="#8CC3EE" d="M64,52 C77,68 77,82 64,90 C51,82 51,68 64,52 Z"/></svg>IDM</div>
       <div class="grow"></div>
       <div class="conn"><i class="dot" id="dot"></i><span id="connTxt">niet ingesteld</span></div>
       <button id="btnSync" disabled>Sync</button>
@@ -529,10 +560,52 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
 
   <!-- OVERZICHT — het verhaal -->
   <div class="view" data-view="overzicht">
-  <div class="tl">
-  <section class="epoch" id="epVandaag">
-    <div class="eh"><h2>Vandaag</h2><span class="sub" id="todaySub"></span></div>
+  <div class="chome">
+
+    <div class="greet" id="homeGreet" hidden><b id="greetHi"></b><span class="sub" id="greetSub"></span></div>
+
+    <div class="hero" id="homeHero" hidden>
+      <div class="ring">
+        <svg viewBox="0 0 116 116" aria-hidden="true">
+          <circle class="rbg" cx="58" cy="58" r="50"></circle>
+          <circle class="rarc" id="ringArc" cx="58" cy="58" r="50" pathLength="100" stroke-dasharray="100" stroke-dashoffset="100"></circle>
+        </svg>
+        <div class="lbl"><b id="ringVal">—</b><small id="ringUnit">mmol/L</small></div>
+      </div>
+      <div class="hinfo">
+        <div class="st" id="ringStatus">—</div>
+        <div class="meta" id="ringMeta"></div>
+      </div>
+    </div>
+
+    <div class="acts" id="homeActs" hidden>
+      <button class="act" id="actEten" type="button"><span class="cig a1"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 2v7c0 1.1.9 2 2 2a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/></svg></span>Koolhydraten</button>
+      <button class="act" id="actLog" type="button"><span class="cig a2"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 21v-7"/><path d="M4 10V3"/><circle cx="4" cy="12" r="2"/><path d="M12 21v-9"/><path d="M12 8V3"/><circle cx="12" cy="10" r="2"/><path d="M20 21v-5"/><path d="M20 12V3"/><circle cx="20" cy="14" r="2"/></svg></span>Loggen</button>
+      <button class="act" id="actSync" type="button"><span class="cig a3"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 3v6h-6"/></svg></span>Sync</button>
+    </div>
+
+    <div class="chead" id="epMaand">Kerncijfers <span class="sub" id="monthSub"></span></div>
+    <div class="kpis" id="kpis"></div>
+    <details class="mini"><summary>Wat betekenen deze cijfers?</summary>
+      <div class="minibody">
+        <div><b>In bereik (TIR)</b> — hoeveel % van de tijd je glucose tussen 3,9 en 10,0 zat. Je belangrijkste maat: hoe hoger, hoe stabieler je dag. Streef &gt; 70%.</div>
+        <div><b>Hypo</b> — % tijd te laag (&lt; 3,9). Dit gaat over veiligheid — laag houden telt zwaarder dan een paar procent extra in bereik. Streef &lt; 4%.</div>
+        <div><b>Variatie (CV)</b> — hoe grillig je waarden zijn. Lager = vlakker en voorspelbaarder, en meestal de grootste winst. Streef ≤ 36%.</div>
+        <div><b>GMI</b> — een schatting van je HbA1c uit je gemiddelde glucose. Een langetermijn-indicatie, geen labwaarde.</div>
+      </div>
+    </details>
+    <div id="secWatch" hidden><div id="watch" style="margin-top:.6rem"></div></div>
+    <div class="card" id="mvsCard" style="margin-top:.6rem" hidden>
+      <div class="mvshead"><span>instelling</span><span>gemeten · ingesteld</span></div>
+      <div id="tune"></div>
+    </div>
+
+    <div class="chead" id="epVandaag">Vandaag <span class="sub" id="todaySub"></span></div>
     <div id="findToday"></div>
+    <div class="chead" id="epWeek">Deze week <span class="sub" id="weekSub"></span></div>
+    <div id="findWeek"></div>
+
+    <div class="chead">Meer</div>
     <details class="fold" id="secDay" hidden>
       <summary>Dagcurve <span class="foldhint">je dag per uur — eten, bolus, hypo's</span></summary>
       <div class="foldbody">
@@ -566,31 +639,8 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
         <div id="awareList"></div>
       </div>
     </details>
-  </section>
-
-  <section class="epoch" id="epWeek">
-    <div class="eh"><h2>Deze week</h2><span class="sub" id="weekSub"></span></div>
-    <div id="findWeek"></div>
-  </section>
-
-  <section class="epoch" id="epMaand">
-    <div class="eh"><h2>Deze maand</h2><span class="sub" id="monthSub"></span></div>
-    <div class="kpis" id="kpis"></div>
-    <details class="mini"><summary>Wat betekenen deze cijfers?</summary>
-      <div class="minibody">
-        <div><b>In bereik (TIR)</b> — hoeveel % van de tijd je glucose tussen 3,9 en 10,0 zat. Je belangrijkste maat: hoe hoger, hoe stabieler je dag. Streef &gt; 70%.</div>
-        <div><b>Hypo</b> — % tijd te laag (&lt; 3,9). Dit gaat over veiligheid — laag houden telt zwaarder dan een paar procent extra in bereik. Streef &lt; 4%.</div>
-        <div><b>Variatie (CV)</b> — hoe grillig je waarden zijn. Lager = vlakker en voorspelbaarder, en meestal de grootste winst. Streef ≤ 36%.</div>
-        <div><b>GMI</b> — een schatting van je HbA1c uit je gemiddelde glucose. Een langetermijn-indicatie, geen labwaarde.</div>
-      </div>
-    </details>
-    <div id="secWatch" hidden><div id="watch" style="margin-top:.6rem"></div></div>
-    <div class="card" id="mvsCard" style="margin-top:.6rem" hidden>
-      <div class="mvshead"><span>instelling</span><span>gemeten · ingesteld</span></div>
-      <div id="tune"></div>
-    </div>
     <div class="tolink" data-goto="anaGrid">Alle analyses →</div>
-  </section>
+
   </div>
   </div>
 
@@ -695,7 +745,7 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
       <p>Eén HTML-bestand, geen build, werkt offline. Je data staat <b>alleen op dit apparaat</b>: metingen in IndexedDB, je adres en token in localStorage. Er gaat niets naar een server behalve <b>lees</b>verzoeken aan je eigen Nightscout (met je token: <code>?token=…</code>). Na de eerste keer werkt alles uit de lokale cache; syncen haalt alleen het nieuwe stuk op.</p>
 
       <h4 class="mh">2 · Glucose &amp; eenheden</h4>
-      <p>Nightscout bewaart glucose in mg/dL; DiaMetric rekent alles op precies één plek om naar <b>mmol/L</b> (÷ 18,018) en toont nooit mg/dL. Streefbereik <b>3,9–10,0</b> mmol/L (internationale consensus, Battelino 2019).</p>
+      <p>Nightscout bewaart glucose in mg/dL; IDM rekent alles op precies één plek om naar <b>mmol/L</b> (÷ 18,018) en toont nooit mg/dL. Streefbereik <b>3,9–10,0</b> mmol/L (internationale consensus, Battelino 2019).</p>
 
       <h4 class="mh">3 · Kerncijfers (maand)</h4>
       <ul class="mul">
@@ -1761,6 +1811,39 @@ function render(glucose, treatments, timeline){
   document.getElementById("todaySub").textContent = ts2 ? `${pct0(ts2.inr/ts2.n)} in bereik tot nu` : "";
   document.getElementById("secAware").hidden = false;
 
+  // ── Companion-home: begroeting, status-ring, snelacties ──
+  { const hr=new Date().getHours();
+    const hi = hr<6?"Goedenacht":hr<12?"Goedemorgen":hr<18?"Goedemiddag":"Goedenavond";
+    const low=last.bg<3.9, high=last.bg>10;
+    document.getElementById("greetHi").textContent = hi+" 👋";
+    document.getElementById("greetSub").textContent =
+      low  ? "Je zit nu onder bereik — houd het in de gaten."
+      : high ? "Je zit nu boven bereik."
+      : "Het gaat goed — je zit nu mooi in bereik.";
+    document.getElementById("homeGreet").hidden=false;
+    // status-ring
+    const rv=document.getElementById("ringVal"); rv.textContent=nl1(last.bg); rv.style.color=colorOf(last.bg);
+    const tir = ts2 ? ts2.inr/ts2.n : m.tir;
+    const arc=document.getElementById("ringArc");
+    arc.style.strokeDashoffset = String(Math.max(0,Math.min(100, 100 - tir*100)));
+    arc.style.stroke = tir>=0.7 ? "var(--inRange)" : tir>=0.5 ? "var(--warn)" : "var(--low)";
+    const stEl=document.getElementById("ringStatus");
+    stEl.textContent = low?"Te laag":high?"Te hoog":"In bereik"; stEl.style.color=colorOf(last.bg);
+    let iobR=0,cobR=0; const hasTx=treatments.length||_dsRecent.length;
+    if(hasTx){ const dsL=_dsRecent.length?_dsRecent[_dsRecent.length-1]:null;
+      const dsF=dsL&&(Date.now()-dsL.ts)<15*60e3;
+      iobR=(dsF&&dsL.iob!=null)?dsL.iob:reconstructIOB(treatments,Date.now(),PEAK_MIN,timeline);
+      cobR=(dsF&&dsL.cob!=null)?dsL.cob:carbsOnBoard(treatments,Date.now()); }
+    document.getElementById("ringMeta").innerHTML =
+      (hasTx?`IOB <b>${nl1(iobR)}</b> E · COB <b>${Math.round(cobR)}</b> g<br>`:"")+
+      `Bijgewerkt <b>${ageMin<90?ageMin+" min":Math.round(ageMin/60)+" u"}</b> geleden`+
+      (ts2?`<br>Vandaag <b>${pct0(ts2.inr/ts2.n)}</b> in bereik`:"");
+    document.getElementById("homeHero").hidden=false;
+    document.getElementById("homeActs").hidden=false;
+    const nu=document.getElementById("secNow");
+    nu.classList.toggle("hideOnHome", (document.querySelector('#tabbar .tab.on')?.dataset.tab||"overzicht")==="overzicht");
+  }
+
   // ── WEEK ──
   document.getElementById("weekSub").textContent = "afgelopen 7 dagen";
   if (tr.length<2){ document.getElementById("secTrend").hidden = true; }
@@ -1867,7 +1950,7 @@ function render(glucose, treatments, timeline){
   const fd = t => t?new Date(t).toLocaleDateString("nl-NL",{day:"2-digit",month:"short",year:"numeric"}):"—";
   const yn = ok => ok?"✓":"✗";
   _summary =
-    `DiaMetric — samenvatting\n`+
+    `IDM — samenvatting\n`+
     `Periode: ${fd(q.from)} – ${fd(q.to)} (${q.usable.length}/${q.days.length} dagen, ${pct0(q.coverage)} dekking)\n\n`+
     `Tijd in bereik 3,9–10,0 : ${pct0(m.tir)}  (streef >70%) ${yn(m.tir>=0.70)}\n`+
     `Tijd < 3,9 (hypo)       : ${pct0(m.tbr)}  (streef <4%)  ${yn(m.tbr<0.04)}\n`+
@@ -2819,7 +2902,7 @@ async function buildReport(){
     ? `<h2>Door de patiënt aangevinkt</h2><ul class="rlist">${clist.map(c=>`<li>${esc(c.title)}</li>`).join("")}</ul>` : "";
 
   return `<div class="rtoolbar"><button class="ghost" id="btnRepPrint">🖨 Opslaan als PDF</button><button class="ghost" id="btnRepClose">✕ Sluiten</button></div>`+
-    `<div class="rep"><h1>Consultrapport — DiaMetric</h1>`+
+    `<div class="rep"><h1>Consultrapport — IDM</h1>`+
     `<div class="rmeta">Periode ${fd(q.from)} – ${fd(q.to)} · ${q.usable.length}/${q.days.length} dagen · ${pct0(q.coverage)} dekking · opgesteld ${fd(Date.now())}</div>`+
     `<h2>Kernwaarden</h2><table>${kern}</table>`+
     `<h2>Veiligheid</h2>${veil}`+
@@ -2828,7 +2911,7 @@ async function buildReport(){
     `<h2>Bespreekpunten</h2>${besp}`+clHtml+
     `<h2>Wijzigingen &amp; effect</h2>${wijz}`+
     `<h2>Vragen voor het gesprek</h2>${vragenHtml}`+
-    `<div class="rfoot">Observaties uit eigen CGM- en pompdata (Nightscout / AndroidAPS), automatisch samengevat door DiaMetric. Geen insteladviezen; richtingen zijn hypotheses ter bespreking. Glucose in mmol/L.</div></div>`;
+    `<div class="rfoot">Observaties uit eigen CGM- en pompdata (Nightscout / AndroidAPS), automatisch samengevat door IDM. Geen insteladviezen; richtingen zijn hypotheses ter bespreking. Glucose in mmol/L.</div></div>`;
 }
 async function openReport(){
   const el=document.getElementById("report");
@@ -2882,7 +2965,7 @@ document.getElementById("btnSave").onclick = async ()=>{
 };
 document.getElementById("btnShare").onclick = async ()=>{
   if (!_summary) return;
-  try { if (navigator.share){ await navigator.share({ title:"DiaMetric-samenvatting", text:_summary }); return; } }
+  try { if (navigator.share){ await navigator.share({ title:"IDM-samenvatting", text:_summary }); return; } }
   catch(e){ if (e.name==="AbortError") return; /* gebruiker annuleerde */ }
   try { await navigator.clipboard.writeText(_summary); toast("Samenvatting gekopieerd — plak het in een bericht of e-mail aan je team."); }
   catch(_){ toast("Kopiëren lukte niet. Selecteer de tekst handmatig of gebruik Print/PDF."); }
@@ -2894,7 +2977,7 @@ document.getElementById("dayNext").onclick = ()=>{ _dayIdx++; renderDay(); };
 document.getElementById("btnExport").onclick = async ()=>{
   let anns=[]; try{ anns=await DB.all("annotations"); }catch(_){}
   if(!anns.length){ toast("Nog niets in je logboek om te exporteren."); return; }
-  const data=JSON.stringify({app:"DiaMetric",kind:"logbook",version:1,exported:new Date().toISOString(),annotations:anns},null,2);
+  const data=JSON.stringify({app:"IDM",kind:"logbook",version:1,exported:new Date().toISOString(),annotations:anns},null,2);
   const url=URL.createObjectURL(new Blob([data],{type:"application/json"}));
   const a=document.createElement("a"); a.href=url; a.download=`diametric-logboek-${new Date().toISOString().slice(0,10)}.json`;
   document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),1000);
@@ -3160,9 +3243,14 @@ function showTab(tab){
   document.querySelectorAll("#tabbar .tab").forEach(b=>{ const on=b.dataset.tab===tab;
     b.classList.toggle("on",on); if(on) b.setAttribute("aria-current","page"); else b.removeAttribute("aria-current"); });
   document.querySelectorAll(".view").forEach(v=>v.hidden = v.dataset.view!==tab);
+  const nu=document.getElementById("secNow"); if(nu) nu.classList.toggle("hideOnHome", tab==="overzicht");
   window.scrollTo({top:0});
 }
 document.querySelectorAll("#tabbar .tab").forEach(b=>b.onclick=()=>showTab(b.dataset.tab));
+// Companion-snelacties op de home
+document.getElementById("actEten").onclick=()=>showTab("eten");
+document.getElementById("actLog").onclick=()=>goTo("secLog","analyses");
+document.getElementById("actSync").onclick=()=>document.getElementById("btnSync").click();
 
 // De index: élke analyse bij naam, één tik — geen zoeken
 // Sprong vanuit Overzicht-links naar een analyse: open de sectie en scrol erheen.
