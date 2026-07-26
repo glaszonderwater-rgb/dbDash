@@ -2127,14 +2127,14 @@ function render(glucose, treatments, timeline){
   const g = glucose.filter(x=>q.usableKeys.has(localDayKey(x.ts)));
   const lowCov = q.coverage>0 && q.coverage<MIN_COVERAGE+.05;
   document.getElementById("scope").innerHTML =
-    `<span><i>periode</i> <b>${q.from?new Date(q.from).toLocaleDateString(LOCALE(),{day:"2-digit",month:"short"}):"—"} – ${q.to?new Date(q.to).toLocaleDateString(LOCALE(),{day:"2-digit",month:"short"}):"—"}</b></span>`+
-    `<span class="${lowCov?"warn":""}"><i>dekking</i> <b>${q.days.length?pct0(q.coverage):"—"}</b></span>`+
-    `<span><i>dagen</i> <b>${q.usable.length}/${q.days.length}</b></span>`;
-  document.getElementById("monthSub").textContent = `${q.usable.length} dagen · ${pct0(q.coverage)} dekking`;
+    `<span><i>${TL("periode","period","período")}</i> <b>${q.from?new Date(q.from).toLocaleDateString(LOCALE(),{day:"2-digit",month:"short"}):"—"} – ${q.to?new Date(q.to).toLocaleDateString(LOCALE(),{day:"2-digit",month:"short"}):"—"}</b></span>`+
+    `<span class="${lowCov?"warn":""}"><i>${TL("dekking","coverage","cobertura")}</i> <b>${q.days.length?pct0(q.coverage):"—"}</b></span>`+
+    `<span><i>${TL("dagen","days","dias")}</i> <b>${q.usable.length}/${q.days.length}</b></span>`;
+  document.getElementById("monthSub").textContent = `${q.usable.length} ${TL("dagen","days","dias")} · ${pct0(q.coverage)} ${TL("dekking","coverage","cobertura")}`;
 
   if (!g.length){
     document.getElementById("findToday").innerHTML =
-      `<div class="f"><div class="fh"><span class="fdot n"></span><span class="ftxt">Nog te weinig dagen met voldoende sensordekking (≥70%) voor betrouwbare cijfers. Synchroniseer meer historie.</span></div></div>`;
+      `<div class="f"><div class="fh"><span class="fdot n"></span><span class="ftxt">${TL("Nog te weinig dagen met voldoende sensordekking (≥70%) voor betrouwbare cijfers. Synchroniseer meer historie.","Still too few days with enough sensor coverage (≥70%) for reliable figures. Sync more history.","Ainda poucos dias com cobertura de sensor suficiente (≥70%) para números fiáveis. Sincronize mais histórico.")}</span></div></div>`;
     for (const id of ["secDay","secAware","secTrend","secLog","secWatch","mvsCard","secAgp","secSafety","secInsulin","secProfile"]) document.getElementById(id).hidden = true;
     document.getElementById("kpis").innerHTML = "";
     return;
@@ -2163,18 +2163,18 @@ function render(glucose, treatments, timeline){
   document.getElementById("secDay").hidden = !_dayKeys.length;
   renderDay();
   const tk=_dayKeys[_dayKeys.length-1], ts2=dayStats.get(tk);
-  document.getElementById("todaySub").textContent = ts2 ? `${pct0(ts2.inr/ts2.n)} in bereik tot nu` : "";
+  document.getElementById("todaySub").textContent = ts2 ? `${pct0(ts2.inr/ts2.n)} ${TL("in bereik tot nu","in range so far","no alvo até agora")}` : "";
   document.getElementById("secAware").hidden = false;
 
   // ── Companion-home: begroeting, status-ring, snelacties ──
   { const hr=new Date().getHours();
-    const hi = hr<6?"Goedenacht":hr<12?"Goedemorgen":hr<18?"Goedemiddag":"Goedenavond";
+    const hi = hr<6?TL("Goedenacht","Good night","Boa noite"):hr<12?TL("Goedemorgen","Good morning","Bom dia"):hr<18?TL("Goedemiddag","Good afternoon","Boa tarde"):TL("Goedenavond","Good evening","Boa noite");
     const low=last.bg<3.9, high=last.bg>10;
     document.getElementById("greetHi").textContent = hi;
     document.getElementById("greetSub").textContent =
-      low  ? "Je zit nu onder bereik — houd het in de gaten."
-      : high ? "Je zit nu boven bereik."
-      : "Het gaat goed — je zit nu mooi in bereik.";
+      low  ? TL("Je zit nu onder bereik — houd het in de gaten.","You're below range right now — keep an eye on it.","Está abaixo do alvo agora — fique atento.")
+      : high ? TL("Je zit nu boven bereik.","You're above range right now.","Está acima do alvo agora.")
+      : TL("Het gaat goed — je zit nu mooi in bereik.","Looking good — you're nicely in range right now.","Está a correr bem — está bem no alvo agora.");
     document.getElementById("homeGreet").hidden=false;
     // horizontale waarde-kaart
     const rv=document.getElementById("ringVal"); rv.textContent=nl1(last.bg); rv.style.color=colorOf(last.bg);
@@ -2186,14 +2186,14 @@ function render(glucose, treatments, timeline){
       cobR=(dsF&&dsL.cob!=null)?dsL.cob:carbsOnBoard(treatments,Date.now()); }
     document.getElementById("ringMeta").innerHTML =
       (hasTx?`IOB <b>${nl1(iobR)}</b> · COB <b>${Math.round(cobR)}</b> g<br>`:"")+
-      `<span class="dim">bijgewerkt ${ageMin<90?ageMin+" min":Math.round(ageMin/60)+" u"} geleden</span>`;
+      `<span class="dim">${TL("bijgewerkt","updated","atualizado")} ${ageMin<90?ageMin+" min":Math.round(ageMin/60)+" "+TL("u","h","h")} ${TL("geleden","ago","atrás")}</span>`;
     document.getElementById("homeHero").hidden=false;
     const nu=document.getElementById("secNow");
     nu.classList.toggle("hideOnHome", (document.querySelector('#tabbar .tab.on')?.dataset.tab||"overzicht")==="overzicht");
   }
 
   // ── WEEK ──
-  document.getElementById("weekSub").textContent = "afgelopen 7 dagen";
+  document.getElementById("weekSub").textContent = TL("afgelopen 7 dagen","last 7 days","últimos 7 dias");
   if (tr.length<2){ document.getElementById("secTrend").hidden = true; }
   else {
     document.getElementById("secTrend").hidden = false;
@@ -2213,10 +2213,10 @@ function render(glucose, treatments, timeline){
   // ── MAAND ──
   const enough = q.usable.length>=14;
   document.getElementById("kpis").innerHTML = [
-    ["In bereik", pct0(m.tir), "streef >70%", tick(m.tir>=0.70)],
-    ["Hypo", pct0(m.tbr), "streef <4%", tick(m.tbr<0.04)],
-    ["Variatie (CV)", pct0(m.cv), "streef ≤36%", tick(m.cv<=0.36)],
-    ["GMI", nl1(m.gmi)+"%", "geschat HbA1c", ""],
+    [TL("In bereik","In range","No alvo"), pct0(m.tir), TL("streef >70%","aim >70%","meta >70%"), tick(m.tir>=0.70)],
+    [TL("Hypo","Low","Hipo"), pct0(m.tbr), TL("streef <4%","aim <4%","meta <4%"), tick(m.tbr<0.04)],
+    [TL("Variatie (CV)","Variability (CV)","Variabilidade (CV)"), pct0(m.cv), TL("streef ≤36%","aim ≤36%","meta ≤36%"), tick(m.cv<=0.36)],
+    ["GMI", nl1(m.gmi)+"%", TL("geschat HbA1c","estimated HbA1c","HbA1c estimada"), ""],
   ].map(([k,v,s3,b])=>`<div class="kpi"><div class="k">${k} ${b}</div><div class="v">${v}</div><div class="s">${s3}</div></div>`).join("");
   document.getElementById("bandBar").innerHTML = bandBarHtml(m);
 
@@ -2229,31 +2229,31 @@ function render(glucose, treatments, timeline){
   const highWin = joinBins(ag.filter(x=>x.p50>=10).map(x=>x.b));
   const lowWin  = joinBins(ag.filter(x=>x.p10<3.9).map(x=>x.b));
   const parts=[];
-  if (highWin.length) parts.push(`ligt je mediaan boven 10 rond <b>${highWin.join(", ")}</b>`);
-  if (lowWin.length)  parts.push(`zakt de onderste band onder 3,9 rond <b>${lowWin.join(", ")}</b>`);
+  if (highWin.length) parts.push(TL(`ligt je mediaan boven 10 rond <b>${highWin.join(", ")}</b>`,`your median is above 10 around <b>${highWin.join(", ")}</b>`,`a sua mediana está acima de 10 por volta de <b>${highWin.join(", ")}</b>`));
+  if (lowWin.length)  parts.push(TL(`zakt de onderste band onder 3,9 rond <b>${lowWin.join(", ")}</b>`,`the lower band drops below 3.9 around <b>${lowWin.join(", ")}</b>`,`a faixa inferior desce abaixo de 3,9 por volta de <b>${lowWin.join(", ")}</b>`));
   document.getElementById("agpObs").innerHTML = parts.length
-    ? "Over de dag "+parts.join("; en ")+"."
-    : "Je mediaan blijft de hele dag binnen bereik — een voorspelbaar dagprofiel.";
+    ? TL("Over de dag ","Over the day ","Ao longo do dia ")+parts.join(TL("; en ","; and ","; e "))+"."
+    : TL("Je mediaan blijft de hele dag binnen bereik — een voorspelbaar dagprofiel.","Your median stays in range all day — a predictable daily profile.","A sua mediana mantém-se no alvo o dia todo — um perfil diário previsível.");
 
   document.getElementById("secSafety").hidden = false;
   document.getElementById("hypoKpis").innerHTML = [
-    ["Hypo-episodes", String(hy.episodes), "≥15 min onder 3,9", false],
-    ["Ernstig (<3,0)", String(hy.level2), "niveau-2", true],
-    ["Korte dips", String(hy.dips), "< 15 min", false],
-    ["'s Nachts", String(hy.nocturnal), "00–06 u", hy.nocturnal>0],
+    [TL("Hypo-episodes","Low episodes","Episódios de hipo"), String(hy.episodes), TL("≥15 min onder 3,9","≥15 min below 3.9","≥15 min abaixo de 3,9"), false],
+    [TL("Ernstig (<3,0)","Severe (<3.0)","Grave (<3,0)"), String(hy.level2), TL("niveau-2","level 2","nível 2"), true],
+    [TL("Korte dips","Short dips","Quedas curtas"), String(hy.dips), TL("< 15 min","< 15 min","< 15 min"), false],
+    [TL("'s Nachts","At night","À noite"), String(hy.nocturnal), TL("00–06 u","00–06 h","00–06 h"), hy.nocturnal>0],
   ].map(([k,v,s3,warn])=>`<div class="kpi${warn?" safety":""}"><div class="k">${k}</div><div class="v">${v}</div><div class="s">${s3}</div></div>`).join("");
   document.getElementById("hypoBars").innerHTML = hypoBarsSvg(hy);
   document.getElementById("safetyObs").innerHTML = (hy.episodes===0 && hy.dips===0
-    ? "Geen waarden onder 3,9 in deze periode — mooi."
+    ? TL("Geen waarden onder 3,9 in deze periode — mooi.","No values below 3.9 in this period — nice.","Sem valores abaixo de 3,9 neste período — ótimo.")
     : hy.episodes===0
-    ? `Geen hypo-episodes van ≥15 min; wel <b>${hy.dips}</b> korte dip${hy.dips===1?"":"s"} onder 3,9 (${pct0(m.tbr)} van je tijd).`
-    : `<b>${hy.episodes}</b> hypo-episode${hy.episodes===1?"":"s"} van ≥15 min onder 3,9 (${pct0(m.tbr)} van je tijd, streef &lt;4%)`+
-      `${hy.level2?`, waarvan <b>${hy.level2}</b> ernstig (<3,0)`:""}`+
-      `${hy.nocturnal?`; <b>${hy.nocturnal}</b> 's nachts (00–06 u)`:hy.worst?`, het vaakst in de ${hy.worst}`:""}`+
-      `${hy.dips?`; plus ${hy.dips} korte dip${hy.dips===1?"":"s"}`:""}.`)
-    + (hy.suspect?` <span class="muted">Bij ${hy.suspect} low${hy.suspect===1?"":"s"} past het patroon van <b>sensordruk</b> — mogelijk niet echt.</span>`:"");
+    ? TL(`Geen hypo-episodes van ≥15 min; wel <b>${hy.dips}</b> korte dip${hy.dips===1?"":"s"} onder 3,9 (${pct0(m.tbr)} van je tijd).`,`No lows of ≥15 min; but <b>${hy.dips}</b> short dip${hy.dips===1?"":"s"} below 3.9 (${pct0(m.tbr)} of your time).`,`Sem hipos de ≥15 min; mas <b>${hy.dips}</b> queda${hy.dips===1?"":"s"} curta${hy.dips===1?"":"s"} abaixo de 3,9 (${pct0(m.tbr)} do seu tempo).`)
+    : TL(`<b>${hy.episodes}</b> hypo-episode${hy.episodes===1?"":"s"} van ≥15 min onder 3,9 (${pct0(m.tbr)} van je tijd, streef &lt;4%)`,`<b>${hy.episodes}</b> low episode${hy.episodes===1?"":"s"} of ≥15 min below 3.9 (${pct0(m.tbr)} of your time, aim &lt;4%)`,`<b>${hy.episodes}</b> episódio${hy.episodes===1?"":"s"} de hipo de ≥15 min abaixo de 3,9 (${pct0(m.tbr)} do seu tempo, meta &lt;4%)`)+
+      `${hy.level2?TL(`, waarvan <b>${hy.level2}</b> ernstig (<3,0)`,`, of which <b>${hy.level2}</b> severe (<3.0)`,`, dos quais <b>${hy.level2}</b> graves (<3,0)`):""}`+
+      `${hy.nocturnal?TL(`; <b>${hy.nocturnal}</b> 's nachts (00–06 u)`,`; <b>${hy.nocturnal}</b> at night (00–06 h)`,`; <b>${hy.nocturnal}</b> à noite (00–06 h)`):hy.worst?TL(`, het vaakst in de ${hy.worst}`,`, most often in the ${hy.worst}`,`, mais frequente ${hy.worst}`):""}`+
+      `${hy.dips?TL(`; plus ${hy.dips} korte dip${hy.dips===1?"":"s"}`,`; plus ${hy.dips} short dip${hy.dips===1?"":"s"}`,`; mais ${hy.dips} queda${hy.dips===1?"":"s"} curta${hy.dips===1?"":"s"}`):""}.`)
+    + (hy.suspect?` <span class="muted">${TL(`Bij ${hy.suspect} low${hy.suspect===1?"":"s"} past het patroon van <b>sensordruk</b> — mogelijk niet echt.`,`For ${hy.suspect} low${hy.suspect===1?"":"s"} the <b>sensor-pressure</b> pattern fits — possibly not real.`,`Em ${hy.suspect} hipo${hy.suspect===1?"":"s"} encaixa o padrão de <b>pressão no sensor</b> — possivelmente não reais.`)}</span>`:"");
   document.getElementById("safetyEv").textContent =
-    `n = ${m.n.toLocaleString(LOCALE())} metingen over ${q.usable.length} dagen` + (enough?"":" · ≥14 dagen aanbevolen");
+    `n = ${m.n.toLocaleString(LOCALE())} ${TL("metingen over","readings over","leituras em")} ${q.usable.length} ${TL("dagen","days","dias")}` + (enough?"":TL(" · ≥14 dagen aanbevolen"," · ≥14 days recommended"," · ≥14 dias recomendado"));
 
   const ins = insulinCarbs(treatments, timeline, q);
   if (!treatments.length){ document.getElementById("secInsulin").hidden = true; }
