@@ -26,10 +26,11 @@ const pizza=await pick('Pizza');
 // 2) Banaan (geen vet/eiwit) → geen tip
 const banaan=await pick('Banaan');
 
-const okPizza = /vet-eiwit-eenheden/.test(pizza) && /u door/.test(pizza) && /verleng/i.test(pizza);
+const okPizza = /vet-eiwit-eenheden/.test(pizza) && /u door/.test(pizza)
+  && /%\s*direct/.test(pizza) && /%\s*verlengd/.test(pizza) && !/bespreek/i.test(pizza);
 const okBanaan = banaan==='' ;
-console.log('pizza-tip:', okPizza?'JA':'NEE');
-console.log('  →', pizza.slice(0,120));
+console.log('pizza-tip (met %-verdeling, geen "bespreek"):', okPizza?'JA':'NEE');
+console.log('  →', pizza.slice(0,130));
 console.log('banaan (geen tip):', okBanaan?'JA':'NEE', banaan?('("'+banaan.slice(0,40)+'")'):'');
 console.log('errors:', errors.length?errors:'geen');
 const ok = okPizza && okBanaan && !errors.length;

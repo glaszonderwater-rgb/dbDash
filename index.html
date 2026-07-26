@@ -3176,15 +3176,18 @@ const FATPR={
   "Chips":[34,6],"Snickers":[24,9],"Mars":[17,4],"Gevulde koek":[18,5],"Stroopwafel":[16,4],"Appeltaart":[13,3],
   "Nutella":[31,6],"Satésaus":[10,5]
 };
-// Korte bolus-tip voor een vet/eiwitrijke portie (educatief; geen dosis).
+// Korte bolus-tip voor een vet/eiwitrijke portie. De verdeling volgt uit de
+// verhouding koolhydraten (snel) vs. vet-eiwit-equivalent (traag).
 function cbFatHtml(food, grams){
   const fp=FATPR[food.n]; if(!fp) return "";
   const vee=(grams*fp[0]/100*9 + grams*fp[1]/100*4)/100;
   if(vee<1) return "";
   const hrs = vee<1.5?3 : vee<2.5?4 : vee<3.5?5 : 8;
+  const carbs=grams*food.per/100, veeCarb=vee*10;
+  let ext = carbs+veeCarb>0 ? Math.round(veeCarb/(carbs+veeCarb)*20)*5 : 40;
+  ext = Math.max(20, Math.min(80, ext)); const now = 100-ext;
   return `<b>Vette maaltijd</b> · ~${nl1(vee)} vet-eiwit-eenheden, werkt ~${hrs} u door. `+
-    `Bolus je koolhydraten normaal en <b>verleng de rest</b> (dual-wave) of tijdelijk hoger basaal. `+
-    `<span class="dim">Bespreek met je team — geen dosisadvies.</span>`;
+    `Geef ~<b>${now}%</b> direct en ~<b>${ext}%</b> verlengd over ~${hrs} u (dual-wave).`;
 }
 let _cbCat="", _cbOpen=null, _cbUnit=0, _cbQty=1, _cbPlate=[];
 const cbGrams=(food)=> _cbUnit>=food.u.length ? _cbQty : food.u[_cbUnit][1]*_cbQty;   // laatste index = "gram"
