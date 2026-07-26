@@ -828,6 +828,7 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
       <div class="cbPlateHead">Op je bord</div>
       <div id="cbPlateItems"></div>
       <div class="cbTotal">Totaal <b id="cbTotal">0 g</b> koolhydraten</div>
+      <div class="fatTip" id="cbPlateFat"></div>
       <div class="logrow">
         <input type="date" id="cbDate" aria-label="datum">
         <button class="ghost" id="cbSave">Vastleggen in logboek</button>
@@ -3176,19 +3177,25 @@ const FATPR={
   "Chips":[34,6],"Snickers":[24,9],"Mars":[17,4],"Gevulde koek":[18,5],"Stroopwafel":[16,4],"Appeltaart":[13,3],
   "Nutella":[31,6],"Satésaus":[10,5]
 };
-// Korte bolus-tip voor een vet/eiwitrijke portie. De verdeling volgt uit de
-// verhouding koolhydraten (snel) vs. vet-eiwit-equivalent (traag).
+// Verdeling direct/verlengd uit de verhouding koolhydraten (snel) vs.
+// vet-eiwit-equivalent (traag), begrensd op 20–80% en afgerond op 5%.
+function fatSplit(carbs, vee){
+  const hrs = vee<1.5?3 : vee<2.5?4 : vee<3.5?5 : 8, veeCarb=vee*10;
+  let ext = carbs+veeCarb>0 ? Math.round(veeCarb/(carbs+veeCarb)*20)*5 : 40;
+  ext = Math.max(20, Math.min(80, ext));
+  return { hrs, ext, now:100-ext };
+}
+// Korte bolus-tip voor een vet/eiwitrijke portie.
 function cbFatHtml(food, grams){
   const fp=FATPR[food.n]; if(!fp) return "";
   const vee=(grams*fp[0]/100*9 + grams*fp[1]/100*4)/100;
   if(vee<1) return "";
-  const hrs = vee<1.5?3 : vee<2.5?4 : vee<3.5?5 : 8;
-  const carbs=grams*food.per/100, veeCarb=vee*10;
-  let ext = carbs+veeCarb>0 ? Math.round(veeCarb/(carbs+veeCarb)*20)*5 : 40;
-  ext = Math.max(20, Math.min(80, ext)); const now = 100-ext;
-  return `<b>Vette maaltijd</b> · ~${nl1(vee)} vet-eiwit-eenheden, werkt ~${hrs} u door. `+
-    `Geef ~<b>${now}%</b> direct en ~<b>${ext}%</b> verlengd over ~${hrs} u (dual-wave).`;
+  const s=fatSplit(grams*food.per/100, vee);
+  return `<b>Vette maaltijd</b> · ~${nl1(vee)} vet-eiwit-eenheden, werkt ~${s.hrs} u door. `+
+    `Geef ~<b>${s.now}%</b> direct en ~<b>${s.ext}%</b> verlengd over ~${s.hrs} u (dual-wave).`;
 }
+// Totale vet-eiwit-eenheden over het hele bord (op naam-lookup).
+function plateVEE(){ let fat=0,pro=0; for(const it of _cbPlate){ const fp=FATPR[it.n]; if(fp){ fat+=it.g*fp[0]/100; pro+=it.g*fp[1]/100; } } return (fat*9+pro*4)/100; }
 let _cbCat="", _cbOpen=null, _cbUnit=0, _cbQty=1, _cbPlate=[];
 const cbGrams=(food)=> _cbUnit>=food.u.length ? _cbQty : food.u[_cbUnit][1]*_cbQty;   // laatste index = "gram"
 const cbCarbs=(food,g)=> Math.round(g*food.per/100);
@@ -3244,6 +3251,12 @@ function renderCbPlate(){
   items.innerHTML=_cbPlate.map((it,i)=>`<div class="cbItem"><span class="ci-n">${esc(it.n)}</span><span class="ci-d">${esc(it.label)} · ${it.g} g</span><span class="ci-c">${it.c} g</span><button class="ci-x" data-i="${i}" aria-label="verwijderen">✕</button></div>`).join("");
   const total=_cbPlate.reduce((s,x)=>s+x.c,0);
   document.getElementById("cbTotal").textContent=`${total} g`;
+  const pf=document.getElementById("cbPlateFat");
+  if(pf){ const vee=plateVEE();
+    if(vee>=1){ const s=fatSplit(total,vee);
+      pf.innerHTML=`<b>Vette maaltijd</b> · ~${nl1(vee)} vet-eiwit-eenheden, werkt ~${s.hrs} u door. `+
+        `Geef ~<b>${s.now}%</b> van je bolus direct en ~<b>${s.ext}%</b> verlengd over ~${s.hrs} u (dual-wave).`;
+    } else pf.innerHTML=""; }
   items.querySelectorAll(".ci-x").forEach(b=>b.onclick=()=>{ _cbPlate.splice(+b.dataset.i,1); renderCbPlate(); });
 }
 function initCarb(){

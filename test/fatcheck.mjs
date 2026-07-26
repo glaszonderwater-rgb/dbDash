@@ -21,19 +21,25 @@ async function pick(name){
   await page.waitForTimeout(200);
   return await page.evaluate(()=>{const f=document.getElementById('cbFat');return f?f.textContent.trim():'GEEN-ELEMENT';});
 }
-// 1) Pizza (vet/eiwitrijk) → korte tip met VEE + doorwerking + verlengen
+// 1) Pizza (vet/eiwitrijk) → korte tip met VEE + doorwerking + %-verdeling
 const pizza=await pick('Pizza');
+// pizza op het bord zetten → bord-tip
+await page.click('#cbAddBtn'); await page.waitForTimeout(150);
+const plate=await page.evaluate(()=>document.getElementById('cbPlateFat').textContent.trim());
 // 2) Banaan (geen vet/eiwit) → geen tip
 const banaan=await pick('Banaan');
 
 const okPizza = /vet-eiwit-eenheden/.test(pizza) && /u door/.test(pizza)
   && /%\s*direct/.test(pizza) && /%\s*verlengd/.test(pizza) && !/bespreek/i.test(pizza);
+const okPlate = /vet-eiwit-eenheden/.test(plate) && /%\s*van je bolus direct/.test(plate) && /%\s*verlengd/.test(plate);
 const okBanaan = banaan==='' ;
 console.log('pizza-tip (met %-verdeling, geen "bespreek"):', okPizza?'JA':'NEE');
 console.log('  →', pizza.slice(0,130));
+console.log('bord-tip (totaal over het bord):', okPlate?'JA':'NEE');
+console.log('  →', plate.slice(0,130));
 console.log('banaan (geen tip):', okBanaan?'JA':'NEE', banaan?('("'+banaan.slice(0,40)+'")'):'');
 console.log('errors:', errors.length?errors:'geen');
-const ok = okPizza && okBanaan && !errors.length;
+const ok = okPizza && okPlate && okBanaan && !errors.length;
 console.log('\nRESULTAAT:', ok?'OK':'FOUT');
 if(!ok) process.exitCode=1;
 await browser.close();
