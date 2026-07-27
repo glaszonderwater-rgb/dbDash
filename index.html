@@ -3392,6 +3392,13 @@ document.getElementById("logAdd").onclick = async ()=>{
    schat-hulpmiddel — geen exacte telling en nooit een dosisopdracht.
    u = porties [label, gram]. k = categorie. per = g koolhydraten per 100 g. */
 const CARB_CATS=[["brood","Brood"],["graan","Graan · pasta · rijst"],["aardappel","Aardappel"],["peul","Peulvruchten"],["fruit","Fruit"],["groente","Groente"],["zuivel","Zuivel"],["noten","Kaas · ei · noten"],["snoep","Snoep · koek · gebak"],["drank","Dranken"],["hartig","Hartig · fastfood"],["beleg","Beleg · saus"]];
+// Categorie-labels drietalig (de productnamen zelf blijven Nederlands: een
+// zoekbare voedingsdatabase; vertalen daarvan is een aparte data-taak).
+const _CATL={ brood:["Brood","Bread","Pão"], graan:["Graan · pasta · rijst","Grains · pasta · rice","Cereais · massa · arroz"], aardappel:["Aardappel","Potato","Batata"], peul:["Peulvruchten","Legumes","Leguminosas"], fruit:["Fruit","Fruit","Fruta"], groente:["Groente","Vegetables","Legumes"], zuivel:["Zuivel","Dairy","Laticínios"], noten:["Kaas · ei · noten","Cheese · egg · nuts","Queijo · ovo · frutos secos"], snoep:["Snoep · koek · gebak","Sweets · cookies · pastry","Doces · bolachas · pastelaria"], drank:["Dranken","Drinks","Bebidas"], hartig:["Hartig · fastfood","Savoury · fast food","Salgados · fast food"], beleg:["Beleg · saus","Spreads · sauce","Recheios · molho"] };
+const catLabel = k => { const a=_CATL[k]; return a?TL(a[0],a[1],a[2]):k; };
+// Veelvoorkomende portie-eenheden drietalig (voor de portiekiezer).
+const _UNITL={ "snee":["snee","slice","fatia"], "dun sneetje":["dun sneetje","thin slice","fatia fina"], "stuk":["stuk","piece","unidade"], "stukje":["stukje","small piece","pedaço"], "plak":["plak","slice","fatia"], "opscheplepel":["opscheplepel","serving spoon","colher de servir"], "bord":["bord","plate","prato"], "bowl":["bowl","bowl","tigela"], "kom":["kom","bowl","tigela"], "schaaltje":["schaaltje","small bowl","taça"], "glas":["glas","glass","copo"], "blikje":["blikje","can","lata"], "flesje":["flesje","bottle","garrafa"], "mok":["mok","mug","caneca"], "kop":["kop","cup","chávena"], "kopje":["kopje","cup","chávena"], "pakje":["pakje","carton","pacote"], "handvol":["handvol","handful","mão-cheia"], "half":["half","half","metade"], "punt":["punt","slice","fatia"], "reep":["reep","bar","barra"], "portie":["portie","portion","porção"], "portie (snee)":["portie (snee)","portion (slice)","porção (fatia)"], "eetlepel":["eetlepel","tablespoon","colher de sopa"], "theelepel":["theelepel","teaspoon","colher de chá"], "klontje":["klontje","cube","cubo"], "klein zakje":["klein zakje","small bag","saco pequeno"], "zakje":["zakje","bag","saco"], "bol":["bol","roll","pãozinho"] };
+const unitLabel = s => { const a=_UNITL[s]; return a?TL(a[0],a[1],a[2]):s; };
 const CARB_DB=[
   {n:"Volkorenbrood",k:"brood",per:41,u:[["snee",35],["dun sneetje",25]]},
   {n:"Bruinbrood",k:"brood",per:42,u:[["snee",35]]},
@@ -3795,8 +3802,9 @@ function cbFatHtml(food, grams){
   const carbs=Math.round(grams*food.per/100);
   if(vee<FAT_MIN || carbs<5) return "";
   const s=fatSplit(carbs, vee);
-  return `<b>Vette maaltijd</b> — werkt ~${s.hrs} u door. Van je ~${carbs} g koolhydraten: `+
-    `~<b>${s.directG} g</b> direct + ~<b>${s.extG} g</b> verlengd over ~${s.hrs} u (dual-wave).`;
+  return TL(`<b>Vette maaltijd</b> — werkt ~${s.hrs} u door. Van je ~${carbs} g koolhydraten: ~<b>${s.directG} g</b> direct + ~<b>${s.extG} g</b> verlengd over ~${s.hrs} u (dual-wave).`,
+    `<b>Fatty meal</b> — acts for ~${s.hrs} h. Of your ~${carbs} g carbs: ~<b>${s.directG} g</b> up front + ~<b>${s.extG} g</b> extended over ~${s.hrs} h (dual-wave).`,
+    `<b>Refeição gorda</b> — atua ~${s.hrs} h. Dos seus ~${carbs} g de hidratos: ~<b>${s.directG} g</b> imediato + ~<b>${s.extG} g</b> prolongado ao longo de ~${s.hrs} h (dual-wave).`);
 }
 // Totale vet-eiwit-eenheden over het hele bord (op naam-lookup).
 function plateVEE(){ let fat=0,pro=0; for(const it of _cbPlate){ const fp=FATPR[it.n]; if(fp){ fat+=it.g*fp[0]/100; pro+=it.g*fp[1]/100; } } return (fat*9+pro*4)/100; }
@@ -3807,8 +3815,8 @@ let _MR=null;
 function etenInsightHtml(MR){
   const n = MR && MR.results ? MR.results.length : 0;
   if(n < MEAL_MIN){
-    return `<div class="cbMe thin"><div class="cbMeH">Zo reageert jóuw lijf <span class="cbMeN">nog te weinig data</span></div>`+
-      `<div class="cbMeRow">Zodra je ~${MEAL_MIN} geïsoleerde maaltijden met een handmatige bolus hebt (nu ${n}), lees ik hier uit jóuw curves af hoe snel je piekt en hoe goed je koolhydraten kloppen. Tot dan zijn de tabelwaarden je richtlijn.</div></div>`;
+    return `<div class="cbMe thin"><div class="cbMeH">${TL("Zo reageert jóuw lijf","How your body responds","Como o seu corpo responde")} <span class="cbMeN">${TL("nog te weinig data","not enough data yet","dados ainda insuficientes")}</span></div>`+
+      `<div class="cbMeRow">${TL(`Zodra je ~${MEAL_MIN} geïsoleerde maaltijden met een handmatige bolus hebt (nu ${n}), lees ik hier uit jóuw curves af hoe snel je piekt en hoe goed je koolhydraten kloppen. Tot dan zijn de tabelwaarden je richtlijn.`,`Once you have ~${MEAL_MIN} isolated meals with a manual bolus (now ${n}), I'll read from your own curves how fast you peak and how well your carbs check out. Until then the table values are your guide.`,`Assim que tiver ~${MEAL_MIN} refeições isoladas com bólus manual (agora ${n}), vou ler das suas curvas quão rápido atinge o pico e se os seus hidratos batem certo. Até lá, os valores de tabela são o seu guia.`)}</div></div>`;
   }
   const tpk = MR.mtpk!=null?Math.round(MR.mtpk):null;
   const t50 = MR.mt50!=null?Math.round(MR.mt50):null;
@@ -3818,25 +3826,25 @@ function etenInsightHtml(MR){
   const rows=[];
   // 1) piektiming → prebolus-timing
   if(tpk!=null){
-    const speed = t50==null?"" : t50>60?" — vrij traag, past bij grote of vette maaltijden" : t50<35?" — snel, dan telt prebolus-timing zwaar mee" : "";
-    rows.push(`<div class="cbMeRow"><span class="cbMeK">Piek</span><span>mediaan <b>~${tpk} min</b> na het eten${speed}.</span></div>`);
+    const speed = t50==null?"" : t50>60?TL(" — vrij traag, past bij grote of vette maaltijden"," — fairly slow, fits large or fatty meals"," — bastante lento, compatível com refeições grandes ou gordas") : t50<35?TL(" — snel, dan telt prebolus-timing zwaar mee"," — fast, then prebolus timing matters a lot"," — rápido, então o timing do prebólus pesa muito") : "";
+    rows.push(`<div class="cbMeRow"><span class="cbMeK">${TL("Piek","Peak","Pico")}</span><span>${TL(`mediaan <b>~${tpk} min</b> na het eten${speed}.`,`median <b>~${tpk} min</b> after eating${speed}.`,`mediana <b>~${tpk} min</b> após comer${speed}.`)}</span></div>`);
   }
   // 2) prebolus-moment (alleen als er handmatige-bolus-timing is)
   if(off!=null){
-    const txt = off<-5 ? `je bolust mediaan <b>~${Math.round(-off)} min vóór</b> het eten`
-              : off>5  ? `je bolust mediaan <b>~${Math.round(off)} min ná</b> het eten — eerder bolussen dempt de piek zónder meer insuline`
-              : `je bolust <b>rond</b> het eetmoment — een paar minuten eerder dempt de piek vaak nog`;
+    const txt = off<-5 ? TL(`je bolust mediaan <b>~${Math.round(-off)} min vóór</b> het eten`,`you bolus a median of <b>~${Math.round(-off)} min before</b> eating`,`bolusa uma mediana de <b>~${Math.round(-off)} min antes</b> de comer`)
+              : off>5  ? TL(`je bolust mediaan <b>~${Math.round(off)} min ná</b> het eten — eerder bolussen dempt de piek zónder meer insuline`,`you bolus a median of <b>~${Math.round(off)} min after</b> eating — bolusing earlier dampens the peak without more insulin`,`bolusa uma mediana de <b>~${Math.round(off)} min após</b> comer — bolusar mais cedo reduz o pico sem mais insulina`)
+              : TL(`je bolust <b>rond</b> het eetmoment — een paar minuten eerder dempt de piek vaak nog`,`you bolus <b>around</b> the eating moment — a few minutes earlier often still dampens the peak`,`bolusa <b>por volta</b> do momento de comer — uns minutos antes ainda reduz muitas vezes o pico`);
     rows.push(`<div class="cbMeRow"><span class="cbMeK">Timing</span><span>${txt}. <span style="color:var(--dim)">(n=${nOff})</span></span></div>`);
   }
   // 3) koolhydraat-kalibratie
   if(pct!=null){
-    const cal = pct>=85&&pct<=115 ? `je schatting sluit goed aan bij wat je glucose laat zien`
-              : pct<85 ? `je ziet <b>minder</b> terug dan ingevoerd — mogelijk tel je wat hoog, of dekt je insuline ruim`
-              : `je ziet <b>meer</b> terug dan ingevoerd — mogelijk onderschat je de koolhydraten`;
-    rows.push(`<div class="cbMeRow"><span class="cbMeK">Koolhydraten</span><span>je ziet mediaan <b>~${pct}%</b> terug: ${cal}.</span></div>`);
+    const cal = pct>=85&&pct<=115 ? TL(`je schatting sluit goed aan bij wat je glucose laat zien`,`your estimate matches what your glucose shows well`,`a sua estimativa corresponde bem ao que a glicose mostra`)
+              : pct<85 ? TL(`je ziet <b>minder</b> terug dan ingevoerd — mogelijk tel je wat hoog, of dekt je insuline ruim`,`you see <b>less</b> back than entered — you may count a bit high, or insulin covers generously`,`vê <b>menos</b> do que introduziu — pode contar um pouco a mais, ou a insulina cobre com folga`)
+              : TL(`je ziet <b>meer</b> terug dan ingevoerd — mogelijk onderschat je de koolhydraten`,`you see <b>more</b> back than entered — you may be underestimating the carbs`,`vê <b>mais</b> do que introduziu — pode estar a subestimar os hidratos`);
+    rows.push(`<div class="cbMeRow"><span class="cbMeK">${TL("Koolhydraten","Carbs","Hidratos")}</span><span>${TL(`je ziet mediaan <b>~${pct}%</b> terug: ${cal}.`,`you see a median of <b>~${pct}%</b> back: ${cal}.`,`vê uma mediana de <b>~${pct}%</b> de volta: ${cal}.`)}</span></div>`);
   }
   if(!rows.length) return "";
-  return `<div class="cbMe"><div class="cbMeH">Zo reageert jóuw lijf <span class="cbMeN">n=${n} maaltijden · geen dosisadvies</span></div>${rows.join("")}</div>`;
+  return `<div class="cbMe"><div class="cbMeH">${TL("Zo reageert jóuw lijf","How your body responds","Como o seu corpo responde")} <span class="cbMeN">${TL(`n=${n} maaltijden · geen dosisadvies`,`n=${n} meals · no dosing advice`,`n=${n} refeições · sem conselho de dose`)}</span></div>${rows.join("")}</div>`;
 }
 function renderEtenInsight(){
   const el=document.getElementById("cbMe"); if(!el) return;
@@ -3846,29 +3854,29 @@ const cbGrams=(food)=> _cbUnit>=food.u.length ? _cbQty : food.u[_cbUnit][1]*_cbQ
 const cbCarbs=(food,g)=> Math.round(g*food.per/100);
 function renderCbCats(){
   const el=document.getElementById("cbCats"); if(!el) return;
-  el.innerHTML=`<button type="button" class="chip${_cbCat===""?" sel":""}" data-k="">Alles</button>`+
-    CARB_CATS.map(([k,l])=>`<button type="button" class="chip${_cbCat===k?" sel":""}" data-k="${k}">${l}</button>`).join("");
+  el.innerHTML=`<button type="button" class="chip${_cbCat===""?" sel":""}" data-k="">${TL("Alles","All","Tudo")}</button>`+
+    CARB_CATS.map(([k,l])=>`<button type="button" class="chip${_cbCat===k?" sel":""}" data-k="${k}">${catLabel(k)}</button>`).join("");
   el.querySelectorAll(".chip").forEach(c=>c.onclick=()=>{ _cbCat=c.dataset.k; _cbOpen=null; renderCbCats(); renderCbResults(); });
 }
 function renderCbResults(){
   const el=document.getElementById("cbResults"); if(!el) return;
   const q=(document.getElementById("cbSearch").value||"").trim().toLowerCase();
-  if(!q && !_cbCat){ el.innerHTML=`<div class="cbNone">Zoek een product hierboven, of kies een categorie om te bladeren.</div>`; return; }
+  if(!q && !_cbCat){ el.innerHTML=`<div class="cbNone">${TL("Zoek een product hierboven, of kies een categorie om te bladeren.","Search for a product above, or pick a category to browse.","Procure um produto acima, ou escolha uma categoria para navegar.")}</div>`; return; }
   let list=CARB_DB.filter(f=>(!_cbCat||f.k===_cbCat)&&(!q||f.n.toLowerCase().includes(q)));
   if(q) list=list.sort((a,b)=>a.n.toLowerCase().indexOf(q)-b.n.toLowerCase().indexOf(q));
   list=list.slice(0,40);
-  if(!list.length){ el.innerHTML=`<div class="cbNone">Niets gevonden. Kies een andere zoekterm, of leg de grammen straks handmatig vast.</div>`; return; }
+  if(!list.length){ el.innerHTML=`<div class="cbNone">${TL("Niets gevonden. Kies een andere zoekterm, of leg de grammen straks handmatig vast.","Nothing found. Try another search term, or enter the grams manually later.","Nada encontrado. Tente outro termo, ou introduza as gramas manualmente depois.")}</div>`; return; }
   el.innerHTML=list.map(f=>{
     const open=_cbOpen===f.n;
     let h=`<div class="cbRow"><div class="cbRhead" data-n="${esc(f.n)}"><span class="cbN">${esc(f.n)}</span><span class="cbP">${f.per} g / 100 g</span></div>`;
     if(open){
-      const units=f.u.map(([lab,g],i)=>`<button type="button" class="cbUnit${_cbUnit===i?" sel":""}" data-u="${i}">${esc(lab)} (${g} g)</button>`).join("")
-        +`<button type="button" class="cbUnit${_cbUnit>=f.u.length?" sel":""}" data-u="${f.u.length}">gram</button>`;
+      const units=f.u.map(([lab,g],i)=>`<button type="button" class="cbUnit${_cbUnit===i?" sel":""}" data-u="${i}">${esc(unitLabel(lab))} (${g} g)</button>`).join("")
+        +`<button type="button" class="cbUnit${_cbUnit>=f.u.length?" sel":""}" data-u="${f.u.length}">${TL("gram","grams","gramas")}</button>`;
       const g=cbGrams(f), c=cbCarbs(f,g);
       h+=`<div class="cbEdit"><div class="cbUnits">${units}</div>`+
-        `<div class="cbQrow"><label>aantal</label><input type="number" id="cbQty" min="0" step="0.5" value="${_cbQty}">`+
-        `<span class="cbEst" id="cbEst">≈ ${c} g KH</span>`+
-        `<button type="button" class="cbAdd" id="cbAddBtn">+ op bord</button></div>`+
+        `<div class="cbQrow"><label>${TL("aantal","amount","quantidade")}</label><input type="number" id="cbQty" min="0" step="0.5" value="${_cbQty}">`+
+        `<span class="cbEst" id="cbEst">≈ ${c} g ${TL("KH","carbs","hidr.")}</span>`+
+        `<button type="button" class="cbAdd" id="cbAddBtn">+ ${TL("op bord","to plate","ao prato")}</button></div>`+
         `<div class="fatTip" id="cbFat">${cbFatHtml(f,g)}</div></div>`;
     }
     return h+`</div>`;
@@ -3877,7 +3885,7 @@ function renderCbResults(){
     const n=r.dataset.n; _cbOpen=(_cbOpen===n?null:n); _cbUnit=0; _cbQty=1; renderCbResults(); });
   if(_cbOpen){
     const food=CARB_DB.find(f=>f.n===_cbOpen);
-    const est=()=>{ const g=cbGrams(food); document.getElementById("cbEst").textContent=`≈ ${cbCarbs(food,g)} g KH`;
+    const est=()=>{ const g=cbGrams(food); document.getElementById("cbEst").textContent=`≈ ${cbCarbs(food,g)} g ${TL("KH","carbs","hidr.")}`;
       const cf=document.getElementById("cbFat"); if(cf) cf.innerHTML=cbFatHtml(food,g); };
     el.querySelectorAll(".cbUnit").forEach(b=>b.onclick=()=>{ _cbUnit=+b.dataset.u;
       el.querySelectorAll(".cbUnit").forEach(x=>x.classList.toggle("sel",+x.dataset.u===_cbUnit)); est(); });
@@ -3885,7 +3893,7 @@ function renderCbResults(){
     if(qi) qi.oninput=()=>{ _cbQty=parseNum(qi.value)||0; est(); };
     const ab=document.getElementById("cbAddBtn");
     if(ab) ab.onclick=()=>{ const g=cbGrams(food); if(!(g>0)){ toast(TL("Vul een aantal in.","Enter an amount.","Introduza uma quantidade.")); return; }
-      const label=_cbUnit>=food.u.length?`${_cbQty}× gram`:`${_cbQty}× ${food.u[_cbUnit][0]}`;
+      const label=_cbUnit>=food.u.length?`${_cbQty}× ${TL("gram","g","g")}`:`${_cbQty}× ${unitLabel(food.u[_cbUnit][0])}`;
       _cbPlate.push({n:food.n,label,g:Math.round(g),c:cbCarbs(food,g)});
       _cbOpen=null; renderCbResults(); renderCbPlate(); toast(TL("Toegevoegd aan je bord.","Added to your plate.","Adicionado ao seu prato.")); };
   }
@@ -3893,14 +3901,15 @@ function renderCbResults(){
 function renderCbPlate(){
   const wrap=document.getElementById("cbPlate"), items=document.getElementById("cbPlateItems"); if(!wrap) return;
   wrap.hidden=_cbPlate.length===0; if(!_cbPlate.length) return;
-  items.innerHTML=_cbPlate.map((it,i)=>`<div class="cbItem"><span class="ci-n">${esc(it.n)}</span><span class="ci-d">${esc(it.label)} · ${it.g} g</span><span class="ci-c">${it.c} g</span><button class="ci-x" data-i="${i}" aria-label="verwijderen">✕</button></div>`).join("");
+  items.innerHTML=_cbPlate.map((it,i)=>`<div class="cbItem"><span class="ci-n">${esc(it.n)}</span><span class="ci-d">${esc(it.label)} · ${it.g} g</span><span class="ci-c">${it.c} g</span><button class="ci-x" data-i="${i}" aria-label="${TL("verwijderen","delete","eliminar")}">✕</button></div>`).join("");
   const total=_cbPlate.reduce((s,x)=>s+x.c,0);
   document.getElementById("cbTotal").textContent=`${total} g`;
   const pf=document.getElementById("cbPlateFat");
   if(pf){ const vee=plateVEE();
     if(vee>=FAT_MIN && total>=5){ const s=fatSplit(total, vee);
-      pf.innerHTML=`<b>Vette maaltijd</b> — werkt ~${s.hrs} u door. Van je ~${total} g koolhydraten: `+
-        `~<b>${s.directG} g</b> direct + ~<b>${s.extG} g</b> verlengd over ~${s.hrs} u (dual-wave).`;
+      pf.innerHTML=TL(`<b>Vette maaltijd</b> — werkt ~${s.hrs} u door. Van je ~${total} g koolhydraten: ~<b>${s.directG} g</b> direct + ~<b>${s.extG} g</b> verlengd over ~${s.hrs} u (dual-wave).`,
+        `<b>Fatty meal</b> — acts for ~${s.hrs} h. Of your ~${total} g carbs: ~<b>${s.directG} g</b> up front + ~<b>${s.extG} g</b> extended over ~${s.hrs} h (dual-wave).`,
+        `<b>Refeição gorda</b> — atua ~${s.hrs} h. Dos seus ~${total} g de hidratos: ~<b>${s.directG} g</b> imediato + ~<b>${s.extG} g</b> prolongado ao longo de ~${s.hrs} h (dual-wave).`);
     } else pf.innerHTML=""; }
   items.querySelectorAll(".ci-x").forEach(b=>b.onclick=()=>{ _cbPlate.splice(+b.dataset.i,1); renderCbPlate(); });
 }
