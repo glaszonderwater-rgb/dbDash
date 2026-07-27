@@ -308,6 +308,23 @@ details.fold>.foldbody{padding:0 1.05rem 1.05rem}
 .cbMe .cbMeK{flex:none;color:var(--dim);width:5.4rem;font-size:.72rem}
 .cbMe.thin{border-left-color:var(--line-2)}
 .cbMe.thin .cbMeRow{color:var(--dim)}
+/* "Vraag het je data" — lokale vraag-router */
+.ask{margin:.2rem 0 .9rem}
+.ask .askrow{display:flex;align-items:center;gap:.5rem;background:var(--surface);border:1px solid var(--line-2);border-radius:.8rem;padding:.15rem .7rem;box-shadow:var(--shadow-sm)}
+.ask .askrow:focus-within{border-color:var(--accent)}
+.ask .askic{width:18px;height:18px;flex:none;stroke:var(--dim);fill:none;stroke-width:2;stroke-linecap:round}
+.ask #askInput{flex:1;border:none;background:none;font-size:.92rem;padding:.6rem 0;color:var(--ink);outline:none}
+.ask .chips{margin:.5rem 0 0}
+.ask .chips .chip{font-size:.74rem}
+.askA{margin-top:.7rem;border:1px solid var(--line-2);border-left:3px solid var(--accent);border-radius:.7rem;background:var(--surface);box-shadow:var(--shadow-sm);padding:.7rem .8rem}
+.askA .askAh{font-size:.82rem;font-weight:700;color:var(--ink);margin-bottom:.3rem}
+.askA .askAb{font-size:.82rem;line-height:1.55;color:var(--muted)}
+.askA .askAb b{color:var(--ink)}
+.askA .askAe{font-size:.7rem;color:var(--dim);margin-top:.45rem}
+.askA .askFollow{margin-top:.55rem}
+.askA .askAct{margin-top:.55rem;display:flex;gap:.4rem;flex-wrap:wrap}
+.askA .askAct .act{font-size:.74rem}
+.askNone{font-size:.8rem;color:var(--muted);line-height:1.5}
 #cbSearch{width:100%;box-sizing:border-box;font-size:.95rem;padding:.7rem .85rem;border:1px solid var(--line-2);border-radius:.7rem;background:var(--surface);color:var(--ink);box-shadow:var(--shadow-sm)}
 #cbSearch:focus{outline:none;border-color:var(--accent)}
 /* categorie-chips: één horizontale scroll-strip i.p.v. een muur */
@@ -622,6 +639,15 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
       <span class="hv" id="ringVal">—</span><span class="hu">mmol/L</span>
       <span class="harw" id="heroArrow"></span>
       <span class="hside" id="ringMeta"></span>
+    </div>
+
+    <div class="ask" id="askBox" hidden>
+      <div class="askrow">
+        <svg class="askic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+        <input type="search" id="askInput" data-i18n-ph="ask.ph" placeholder="Vraag iets over je data…" autocomplete="off">
+      </div>
+      <div class="chips" id="askExamples"></div>
+      <div id="askAnswer"></div>
     </div>
 
     <div class="chead" id="epMaand"><span data-i18n="home.kpiTitle">Kerncijfers</span> <span class="sub" id="monthSub"></span></div>
@@ -1103,6 +1129,7 @@ Object.assign(I18N, {
   "cfg.logBackupHint":{ en:"Your marks and hypo-awareness logs live only on this device. Export them as a backup (e.g. before clearing the cache or switching devices).", pt:"As suas marcas e registos de perceção de hipo existem apenas neste dispositivo. Exporte-os como cópia de segurança (ex. antes de limpar a cache ou mudar de dispositivo)." },
   "cfg.export":{ en:"⭳ Export logbook", pt:"⭳ Exportar diário" },
   "cfg.import":{ en:"⭱ Import", pt:"⭱ Importar" },
+  "ask.ph":{ en:"Ask something about your data…", pt:"Pergunte algo sobre os seus dados…" },
 });
 // Uitleg-sectie ("Uitleg & leren") — één sleutel met de volledige HTML per taal.
 Object.assign(I18N, { "meth.body":{
@@ -2143,12 +2170,13 @@ function render(glucose, treatments, timeline){
   if (!g.length){
     document.getElementById("findToday").innerHTML =
       `<div class="f"><div class="fh"><span class="fdot n"></span><span class="ftxt">${TL("Nog te weinig dagen met voldoende sensordekking (≥70%) voor betrouwbare cijfers. Synchroniseer meer historie.","Still too few days with enough sensor coverage (≥70%) for reliable figures. Sync more history.","Ainda poucos dias com cobertura de sensor suficiente (≥70%) para números fiáveis. Sincronize mais histórico.")}</span></div></div>`;
-    for (const id of ["secDay","secAware","secTrend","secLog","secWatch","mvsCard","secAgp","secSafety","secInsulin","secProfile"]) document.getElementById(id).hidden = true;
+    for (const id of ["secDay","secAware","secTrend","secLog","secWatch","mvsCard","secAgp","secSafety","secInsulin","secProfile","askBox"]) document.getElementById(id).hidden = true;
     document.getElementById("kpis").innerHTML = "";
     return;
   }
 
   _ctx = { glucose, q, treatments, timeline };
+  renderAskExamples();   // "Vraag het je data" — zoekbalk + voorbeeldvragen
   document.querySelectorAll("details.deep").forEach(d=>{ d.open=false; delete d.dataset.done;
     d.querySelector(".body").innerHTML = '<div class="loading">'+t("loading")+'</div>'; });
 
@@ -2537,6 +2565,205 @@ async function renderFindings(ctx){
 }
 
 /* ── Consultlijst — verzamelt bespreekpunten richting je afspraak ────────── */
+/* ── "Vraag het je data" — lokale, deterministische vraag-router ─────────────
+   Geen extern model: je vraag wordt lokaal op intentie gematcht en beantwoord
+   met dezelfde transparante analyses (mét bewijs). Privé, offline, geen dosis. */
+const _askNorm = s => (s||"").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^a-z0-9\s]/g," ").replace(/\s+/g," ").trim();
+function _askDaypart(q){
+  if(/\bnacht|night|noite|vannacht|last night\b/.test(q)) return "nacht";
+  if(/\bontbijt|breakfast|ochtend|morning|manha\b/.test(q)) return "ochtend";
+  if(/\blunch|middag|afternoon|tarde\b/.test(q)) return "middag";
+  if(/\bdiner|dinner|avond|evening|jantar\b/.test(q)) return "avond";
+  return null;
+}
+// Voorbeeld-/startvragen (chips + terugval).
+function _askExamples(){ return [
+  TL("Hoe ging mijn nacht?","How was my night?","Como foi a minha noite?"),
+  TL("Waarom zak ik 's nachts?","Why do I go low at night?","Porque desço à noite?"),
+  TL("Tel ik mijn koolhydraten goed?","Am I counting carbs well?","Conto bem os hidratos?"),
+  TL("Wanneer moet ik prebolussen?","When should I prebolus?","Quando devo fazer prebólus?"),
+  TL("Klopt mijn correctiefactor?","Is my correction factor right?","O meu fator de correção está certo?"),
+  TL("Heb ik een dawn-fenomeen?","Do I have a dawn phenomenon?","Tenho fenómeno do amanhecer?"),
+  TL("Hoe is mijn tijd in bereik?","How's my time in range?","Como está o meu tempo no alvo?"),
+  TL("Wat bespreek ik met mijn arts?","What should I discuss with my doctor?","O que discuto com o médico?"),
+]; }
+// Oorzaak-etiketten (voor de waarom-antwoorden).
+function _askCause(){ return { "smb-stapeling":TL("loop-correcties (SMB's)","loop corrections (SMBs)","correções do loop (SMB)"),
+  "correctie-nawerking":TL("correctiebolus","correction bolus","bólus de correção"), "maaltijd-nawerking":TL("maaltijdbolus","meal bolus","bólus de refeição"),
+  "basaal":TL("basaal","basal","basal"), "sensordruk":TL("sensordruk","sensor pressure","pressão no sensor"), "onverklaard":TL("onverklaard","unexplained","inexplicado") }; }
+// Intenties: keyword-sets (per taal, union-match) + antwoordbouwer die D krijgt.
+function _askIntents(){ return [
+  { id:"night", kw:["nacht","night","noite","vannacht","last night","geslapen","slept","dormi"],
+    run:D=>{ const lows=(D.hy.allLows||[]).filter(e=>todMin(e.start)<360);
+      const nn=lows.length, minv=nn?Math.min(...lows.map(x=>x.min)):null;
+      const b = nn? TL(`Vannacht/recent zag ik <b>${nn}×</b> een waarde onder 3,9 tussen 00–06 u (laagste ${nl1(minv)}).`,`Last night/recently I saw <b>${nn}×</b> a value below 3.9 between 00–06 h (lowest ${nl1(minv)}).`,`Esta noite/recentemente vi <b>${nn}×</b> um valor abaixo de 3,9 entre 00–06 h (mínimo ${nl1(minv)}).`)
+        : TL("Geen waarden onder 3,9 in de nachten van deze periode — rustige nachten.","No values below 3.9 in the nights of this period — quiet nights.","Sem valores abaixo de 3,9 nas noites deste período — noites tranquilas.");
+      const sg=somogyiPattern(D.c.glucose,D.c.q);
+      const extra = sg? " "+TL(`In ${sg.rebounds} van ${sg.nights} nachten met een laagte volgde een ochtendhyper — mogelijk Somogyi (omstreden).`,`In ${sg.rebounds} of ${sg.nights} nights with a low a morning high followed — possibly Somogyi (debated).`,`Em ${sg.rebounds} de ${sg.nights} noites com hipo seguiu-se hiperglicemia matinal — possivelmente Somogyi (debatido).`):"";
+      return { t:TL("Je nachten","Your nights","As suas noites"), b:b+extra,
+        e:TL("bron: sensorwaarden 00–06 u","source: sensor values 00–06 h","fonte: valores do sensor 00–06 h"),
+        follow:["whylow","basal","safety"] }; } },
+  { id:"whylow", kw:["waarom","why","porque","porque desco","zak","laag","hypo","low","daal","crash","drop","desco","baixo"],
+    run:D=>{ const eps=(D.hy&&D.hy.eps)||[]; if(eps.length<2) return { t:TL("Waarom je zakt","Why you go low","Porque desce"), b:TL("Nog te weinig hypo-episodes om de oorzaken op te tellen — goed nieuws voor je bereik.","Too few low episodes to tally causes — good news for your range.","Poucos episódios de hipo para somar causas — boa notícia para o seu alvo."), e:"" };
+      const LBL=_askCause(), tally={}; let done=0;
+      for(const e of eps){ let w=null; try{ w=explainHypo(e,D.c.glucose,D.c.treatments,D.c.timeline); }catch(_){}
+        if(!w)continue; tally[w.cause]=(tally[w.cause]||0)+1; done++; }
+      const ranked=Object.entries(tally).sort((a,b)=>b[1]-a[1]);
+      if(!done||!ranked.length) return { t:TL("Waarom je zakt","Why you go low","Porque desce"), b:TL("Ik kon de oorzaken niet betrouwbaar reconstrueren (te weinig insuline-/koolhydraatdata rond de laagtes).","I couldn't reliably reconstruct the causes (too little insulin/carb data around the lows).","Não consegui reconstruir as causas de forma fiável (poucos dados de insulina/hidratos à volta das hipos)."), e:"" };
+      const [top,tn]=ranked[0], bd=ranked.map(([c,n])=>`${n}× ${LBL[c]||c}`).join(" · ");
+      return { t:TL("Waarom je zakt","Why you go low","Porque desce"),
+        b:TL(`Van je <b>${done}</b> gereconstrueerde hypo's paste <b>${LBL[top]}</b> het vaakst (${tn}×). Verdeling: ${bd}.`,`Of your <b>${done}</b> reconstructed lows, <b>${LBL[top]}</b> fit most often (${tn}×). Breakdown: ${bd}.`,`Das suas <b>${done}</b> hipos reconstruídas, <b>${LBL[top]}</b> encaixou mais vezes (${tn}×). Distribuição: ${bd}.`),
+        e:TL(`n = ${done} doorgerekende hypo's · elk uit je insuline, koolhydraten en daalsnelheid`,`n = ${done} computed lows · each from your insulin, carbs and fall rate`,`n = ${done} hipos calculadas · cada uma da sua insulina, hidratos e taxa de descida`),
+        consult:{id:"ask-whylow", title:TL(`Waarom-hypo's: vaakst ${LBL[top]}`,`Why-lows: most often ${LBL[top]}`,`Porquê-hipos: mais vezes ${LBL[top]}`)}, follow:["night","safety","isf"] }; } },
+  { id:"whyspike", kw:["waarom","why","porque","piek","spike","hoog","high","na het eten","after eating","na de maaltijd","depois de comer","alto"],
+    run:D=>{ const res=(D.MR&&D.MR.results)||[]; const dp=D.ent.dp, win={ochtend:[240,660],middag:[660,900],avond:[900,1320]}[dp];
+      let notable=res.filter(r=>r.peakRise>=2.5); if(win) notable=notable.filter(r=>r.ts!=null&&todMin(r.ts)>=win[0]&&todMin(r.ts)<win[1]);
+      if(notable.length<2) return { t:TL("Waarom je piekt","Why you spike","Porque tem picos"), b:TL("Nog te weinig geïsoleerde maaltijden met een piek om de oorzaken te duiden.","Too few isolated meals with a peak to explain the causes.","Poucas refeições isoladas com pico para explicar as causas."), e:"" };
+      const SL={ prebolus:TL("een te late bolus (geen prebolus)","a late bolus (no prebolus)","um bólus tardio (sem prebólus)"), "kh-onderschat":TL("onderschatte koolhydraten","underestimated carbs","hidratos subestimados"), traag:TL("een trage/vette maaltijd","a slow/fatty meal","uma refeição lenta/gorda"), verwacht:TL("binnen verwachting","as expected","dentro do esperado") };
+      const tally={}; for(const r of notable){ const w=explainSpike(r); tally[w.cause]=(tally[w.cause]||0)+1; }
+      const ranked=Object.entries(tally).sort((a,b)=>b[1]-a[1]).filter(([c])=>c!=="verwacht");
+      const lead = ranked.length? TL(`Je hoogste pieken${dp?` ('s ${mealName({ochtend:"ontbijt",middag:"lunch",avond:"diner"}[dp])})`:""} komen het vaakst door <b>${SL[ranked[0][0]]}</b> (${ranked[0][1]}×).`,`Your highest peaks${dp?` (${mealName({ochtend:"ontbijt",middag:"lunch",avond:"diner"}[dp])})`:""} most often come from <b>${SL[ranked[0][0]]}</b> (${ranked[0][1]}×).`,`Os seus picos mais altos${dp?` (${mealName({ochtend:"ontbijt",middag:"lunch",avond:"diner"}[dp])})`:""} vêm mais vezes de <b>${SL[ranked[0][0]]}</b> (${ranked[0][1]}×).`)
+        : TL("Je pieken blijven binnen verwachting voor de maaltijdgrootte.","Your peaks stay within expectation for the meal size.","Os seus picos ficam dentro do esperado para o tamanho da refeição.");
+      return { t:TL("Waarom je piekt","Why you spike","Porque tem picos"), b:lead,
+        e:TL(`n = ${notable.length} maaltijden met piek ≥ 2,5 · doorgerekend met je eigen ISF & KH-ratio`,`n = ${notable.length} meals with peak ≥ 2.5 · computed with your own ISF & carb ratio`,`n = ${notable.length} refeições com pico ≥ 2,5 · calculado com o seu ISF e rácio`),
+        consult:ranked.length?{id:"ask-whyspike", title:TL(`Waarom-pieken: vaakst ${SL[ranked[0][0]]}`,`Why-spikes: most often ${SL[ranked[0][0]]}`,`Porquê-picos: mais vezes ${SL[ranked[0][0]]}`)}:null, follow:["prebolus","carbs","meals"] }; } },
+  { id:"carbs", kw:["koolhydraten","carb","hidratos","tel","count","conto","kh ratio","carb ratio","ratio"],
+    run:D=>{ if(!D.MR||D.MR.results.length<MEAL_MIN) return { t:TL("Koolhydraten tellen","Carb counting","Contagem de hidratos"), b:TL("Nog te weinig geïsoleerde maaltijden met bolus om je koolhydraat-telling te toetsen.","Too few isolated meals with a bolus to check your carb counting.","Poucas refeições isoladas com bólus para verificar a contagem."), e:"" };
+      const p=Math.round(D.MR.mfrac*100);
+      const cal = p>=85&&p<=115?TL("je schatting sluit goed aan","your estimate matches well","a sua estimativa bate certo"):p<85?TL("je ziet minder terug dan ingevoerd — mogelijk tel je wat hoog","you see less than entered — you may count a bit high","vê menos do que introduziu — pode contar um pouco a mais"):TL("je ziet meer terug dan ingevoerd — mogelijk ondergeteld","you see more than entered — possibly undercounted","vê mais do que introduziu — possivelmente subcontado");
+      return { t:TL("Koolhydraten tellen","Carb counting","Contagem de hidratos"),
+        b:TL(`Je ziet mediaan <b>~${p}%</b> van je ingevoerde koolhydraten terug: ${cal}.`,`You see a median of <b>~${p}%</b> of your entered carbs back: ${cal}.`,`Vê uma mediana de <b>~${p}%</b> dos hidratos introduzidos: ${cal}.`),
+        e:TL(`n = ${D.MR.results.length} maaltijden · maat valt structureel hoog uit, alleen als context`,`n = ${D.MR.results.length} meals · measure runs high, context only`,`n = ${D.MR.results.length} refeições · medida sai alta, apenas contexto`), follow:["prebolus","whyspike","meals"] }; } },
+  { id:"prebolus", kw:["prebolus","prebólus","timing","wanneer","when","quando","bolus","piek","peak","hoe snel","how fast"],
+    run:D=>{ if(!D.MR||D.MR.results.length<MEAL_MIN) return { t:TL("Prebolus & timing","Prebolus & timing","Prebólus e timing"), b:TL("Nog te weinig maaltijden met bolus-timing om je prebolus te beoordelen.","Too few meals with bolus timing to assess your prebolus.","Poucas refeições com timing de bólus para avaliar."), e:"" };
+      const tpk=Math.round(D.MR.mtpk), off=D.MR.moffset;
+      const ot = off==null?"" : off<-5?TL(` Je bolust mediaan ~${Math.round(-off)} min vóór het eten — een goede prebolus.`,` You bolus a median of ~${Math.round(-off)} min before eating — a good prebolus.`,` Bolusa uma mediana de ~${Math.round(-off)} min antes de comer — um bom prebólus.`):off>5?TL(` Je bolust mediaan ~${Math.round(off)} min ná het eten — eerder bolussen dempt de piek zónder meer insuline.`,` You bolus a median of ~${Math.round(off)} min after eating — bolusing earlier dampens the peak without more insulin.`,` Bolusa uma mediana de ~${Math.round(off)} min após comer — bolusar mais cedo reduz o pico sem mais insulina.`):TL(" Je bolust rond het eetmoment — een paar minuten eerder dempt de piek vaak nog."," You bolus around the eating moment — a few minutes earlier often still dampens the peak."," Bolusa por volta do momento de comer — uns minutos antes ainda reduz o pico.");
+      return { t:TL("Prebolus & timing","Prebolus & timing","Prebólus e timing"),
+        b:TL(`Je maaltijden pieken mediaan <b>~${tpk} min</b> na het eten.`,`Your meals peak a median of <b>~${tpk} min</b> after eating.`,`As suas refeições atingem o pico a uma mediana de <b>~${tpk} min</b> após comer.`)+ot,
+        e:TL(`n = ${D.MR.results.length} maaltijden · handmatige bolus, SMB's tellen niet mee`,`n = ${D.MR.results.length} meals · manual bolus, SMBs excluded`,`n = ${D.MR.results.length} refeições · bólus manual, SMB excluídos`), follow:["whyspike","carbs","meals"] }; } },
+  { id:"isf", kw:["isf","correctie","correction","correcao","gevoelig","sensitiv","sensivel","correctiefactor"],
+    run:D=>{ const oi=D.oi; if(!oi||oi.obs==null) return { t:TL("Correctiefactor (ISF)","Correction factor (ISF)","Fator de correção (ISF)"), b:TL(`Nog te weinig schone handmatige correcties (${oi?oi.n:0}/8) om je ISF te meten. Bij een closed loop corrigeer je meestal via SMB's.`,`Too few clean manual corrections (${oi?oi.n:0}/8) to measure your ISF. With a closed loop you usually correct via SMBs.`,`Poucas correções manuais limpas (${oi?oi.n:0}/8) para medir o ISF. Num closed loop corrige via SMB.`), e:"" };
+      const prof = oi.prof!=null?TL(` naast je ingestelde <b>${nl1(oi.prof)}</b>`,` next to your set <b>${nl1(oi.prof)}</b>`,` face ao definido <b>${nl1(oi.prof)}</b>`):"";
+      const judge = oi.prof==null?"":(oi.obs/oi.prof>=0.8&&oi.obs/oi.prof<=1.25?TL(" — die sluiten aan."," — these align."," — alinham."):oi.obs/oi.prof>1.25?TL(" — je bent gevoeliger dan je profiel aanneemt; correcties kunnen doorschieten."," — you're more sensitive than your profile assumes; corrections may overshoot."," — é mais sensível do que o perfil assume; as correções podem exceder."):TL(" — correcties doen minder dan je profiel aanneemt."," — corrections do less than your profile assumes."," — as correções fazem menos do que o perfil assume."));
+      return { t:TL("Correctiefactor (ISF)","Correction factor (ISF)","Fator de correção (ISF)"),
+        b:TL(`Gemeten daalt 1 E je glucose ~<b>${nl1(oi.obs)}</b> mmol/L${prof}${judge}`,`Measured, 1 U lowers your glucose ~<b>${nl1(oi.obs)}</b> mmol/L${prof}${judge}`,`Medido, 1 U baixa a glicose ~<b>${nl1(oi.obs)}</b> mmol/L${prof}${judge}`),
+        e:TL(`n = ${oi.n} correcties · IQR ${nl1(oi.q25)}–${nl1(oi.q75)} · meetwaarde, geen voorschrift`,`n = ${oi.n} corrections · IQR ${nl1(oi.q25)}–${nl1(oi.q75)} · measured, not a prescription`,`n = ${oi.n} correções · IQR ${nl1(oi.q25)}–${nl1(oi.q75)} · valor medido, não prescrição`),
+        consult:oi.prof!=null&&(oi.obs/oi.prof<0.8||oi.obs/oi.prof>1.25)?{id:"ask-isf",title:TL(`Gemeten ISF ~${nl1(oi.obs)} vs ingesteld ${nl1(oi.prof)}`,`Measured ISF ~${nl1(oi.obs)} vs set ${nl1(oi.prof)}`,`ISF medido ~${nl1(oi.obs)} vs definido ${nl1(oi.prof)}`)}:null, follow:["basal","whylow","discuss"] }; } },
+  { id:"basal", kw:["basaal","basal","drift","dawn","ochtendstijging","wegdrijf","morning rise","deriva","fasting"],
+    run:D=>{ const dr=D.drift, dawn=dr&&dr.stat?dawnPattern(dr):null;
+      if(!dr||!dr.stat) return { t:TL("Basaal & drift","Basal & drift","Basal e deriva"), b:TL("Te weinig maaltijd-/bolusvrije vensters om drift te meten. Bij een closed loop maskeert temp-basaal dit — zie Loop-basaal.","Too few meal-/bolus-free windows to measure drift. With a closed loop temp basal masks this — see Loop basal.","Poucas janelas sem refeição/bólus para medir a deriva. Num closed loop a basal temporária mascara isto — ver Basal do loop."), e:"" };
+      let b;
+      if(dawn) b=TL(`Je hebt een <b>dawn-fenomeen</b>: nuchter stijg je in de vroege ochtend (rond ${joinHrs(dawn.hours).join(", ")}) met ~${nl1(dawn.rise)} mmol/L/u.`,`You have a <b>dawn phenomenon</b>: when fasting you rise in the early morning (around ${joinHrs(dawn.hours).join(", ")}) by ~${nl1(dawn.rise)} mmol/L/h.`,`Tem um <b>fenómeno do amanhecer</b>: em jejum sobe de madrugada (por volta de ${joinHrs(dawn.hours).join(", ")}) ~${nl1(dawn.rise)} mmol/L/h.`);
+      else if(!dr.up.length&&!dr.down.length) b=TL("In stille vensters drijf je nergens structureel weg — je basaal lijkt in balans.","In quiet windows you don't drift structurally anywhere — your basal seems balanced.","Em janelas calmas não deriva estruturalmente — a sua basal parece equilibrada.");
+      else { const parts=[]; if(dr.up.length)parts.push(TL(`stijg je rond ${joinHrs(dr.up.map(x=>x.h)).join(", ")}`,`you rise around ${joinHrs(dr.up.map(x=>x.h)).join(", ")}`,`sobe por volta de ${joinHrs(dr.up.map(x=>x.h)).join(", ")}`)); if(dr.down.length)parts.push(TL(`zak je rond ${joinHrs(dr.down.map(x=>x.h)).join(", ")}`,`you fall around ${joinHrs(dr.down.map(x=>x.h)).join(", ")}`,`desce por volta de ${joinHrs(dr.down.map(x=>x.h)).join(", ")}`)); b=TL(`Nuchter ${parts.join(" en ")}.`,`When fasting ${parts.join(" and ")}.`,`Em jejum ${parts.join(" e ")}.`); }
+      return { t:TL("Basaal & drift","Basal & drift","Basal e deriva"), b:b+" "+TL("Bespreekpunt, geen instelwaarde.","Discussion point, not a setting.","Ponto de discussão, não um parâmetro."),
+        e:TL(`n = ${dr.total.toLocaleString(LOCALE())} driftmetingen in stille vensters`,`n = ${dr.total.toLocaleString(LOCALE())} drift readings in quiet windows`,`n = ${dr.total.toLocaleString(LOCALE())} medições de deriva em janelas calmas`),
+        consult:(dawn||dr.up.length||dr.down.length)?{id:"ask-basal",title:dawn?TL("Dawn-fenomeen (ochtendstijging)","Dawn phenomenon (morning rise)","Fenómeno do amanhecer"):TL("Nuchtere drift per uur","Fasting drift per hour","Deriva em jejum por hora")}:null, follow:["night","discuss","isf"] }; } },
+  { id:"tir", kw:["bereik","range","alvo","tir","hoe gaat","hoe sta","doing","tijd in bereik","time in range","como estou","como esta"],
+    run:D=>{ const m=D.m; return { t:TL("Je maand in bereik","Your month in range","O seu mês no alvo"),
+      b:TL(`Tijd in bereik <b>${pct0(m.tir)}</b> (streef >70%), hypo-tijd <b>${pct0(m.tbr)}</b> (<4%), variatie <b>${pct0(m.cv)}</b> (≤36%), GMI ${nl1(m.gmi)}%.`,`Time in range <b>${pct0(m.tir)}</b> (aim >70%), low time <b>${pct0(m.tbr)}</b> (<4%), variability <b>${pct0(m.cv)}</b> (≤36%), GMI ${nl1(m.gmi)}%.`,`Tempo no alvo <b>${pct0(m.tir)}</b> (meta >70%), tempo em hipo <b>${pct0(m.tbr)}</b> (<4%), variabilidade <b>${pct0(m.cv)}</b> (≤36%), GMI ${nl1(m.gmi)}%.`),
+      e:TL(`n = ${m.n.toLocaleString(LOCALE())} metingen`,`n = ${m.n.toLocaleString(LOCALE())} readings`,`n = ${m.n.toLocaleString(LOCALE())} medições`), follow:["trend","safety","discuss"] }; } },
+  { id:"safety", kw:["veilig","safe","seguro","hoeveel hypo","how many low","quantas hipo","ernstig","severe","hypos"],
+    run:D=>{ const hy=D.hy; return { t:TL("Veiligheid — hypo's","Safety — lows","Segurança — hipos"),
+      b:TL(`<b>${hy.episodes}</b> hypo-episode(s) ≥15 min${hy.level2?`, waarvan ${hy.level2} ernstig (<3,0)`:""}${hy.nocturnal?`; ${hy.nocturnal} 's nachts`:""}. Korte dips: ${hy.dips}.`,`<b>${hy.episodes}</b> low episode(s) ≥15 min${hy.level2?`, of which ${hy.level2} severe (<3.0)`:""}${hy.nocturnal?`; ${hy.nocturnal} at night`:""}. Short dips: ${hy.dips}.`,`<b>${hy.episodes}</b> episódio(s) de hipo ≥15 min${hy.level2?`, dos quais ${hy.level2} graves (<3,0)`:""}${hy.nocturnal?`; ${hy.nocturnal} à noite`:""}. Quedas curtas: ${hy.dips}.`),
+      e:TL("een echte hypo = ≥15 min onder 3,9","a real low = ≥15 min below 3.9","uma hipo real = ≥15 min abaixo de 3,9"), follow:["whylow","night","awareness"] }; } },
+  { id:"trend", kw:["trend","slechter","worse","beter","better","verandert","changing","vooruit","achteruit","pior","melhor","tendencia"],
+    run:D=>{ const w=watchList(D.c.glucose,D.c.q);
+      if(w.few) return { t:TL("Trend","Trend","Tendência"), b:TL("Nog te weinig dagen om de laatste 2 weken met de 2 weken daarvóór te vergelijken.","Too few days to compare the last 2 weeks with the 2 before.","Poucos dias para comparar as últimas 2 semanas com as 2 anteriores."), e:"" };
+      const b = w.alerts.length? w.alerts.map(a=>`<b>${a.title}</b> — ${a.detail}`).join("<br>") : TL("Niets dat oploopt: hypo-tijd, tijd in bereik en variatie zijn stabiel of beter dan de 2 weken ervoor.","Nothing rising: low time, time in range and variability are stable or better than the 2 weeks before.","Nada a subir: tempo em hipo, tempo no alvo e variabilidade estão estáveis ou melhores que as 2 semanas anteriores.");
+      return { t:TL("Trend","Trend","Tendência"), b, e:TL("laatste 2 weken vs de 2 weken daarvóór · ≥70% dekking","last 2 weeks vs the 2 before · ≥70% coverage","últimas 2 semanas vs as 2 anteriores · ≥70% cobertura"), follow:["tir","discuss","safety"] }; } },
+  { id:"insulin", kw:["insuline","insulin","insulina","dosis","dose","eenheden","units","unidades","tdd","dagdosis"],
+    run:D=>{ const ins=D.ins; if(ins.tdd==null&&!ins.bolusDay) return { t:TL("Insulinegebruik","Insulin use","Uso de insulina"), b:TL("Geen behandeldata gevonden om je insulinegebruik te tonen.","No treatment data found to show your insulin use.","Sem dados de tratamento para mostrar o uso de insulina."), e:"" };
+      const td = ins.tdd!=null?TL(`Totale dagdosis ~<b>${nl1(ins.tdd)} E</b> (basaal/bolus ${Math.round(ins.basalPct*100)}/${Math.round(ins.bolusPct*100)}%).`,`Total daily dose ~<b>${nl1(ins.tdd)} U</b> (basal/bolus ${Math.round(ins.basalPct*100)}/${Math.round(ins.bolusPct*100)}%).`,`Dose diária total ~<b>${nl1(ins.tdd)} U</b> (basal/bólus ${Math.round(ins.basalPct*100)}/${Math.round(ins.bolusPct*100)}%).`):TL(`Bolus+SMB ~<b>${nl1(ins.bolusDay)} E/dag</b>.`,`Bolus+SMB ~<b>${nl1(ins.bolusDay)} U/day</b>.`,`Bólus+SMB ~<b>${nl1(ins.bolusDay)} U/dia</b>.`);
+      return { t:TL("Insulinegebruik","Insulin use","Uso de insulina"), b:td+" "+TL(`Koolhydraten ~${Math.round(ins.carbsDay)} g/dag.`,`Carbs ~${Math.round(ins.carbsDay)} g/day.`,`Hidratos ~${Math.round(ins.carbsDay)} g/dia.`),
+        e:TL("basaal is een profiel-schatting; bolus en koolhydraten zijn exact","basal is a profile estimate; bolus and carbs are exact","a basal é uma estimativa do perfil; bólus e hidratos são exatos"), follow:["tir","isf","discuss"] }; } },
+  { id:"awareness", kw:["voel","feel","sinto","voelgrens","bewust","aware","hypogevoel","perceção","hypo awareness"],
+    run:D=>{ let felt=[]; const aw=hypoAwareness(D.c.glucose, (window._askFelt||[]));
+      // aw uses felt logs; we pass what we have (loaded async elsewhere). If none:
+      if(!aw||!aw.n) return { t:TL("Hypo-gevoel","Hypo awareness","Perceção de hipo"), b:TL("Nog geen hypo-gevoel gelogd. Leg in het Overzicht (Hypo-gevoel) vast wannéér je een hypo vóélt — dan volgt de app of die voelgrens zakt.","No hypo awareness logged yet. In the Overview (Hypo awareness) note when you feel a hypo — then the app tracks whether that threshold drops.","Ainda sem perceção de hipo registada. No Resumo (Perceção de hipo) registe quando sente uma hipo — a app segue se esse limiar desce."), e:"" };
+      return { t:TL("Hypo-gevoel","Hypo awareness","Perceção de hipo"), b:TL(`Je voelt hypo's mediaan rond <b>${nl1(aw.thr)} mmol/L</b>.`,`You feel lows at a median around <b>${nl1(aw.thr)} mmol/L</b>.`,`Sente hipos a uma mediana de <b>${nl1(aw.thr)} mmol/L</b>.`), e:`n = ${aw.n}`, follow:["safety","whylow"] }; } },
+  { id:"day", kw:["beste dag","slechtste dag","best day","worst day","melhor dia","pior dia","ergste"],
+    run:D=>{ const j=_notable||{}; const parts=[];
+      if(j.best) parts.push(TL(`beste dag ${pct0(j.best.v)} in bereik`,`best day ${pct0(j.best.v)} in range`,`melhor dia ${pct0(j.best.v)} no alvo`));
+      if(j.worst) parts.push(TL(`laagste ${nl1(j.worst.v)}`,`lowest ${nl1(j.worst.v)}`,`mínimo ${nl1(j.worst.v)}`));
+      if(j.high) parts.push(TL(`hoogste ${nl1(j.high.v)}`,`highest ${nl1(j.high.v)}`,`máximo ${nl1(j.high.v)}`));
+      if(!parts.length) return { t:TL("Beste & slechtste dag","Best & worst day","Melhor e pior dia"), b:TL("Nog te weinig volledige dagen om uitschieters aan te wijzen.","Too few full days to point out outliers.","Poucos dias completos para apontar extremos."), e:"" };
+      return { t:TL("Beste & slechtste dag","Best & worst day","Melhor e pior dia"), b:parts.join(" · ")+". "+TL("Open de Dagcurve om ze te bekijken.","Open the Day curve to view them.","Abra a Curva do dia para os ver."), e:"", follow:["tir","safety"] }; } },
+  { id:"discuss", kw:["bespreek","discuss","discutir","arts","doctor","medico","consult","vragen","questions","perguntas","aandacht"],
+    run:D=>{ const op=opportunity(D.m, agp(D.g), D.hy, weeklyTrend(D.c.glucose,D.c.q));
+      return { t:TL("Wat te bespreken","What to discuss","O que discutir"), b:op.msg,
+        e:TL("Zet bevindingen op je consultlijst — ze komen automatisch in je rapport.","Add findings to your consult list — they go into your report automatically.","Adicione achados à lista de consulta — entram no relatório."),
+        goto:"consult", follow:["tir","safety","isf"] }; } },
+];}
+function askData(query){
+  const c=_ctx;
+  if(!c||!c.glucose||!c.glucose.length) return { none:true, msg:TL("Nog geen data — synchroniseer eerst je Nightscout.","No data yet — sync your Nightscout first.","Ainda sem dados — sincronize primeiro o seu Nightscout.") };
+  const q=_askNorm(query); if(!q) return null;
+  const g=c.glucose.filter(x=>c.q.usableKeys.has(localDayKey(x.ts)));
+  const D={ c, g, ent:{dp:_askDaypart(q)},
+    m:metrics(g), hy:c.hy||hypoStats(g),
+    MR:mealResults(c.glucose,c.treatments,c.timeline),
+    oi:observedISF(c.glucose,c.treatments,c.timeline),
+    drift:basalDrift(c.glucose,c.treatments,c.q),
+    ins:insulinCarbs(c.treatments,c.timeline,c.q) };
+  const intents=_askIntents();
+  let best=null, bestScore=0;
+  for(const it of intents){ let s=0; for(const k of it.kw){ if(q.includes(_askNorm(k))) s+= (k.includes(" ")?2:1); }
+    if(s>bestScore){ bestScore=s; best=it; } }
+  if(!best || bestScore===0) return { unknown:true };
+  const ans=best.run(D); ans._id=best.id; return ans;
+}
+async function renderAsk(query){
+  const out=document.getElementById("askAnswer"); if(!out) return;
+  // hypo-gevoel-logs voor de awareness-intentie
+  try{ window._askFelt=(await DB.all("annotations")).filter(a=>a.type==="hypogevoel").map(f=>({ts:f.ts,measured:f.measured,intensity:f.intensity})); }catch(_){ window._askFelt=[]; }
+  const r=askData(query);
+  if(!r){ out.innerHTML=""; return; }
+  if(r.none){ out.innerHTML=`<div class="askA"><div class="askAb">${r.msg}</div></div>`; return; }
+  if(r.unknown){ out.innerHTML=`<div class="askA"><div class="askAb askNone">${TL("Die vraag snap ik (nog) niet. Probeer bijvoorbeeld:","I don't understand that question (yet). Try for example:","Não entendo essa pergunta (ainda). Tente por exemplo:")}</div><div class="chips askFollow">${_askExamples().slice(0,5).map(x=>`<button type="button" class="chip" data-ask="${esc(x)}">${esc(x)}</button>`).join("")}</div></div>`; wireAsk(out); return; }
+  const foll=(r.follow||[]).map(id=>_askQtext(id)).filter(Boolean);
+  out.innerHTML=`<div class="askA"><div class="askAh">${r.t}</div><div class="askAb">${r.b}</div>${r.e?`<div class="askAe">${r.e}</div>`:""}`+
+    `<div class="askAct">`+
+      (r.consult?`<button type="button" class="act ghost" data-askconsult='${esc(JSON.stringify(r.consult))}'>${TL("→ consultlijst","→ consult list","→ lista de consulta")}</button>`:"")+
+      (r.goto?`<button type="button" class="act ghost" data-askgoto="${r.goto}">${TL("Open Consult","Open Consult","Abrir Consulta")}</button>`:"")+
+    `</div>`+
+    (foll.length?`<div class="chips askFollow">${foll.map(x=>`<button type="button" class="chip" data-ask="${esc(x)}">${esc(x)}</button>`).join("")}</div>`:"")+
+    `</div>`;
+  wireAsk(out);
+}
+function wireAsk(scope){
+  scope.querySelectorAll("[data-ask]").forEach(b=>b.onclick=()=>{ const inp=document.getElementById("askInput"); if(inp) inp.value=b.dataset.ask; renderAsk(b.dataset.ask); });
+  scope.querySelectorAll("[data-askgoto]").forEach(b=>b.onclick=()=>showTab(b.dataset.askgoto));
+  scope.querySelectorAll("[data-askconsult]").forEach(b=>b.onclick=async()=>{ let cc; try{cc=JSON.parse(b.dataset.askconsult);}catch(_){return;}
+    let l=[]; try{ l=(await DB.meta("consultlist"))||[]; }catch(_){}
+    if(!l.some(x=>x.id===cc.id)){ l.push(cc); await DB.meta("consultlist",l); toast(TL("Op je consultlijst gezet.","Added to your consult list.","Adicionado à lista de consulta.")); renderConsult(); }
+    b.textContent=TL("✓ op consultlijst","✓ on consult list","✓ na lista"); b.disabled=true; });
+}
+// Voorbeeldvraag per intentie-id (voor de start- en vervolgvraag-chips).
+function _askQtext(id){ return ({
+  night:TL("Hoe ging mijn nacht?","How was my night?","Como foi a minha noite?"),
+  whylow:TL("Waarom zak ik 's nachts?","Why do I go low at night?","Porque desço à noite?"),
+  whyspike:TL("Waarom piek ik na het eten?","Why do I spike after eating?","Porque tenho picos após comer?"),
+  carbs:TL("Tel ik mijn koolhydraten goed?","Am I counting carbs well?","Conto bem os hidratos?"),
+  prebolus:TL("Wanneer moet ik prebolussen?","When should I prebolus?","Quando devo fazer prebólus?"),
+  isf:TL("Klopt mijn correctiefactor?","Is my correction factor right?","O meu fator de correção está certo?"),
+  basal:TL("Heb ik een dawn-fenomeen?","Do I have a dawn phenomenon?","Tenho fenómeno do amanhecer?"),
+  tir:TL("Hoe is mijn tijd in bereik?","How's my time in range?","Como está o meu tempo no alvo?"),
+  safety:TL("Hoeveel hypo's heb ik?","How many lows do I have?","Quantas hipos tenho?"),
+  trend:TL("Word ik beter of slechter?","Am I getting better or worse?","Estou a melhorar ou a piorar?"),
+  insulin:TL("Hoeveel insuline gebruik ik?","How much insulin do I use?","Quanta insulina uso?"),
+  awareness:TL("Voel ik mijn hypo's nog?","Do I still feel my lows?","Ainda sinto as minhas hipos?"),
+  day:TL("Wat was mijn beste en slechtste dag?","What were my best and worst days?","Quais foram os meus melhores e piores dias?"),
+  discuss:TL("Wat bespreek ik met mijn arts?","What should I discuss with my doctor?","O que discuto com o médico?"),
+})[id]||null; }
+function renderAskExamples(){
+  const box=document.getElementById("askBox"), ex=document.getElementById("askExamples"); if(!box||!ex) return;
+  box.hidden = !(_ctx&&_ctx.glucose&&_ctx.glucose.length);
+  const ids=["night","whylow","carbs","prebolus"];
+  ex.innerHTML=ids.map(id=>_askQtext(id)).filter(Boolean).map(x=>`<button type="button" class="chip" data-ask="${esc(x)}">${esc(x)}</button>`).join("");
+  wireAsk(ex);
+}
+
 async function renderConsult(){
   const el=document.getElementById("consultList"); if(!el) return;
   let cl=[]; try{ cl=(await DB.meta("consultlist"))||[]; }catch(_){}
@@ -4036,6 +4263,12 @@ function initCarb(){
   };
 }
 initCarb();
+// "Vraag het je data" — invoer afhandelen (Enter of wissen).
+(function initAsk(){ const inp=document.getElementById("askInput"); if(!inp) return;
+  const go=()=>{ const v=inp.value.trim(); if(v) renderAsk(v); else { const o=document.getElementById("askAnswer"); if(o) o.innerHTML=""; } };
+  inp.addEventListener("keydown",e=>{ if(e.key==="Enter"){ e.preventDefault(); go(); } });
+  inp.addEventListener("search",go);   // vuurt op Enter én op het kruisje (wissen)
+})();
 
 // Thema — handmatige keuze (systeem → licht → donker) die de systeeminstelling overschrijft
 function applyTheme(t){

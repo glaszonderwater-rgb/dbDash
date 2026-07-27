@@ -26,6 +26,7 @@ Playwright-browserinstallatie.
 - `pwacheck` — PWA: manifest geldig (standalone + maskable icoon), service worker bestuurt de pagina, offline herladen werkt (eigen mini-http-server, want SW registreert niet vanaf `file://`)
 - `whycheck` — "waarom"-motor: reconstrueert de oorzaak van een nacht-hypo (SMB-stapeling) met bewijs (actieve insuline, daalsnelheid) en telt de oorzaken over de week op
 - `carbcheck` — koolhydraat-schatter: zoek eten → portie → gram KH (banaan 25 g, cola-blikje 36 g), bord-totaal en vastleggen als maaltijd in het logboek
+- `askcheck` — "Vraag het je data": de lokale vraag-router (geen extern model) beantwoordt getypte vragen (tijd in bereik, nacht, koolhydraten tellen, correctiefactor…) met bewijs, toont voorbeeld- en vervolgvraag-chips, valt netjes terug op onbekende vragen, en vertaalt mee (EN)
 - `patterncheck` — circadiane & context-patronen (referentie T1D-methoden §4/§5): dawn-fenomeen (nuchtere ochtendstijging) verschijnt als week-bevinding en vertaalt mee; Somogyi-rebound (nachtelijke laagte → ochtendhyper) en verlate hypo ná een "sport"-markering worden herkend — allemaal observatie, geen dosisadvies
 - `spikecheck` — "waarom"-motor voor pieken: herkent een te late bolus (geen prebolus) als oorzaak van hoge maaltijdpieken en telt de oorzaken op
 - `fatcheck` — vette/eiwitrijke maaltijden: bij selectie van een vet product (pizza) verschijnt een korte inline bolus-tip (vet-eiwit-eenheden + doorwerkingsduur + verlengen); bij een niet-vet product (banaan) geen tip
