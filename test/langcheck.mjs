@@ -23,6 +23,8 @@ const grab=()=>page.evaluate(()=>({
   kpiTitle:document.querySelector('#epMaand span[data-i18n]')?.textContent.trim(),
   attention:document.getElementById('epVandaag').textContent.trim(),
   hero:document.getElementById('ringVal').textContent.trim(),
+  kpiSub:document.querySelector('.chome .kpis .kpi .s')?.textContent.trim(),   // dynamische tegel-tekst
+  findings:document.getElementById('findWeek').textContent.trim(),            // dynamisch bevinding-verhaal
 }));
 
 // NL (standaard)
@@ -42,11 +44,13 @@ console.log('EN tabs:', enTabs, '| hero:', en.hero, '| kpiTitle:', en.kpiTitle, 
 console.log('PT tabs:', ptTabs, '| hero:', pt.hero, '| kpiTitle:', pt.kpiTitle, '| html lang:', pt.htmlLang);
 console.log('terug NL tabs:', backTabs);
 
-const okNL = nlTabs==='Overzicht|Eten|Analyses|Consult' && /,/.test(nl.hero);
+console.log('EN kpiSub:', en.kpiSub, '| EN findings:', en.findings.slice(0,70));
+const okNL = nlTabs==='Overzicht|Eten|Analyses|Consult' && /,/.test(nl.hero) && /streef/.test(nl.kpiSub||'');
 const okEN = enTabs==='Overview|Food|Analyses|Consult' && en.htmlLang==='en' && en.kpiTitle==='Key figures'
-  && /Attention/.test(en.attention) && /\./.test(en.hero) && !/,/.test(en.hero);   // Engels: punt-decimaal
+  && /Attention/.test(en.attention) && /\./.test(en.hero) && !/,/.test(en.hero)   // Engels: punt-decimaal
+  && /aim/.test(en.kpiSub||'') && !/streef|dagen|bereik/.test(en.findings);        // dynamische tekst ook vertaald
 const okPT = ptTabs==='Resumo|Comida|Análises|Consulta' && pt.htmlLang==='pt' && pt.kpiTitle==='Números-chave'
-  && /,/.test(pt.hero);   // Portugees: komma-decimaal
+  && /,/.test(pt.hero) && /meta/.test(pt.kpiSub||'');   // Portugees: komma-decimaal + dynamische tekst
 const okBack = backTabs==='Overzicht|Eten|Analyses|Consult';
 console.log('NL ok:',okNL?'JA':'NEE','| EN ok:',okEN?'JA':'NEE','| PT ok:',okPT?'JA':'NEE','| terug NL ok:',okBack?'JA':'NEE');
 console.log('errors:', errors.length?errors:'geen');
