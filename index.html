@@ -2009,17 +2009,17 @@ function opportunity(m, ag, hy, trend){
   if (trend && trend.length>=2){
     const f=trend[0], l=trend[trend.length-1];
     if (l.tbr-f.tbr>=0.02 && l.tbr>=0.03)
-      return { risk:true, msg:`<b>Let op — hypo's nemen toe.</b> Je tijd onder 3,9 liep op van ${pct0(f.tbr)} naar ${pct0(l.tbr)} over de weken. Dit is nu je belangrijkste aandachtspunt.` };
+      return { risk:true, msg:TL(`<b>Let op — hypo's nemen toe.</b> Je tijd onder 3,9 liep op van ${pct0(f.tbr)} naar ${pct0(l.tbr)} over de weken. Dit is nu je belangrijkste aandachtspunt.`,`<b>Note — lows are increasing.</b> Your time below 3.9 rose from ${pct0(f.tbr)} to ${pct0(l.tbr)} over the weeks. This is now your main point of attention.`,`<b>Atenção — as hipos aumentam.</b> O seu tempo abaixo de 3,9 subiu de ${pct0(f.tbr)} para ${pct0(l.tbr)} ao longo das semanas. Este é agora o seu ponto de atenção principal.`) };
   }
   const highWin = joinBins(ag.filter(x=>x.p50>=10).map(x=>x.b));
   const lowWin  = joinBins(ag.filter(x=>x.p10<3.9).map(x=>x.b));
   if (m.veryLow>=0.01 || m.tbr>=0.04)
-    return { risk:true, msg:`<b>Hypo-veiligheid.</b> Je zit ${pct0(m.tbr)} van de tijd onder 3,9 (streef &lt;4%)${lowWin.length?`, vooral rond <b>${lowWin.join(", ")}</b>`:""}. Dit is je belangrijkste aandachtspunt.` };
+    return { risk:true, msg:TL(`<b>Hypo-veiligheid.</b> Je zit ${pct0(m.tbr)} van de tijd onder 3,9 (streef &lt;4%)${lowWin.length?`, vooral rond <b>${lowWin.join(", ")}</b>`:""}. Dit is je belangrijkste aandachtspunt.`,`<b>Low safety.</b> You're below 3.9 ${pct0(m.tbr)} of the time (aim &lt;4%)${lowWin.length?`, mostly around <b>${lowWin.join(", ")}</b>`:""}. This is your main point of attention.`,`<b>Segurança de hipo.</b> Está abaixo de 3,9 ${pct0(m.tbr)} do tempo (meta &lt;4%)${lowWin.length?`, sobretudo por volta de <b>${lowWin.join(", ")}</b>`:""}. Este é o seu ponto de atenção principal.`) };
   if (m.cv>0.36)
-    return { risk:false, msg:`<b>Schommelingen.</b> Je variatie (CV ${pct0(m.cv)}) ligt boven het streven van 36% — je waarden lopen sterk uiteen. Dat is meestal de grootste winst.` };
+    return { risk:false, msg:TL(`<b>Schommelingen.</b> Je variatie (CV ${pct0(m.cv)}) ligt boven het streven van 36% — je waarden lopen sterk uiteen. Dat is meestal de grootste winst.`,`<b>Swings.</b> Your variability (CV ${pct0(m.cv)}) is above the 36% target — your values vary widely. That's usually the biggest gain.`,`<b>Oscilações.</b> A sua variabilidade (CV ${pct0(m.cv)}) está acima da meta de 36% — os seus valores variam muito. Esse é normalmente o maior ganho.`) };
   if (m.tir<0.70)
-    return { risk:false, msg:`<b>Tijd te hoog.</b> Je tijd in bereik is ${pct0(m.tir)} (streef &gt;70%)${highWin.length?`; je zit vooral hoog rond <b>${highWin.join(", ")}</b>`:""}.` };
-  return { risk:false, msg:`<b>Mooi in balans.</b> TIR ${pct0(m.tir)}, hypo-tijd ${pct0(m.tbr)} en CV ${pct0(m.cv)} zitten alle binnen de streefwaarden.` };
+    return { risk:false, msg:TL(`<b>Tijd te hoog.</b> Je tijd in bereik is ${pct0(m.tir)} (streef &gt;70%)${highWin.length?`; je zit vooral hoog rond <b>${highWin.join(", ")}</b>`:""}.`,`<b>Time high.</b> Your time in range is ${pct0(m.tir)} (aim &gt;70%)${highWin.length?`; you're mostly high around <b>${highWin.join(", ")}</b>`:""}.`,`<b>Tempo alto.</b> O seu tempo no alvo é ${pct0(m.tir)} (meta &gt;70%)${highWin.length?`; está sobretudo alto por volta de <b>${highWin.join(", ")}</b>`:""}.`) };
+  return { risk:false, msg:TL(`<b>Mooi in balans.</b> TIR ${pct0(m.tir)}, hypo-tijd ${pct0(m.tbr)} en CV ${pct0(m.cv)} zitten alle binnen de streefwaarden.`,`<b>Nicely balanced.</b> TIR ${pct0(m.tir)}, low time ${pct0(m.tbr)} and CV ${pct0(m.cv)} are all within target.`,`<b>Bem equilibrado.</b> TIR ${pct0(m.tir)}, tempo em hipo ${pct0(m.tbr)} e CV ${pct0(m.cv)} estão todos dentro das metas.`) };
 }
 
 /* ══ SVG-GRAFIEKEN (schaalbaar, geen bibliotheek) ══════════════════════════ */
@@ -2306,21 +2306,23 @@ function render(glucose, treatments, timeline){
   const opp = opportunity(m, ag, hy, tr);
   const fd = t => t?new Date(t).toLocaleDateString(LOCALE(),{day:"2-digit",month:"short",year:"numeric"}):"—";
   const yn = ok => ok?"✓":"✗";
+  const U=TL("E","U","U"), opMsg=opp.msg.replace(/<[^>]+>/g,"");
+  const tdLine = ins.tdd!=null?TL(`Totale dagdosis: ~${nl1(ins.tdd)} E/dag (basaal/bolus ${Math.round(ins.basalPct*100)}/${Math.round(ins.bolusPct*100)}%)\n`,`Total daily dose: ~${nl1(ins.tdd)} U/day (basal/bolus ${Math.round(ins.basalPct*100)}/${Math.round(ins.bolusPct*100)}%)\n`,`Dose diária total: ~${nl1(ins.tdd)} U/dia (basal/bólus ${Math.round(ins.basalPct*100)}/${Math.round(ins.bolusPct*100)}%)\n`):``;
+  const prLine = pi?TL(`Profiel: basaal ~${nl2(pi.basalDaily)} E/dag`,`Profile: basal ~${nl2(pi.basalDaily)} U/day`,`Perfil: basal ~${nl2(pi.basalDaily)} U/dia`)+(oi.obs!=null?TL(`, gemeten ISF ~${nl1(oi.obs)} mmol/L per E (meetwaarde)`,`, measured ISF ~${nl1(oi.obs)} mmol/L per U (measured)`,`, ISF medido ~${nl1(oi.obs)} mmol/L por U (medido)`):``)+`\n`:``;
   _summary =
-    `IDM — samenvatting\n`+
-    `Periode: ${fd(q.from)} – ${fd(q.to)} (${q.usable.length}/${q.days.length} dagen, ${pct0(q.coverage)} dekking)\n\n`+
-    `Tijd in bereik 3,9–10,0 : ${pct0(m.tir)}  (streef >70%) ${yn(m.tir>=0.70)}\n`+
-    `Tijd < 3,9 (hypo)       : ${pct0(m.tbr)}  (streef <4%)  ${yn(m.tbr<0.04)}\n`+
-    `Tijd < 3,0              : ${pct0(m.veryLow)}  (streef <1%)  ${yn(m.veryLow<0.01)}\n`+
-    `Tijd > 10,0             : ${pct0(m.tar)}\n`+
-    `Tijd > 13,9             : ${pct0(m.veryHigh)}  (streef <5%)  ${yn(m.veryHigh<0.05)}\n`+
-    `Variatie (CV)           : ${pct0(m.cv)}  (streef ≤36%) ${yn(m.cv<=0.36)}\n`+
-    `GMI (gesch. HbA1c)      : ${nl1(m.gmi)}%\n`+
-    `Gemiddelde glucose      : ${nl1(m.mean)} mmol/L\n`+
-    `Hypo-episodes (≥15 min): ${hy.episodes} (waarvan ${hy.level2} ernstig <3,0, ${hy.nocturnal} 's nachts) · korte dips: ${hy.dips}\n\n`+
-    `Aandachtspunt: ${opp.msg.replace(/<[^>]+>/g,"")}\n`+
-    (ins.tdd!=null?`Totale dagdosis: ~${nl1(ins.tdd)} E/dag (basaal/bolus ${Math.round(ins.basalPct*100)}/${Math.round(ins.bolusPct*100)}%)\n`:``)+
-    (pi?`Profiel: basaal ~${pi.basalDaily.toFixed(2).replace(".",",")} E/dag`+(oi.obs!=null?`, gemeten ISF ~${nl1(oi.obs)} mmol/L per E (meetwaarde)`:``)+`\n`:``);
+    TL(`IDM — samenvatting\n`,`IDM — summary\n`,`IDM — resumo\n`)+
+    TL(`Periode: ${fd(q.from)} – ${fd(q.to)} (${q.usable.length}/${q.days.length} dagen, ${pct0(q.coverage)} dekking)\n\n`,`Period: ${fd(q.from)} – ${fd(q.to)} (${q.usable.length}/${q.days.length} days, ${pct0(q.coverage)} coverage)\n\n`,`Período: ${fd(q.from)} – ${fd(q.to)} (${q.usable.length}/${q.days.length} dias, ${pct0(q.coverage)} cobertura)\n\n`)+
+    TL(`Tijd in bereik 3,9–10,0 : ${pct0(m.tir)}  (streef >70%) ${yn(m.tir>=0.70)}\n`,`Time in range 3.9–10.0  : ${pct0(m.tir)}  (aim >70%) ${yn(m.tir>=0.70)}\n`,`Tempo no alvo 3,9–10,0  : ${pct0(m.tir)}  (meta >70%) ${yn(m.tir>=0.70)}\n`)+
+    TL(`Tijd < 3,9 (hypo)       : ${pct0(m.tbr)}  (streef <4%)  ${yn(m.tbr<0.04)}\n`,`Time < 3.9 (low)        : ${pct0(m.tbr)}  (aim <4%)  ${yn(m.tbr<0.04)}\n`,`Tempo < 3,9 (hipo)      : ${pct0(m.tbr)}  (meta <4%)  ${yn(m.tbr<0.04)}\n`)+
+    TL(`Tijd < 3,0              : ${pct0(m.veryLow)}  (streef <1%)  ${yn(m.veryLow<0.01)}\n`,`Time < 3.0              : ${pct0(m.veryLow)}  (aim <1%)  ${yn(m.veryLow<0.01)}\n`,`Tempo < 3,0             : ${pct0(m.veryLow)}  (meta <1%)  ${yn(m.veryLow<0.01)}\n`)+
+    TL(`Tijd > 10,0             : ${pct0(m.tar)}\n`,`Time > 10.0             : ${pct0(m.tar)}\n`,`Tempo > 10,0            : ${pct0(m.tar)}\n`)+
+    TL(`Tijd > 13,9             : ${pct0(m.veryHigh)}  (streef <5%)  ${yn(m.veryHigh<0.05)}\n`,`Time > 13.9             : ${pct0(m.veryHigh)}  (aim <5%)  ${yn(m.veryHigh<0.05)}\n`,`Tempo > 13,9            : ${pct0(m.veryHigh)}  (meta <5%)  ${yn(m.veryHigh<0.05)}\n`)+
+    TL(`Variatie (CV)           : ${pct0(m.cv)}  (streef ≤36%) ${yn(m.cv<=0.36)}\n`,`Variability (CV)        : ${pct0(m.cv)}  (aim ≤36%) ${yn(m.cv<=0.36)}\n`,`Variabilidade (CV)      : ${pct0(m.cv)}  (meta ≤36%) ${yn(m.cv<=0.36)}\n`)+
+    TL(`GMI (gesch. HbA1c)      : ${nl1(m.gmi)}%\n`,`GMI (est. HbA1c)        : ${nl1(m.gmi)}%\n`,`GMI (HbA1c est.)        : ${nl1(m.gmi)}%\n`)+
+    TL(`Gemiddelde glucose      : ${nl1(m.mean)} mmol/L\n`,`Mean glucose            : ${nl1(m.mean)} mmol/L\n`,`Glicose média           : ${nl1(m.mean)} mmol/L\n`)+
+    TL(`Hypo-episodes (≥15 min): ${hy.episodes} (waarvan ${hy.level2} ernstig <3,0, ${hy.nocturnal} 's nachts) · korte dips: ${hy.dips}\n\n`,`Low episodes (≥15 min): ${hy.episodes} (of which ${hy.level2} severe <3.0, ${hy.nocturnal} at night) · short dips: ${hy.dips}\n\n`,`Episódios de hipo (≥15 min): ${hy.episodes} (dos quais ${hy.level2} graves <3,0, ${hy.nocturnal} à noite) · quedas curtas: ${hy.dips}\n\n`)+
+    TL(`Aandachtspunt: ${opMsg}\n`,`Point of attention: ${opMsg}\n`,`Ponto de atenção: ${opMsg}\n`)+
+    tdLine+prLine;
 
   // ── bevindingen + consultlijst (async, buiten de renderflow) ──
   renderFindings({ glucose, q, m, hy, tr, drift, oi, MR, stack, treatments, timeline });
@@ -2517,12 +2519,12 @@ async function renderFindings(ctx){
 async function renderConsult(){
   const el=document.getElementById("consultList"); if(!el) return;
   let cl=[]; try{ cl=(await DB.meta("consultlist"))||[]; }catch(_){}
-  document.getElementById("consultSub").textContent = cl.length?`${cl.length} punt${cl.length===1?"":"en"} verzameld`:"";
+  document.getElementById("consultSub").textContent = cl.length?TL(`${cl.length} punt${cl.length===1?"":"en"} verzameld`,`${cl.length} point${cl.length===1?"":"s"} collected`,`${cl.length} ponto${cl.length===1?"":"s"} recolhido${cl.length===1?"":"s"}`):"";
   const badge=document.getElementById("consultBadge");
   if (badge){ badge.textContent=cl.length; badge.hidden=!cl.length; }
   el.innerHTML = cl.length
-    ? cl.map(c=>`<div class="citem"><span>${esc(c.title)}</span><button class="del" data-cid="${esc(c.id)}" aria-label="verwijderen">✕</button></div>`).join("")
-    : `<div class="muted" style="padding:.2rem .1rem .4rem">Nog niets verzameld. Zet bevindingen met <b>→ consultlijst</b> hierop — ze komen automatisch in je rapport.</div>`;
+    ? cl.map(c=>`<div class="citem"><span>${esc(c.title)}</span><button class="del" data-cid="${esc(c.id)}" aria-label="${TL("verwijderen","delete","eliminar")}">✕</button></div>`).join("")
+    : `<div class="muted" style="padding:.2rem .1rem .4rem">${TL("Nog niets verzameld. Zet bevindingen met <b>→ consultlijst</b> hierop — ze komen automatisch in je rapport.","Nothing collected yet. Add findings with <b>→ consult list</b> here — they go into your report automatically.","Ainda nada recolhido. Adicione achados com <b>→ lista de consulta</b> aqui — entram automaticamente no seu relatório.")}</div>`;
   el.querySelectorAll("[data-cid]").forEach(b2=>b2.onclick=async()=>{
     let l2=(await DB.meta("consultlist"))||[]; l2=l2.filter(x=>x.id!==b2.dataset.cid);
     await DB.meta("consultlist",l2); renderConsult();
@@ -3193,10 +3195,10 @@ async function renderAware(){
 // Bundelt alle bevindingen tot één schoon, arts-klaar document. Hergebruikt de
 // bestaande analyses (o.a. fineTuneData) zodat er geen tweede waarheid ontstaat.
 async function buildReport(){
-  if(!_ctx) return `<div class="rep"><p class="rnone">Geen data.</p></div>`;
+  if(!_ctx) return `<div class="rep"><p class="rnone">${TL("Geen data.","No data.","Sem dados.")}</p></div>`;
   const {glucose,q,treatments,timeline}=_ctx;
   const g=glucose.filter(x=>q.usableKeys.has(localDayKey(x.ts)));
-  if(!g.length) return `<div class="rep"><p class="rnone">Onvoldoende bruikbare dagen voor een rapport.</p></div>`;
+  if(!g.length) return `<div class="rep"><p class="rnone">${TL("Onvoldoende bruikbare dagen voor een rapport.","Not enough usable days for a report.","Dias utilizáveis insuficientes para um relatório.")}</p></div>`;
   const m=metrics(g), hy=hypoStats(g);
   const ins=insulinCarbs(treatments,timeline,q);
   const pi=timeline?profileInfo(timeline,q.to||Date.now()):null;
@@ -3210,71 +3212,71 @@ async function buildReport(){
   const changes=anns.filter(a=>a.type==="wijziging").sort((a,b)=>b.ts-a.ts).slice(0,6);
   const findings=fineTuneData(drift,oi,MR,stack,pi).filter(r=>r.st==="warn");
   const fd=t=>t?new Date(t).toLocaleDateString(LOCALE(),{day:"2-digit",month:"short",year:"numeric"}):"—";
-  const yn=ok=>ok?"✓":"✗", nl2=v=>v==null?"—":v.toFixed(2).replace(".",",");
-  const icf=v=>{const r=Math.round(v*10)/10;return (r%1===0?String(r):r.toFixed(1)).replace(".",",");};
+  const yn=ok=>ok?"✓":"✗", nl2=v=>v==null?"—":num(v,2);
+  const icf=v=>{const r=Math.round(v*10)/10;return (r%1===0?String(r):num(r,1));};
   const range=(arr,f)=>{if(!arr||!arr.length)return "—";const vs=arr.map(b=>b.value),mn=Math.min(...vs),mx=Math.max(...vs);return Math.abs(mx-mn)<1e-9?f(mn):`${f(mn)}–${f(mx)}`;};
-
+  const U=TL("E","U","U");
   const kern=[
-    ["Tijd in bereik 3,9–10,0", pct0(m.tir), ">70%", m.tir>=0.70],
-    ["Tijd <3,9 (hypo)", pct0(m.tbr), "<4%", m.tbr<0.04],
-    ["Tijd <3,0", pct0(m.veryLow), "<1%", m.veryLow<0.01],
-    ["Tijd >10,0", pct0(m.tar), "", null],
-    ["Tijd >13,9", pct0(m.veryHigh), "<5%", m.veryHigh<0.05],
-    ["Variatie (CV)", pct0(m.cv), "≤36%", m.cv<=0.36],
-    ["GMI (gesch. HbA1c)", nl1(m.gmi)+"%", "", null],
-    ["Gemiddelde glucose", nl1(m.mean)+" mmol/L", "", null],
+    [TL("Tijd in bereik 3,9–10,0","Time in range 3.9–10.0","Tempo no alvo 3,9–10,0"), pct0(m.tir), ">70%", m.tir>=0.70],
+    [TL("Tijd <3,9 (hypo)","Time <3.9 (low)","Tempo <3,9 (hipo)"), pct0(m.tbr), "<4%", m.tbr<0.04],
+    [TL("Tijd <3,0","Time <3.0","Tempo <3,0"), pct0(m.veryLow), "<1%", m.veryLow<0.01],
+    [TL("Tijd >10,0","Time >10.0","Tempo >10,0"), pct0(m.tar), "", null],
+    [TL("Tijd >13,9","Time >13.9","Tempo >13,9"), pct0(m.veryHigh), "<5%", m.veryHigh<0.05],
+    [TL("Variatie (CV)","Variability (CV)","Variabilidade (CV)"), pct0(m.cv), "≤36%", m.cv<=0.36],
+    [TL("GMI (gesch. HbA1c)","GMI (est. HbA1c)","GMI (HbA1c est.)"), nl1(m.gmi)+"%", "", null],
+    [TL("Gemiddelde glucose","Mean glucose","Glicose média"), nl1(m.mean)+" mmol/L", "", null],
   ].map(([l,v,t,ok])=>`<tr><td>${l}</td><td class="rv">${v}</td><td class="rt">${t}</td><td class="rc">${ok==null?"":yn(ok)}</td></tr>`).join("");
 
-  let veil=`<p class="rp"><b>${hy.episodes}</b> hypo-episode(s) van ≥15 min onder 3,9`+
-    (hy.level2?`, waarvan <b>${hy.level2}</b> ernstig (<3,0)`:``)+
-    (hy.nocturnal?`; <b>${hy.nocturnal}</b> 's nachts (00–06 u)`:``)+
-    (hy.dips?`; plus <b>${hy.dips}</b> korte dip(s) &lt;15 min`:``)+
-    (hy.suspect?`. Bij ${hy.suspect} low(s) past het patroon van sensordruk (mogelijk artefact)`:``)+`.</p>`;
-  if(aw.n>=3) veil+=`<p class="rp">Hypo-voelgrens mediaan <b>${nl1(aw.thr)} mmol/L</b> (n=${aw.n})`+
-    (aw.trend&&Math.abs(aw.trend.delta)>=0.5?`; verlopen van ${nl1(aw.trend.early)} naar ${nl1(aw.trend.late)}${aw.trend.delta<0?" — mogelijk afnemend hypogevoel":""}`:``)+`.</p>`;
+  let veil=`<p class="rp"><b>${hy.episodes}</b> ${TL("hypo-episode(s) van ≥15 min onder 3,9","low episode(s) of ≥15 min below 3.9","episódio(s) de hipo de ≥15 min abaixo de 3,9")}`+
+    (hy.level2?TL(`, waarvan <b>${hy.level2}</b> ernstig (<3,0)`,`, of which <b>${hy.level2}</b> severe (<3.0)`,`, dos quais <b>${hy.level2}</b> graves (<3,0)`):``)+
+    (hy.nocturnal?TL(`; <b>${hy.nocturnal}</b> 's nachts (00–06 u)`,`; <b>${hy.nocturnal}</b> at night (00–06 h)`,`; <b>${hy.nocturnal}</b> à noite (00–06 h)`):``)+
+    (hy.dips?TL(`; plus <b>${hy.dips}</b> korte dip(s) &lt;15 min`,`; plus <b>${hy.dips}</b> short dip(s) &lt;15 min`,`; mais <b>${hy.dips}</b> queda(s) curta(s) &lt;15 min`):``)+
+    (hy.suspect?TL(`. Bij ${hy.suspect} low(s) past het patroon van sensordruk (mogelijk artefact)`,`. For ${hy.suspect} low(s) the sensor-pressure pattern fits (possible artifact)`,`. Em ${hy.suspect} hipo(s) encaixa o padrão de pressão no sensor (possível artefacto)`):``)+`.</p>`;
+  if(aw.n>=3) veil+=`<p class="rp">${TL(`Hypo-voelgrens mediaan <b>${nl1(aw.thr)} mmol/L</b> (n=${aw.n})`,`Hypo feel-threshold median <b>${nl1(aw.thr)} mmol/L</b> (n=${aw.n})`,`Limiar de perceção de hipo mediano <b>${nl1(aw.thr)} mmol/L</b> (n=${aw.n})`)}`+
+    (aw.trend&&Math.abs(aw.trend.delta)>=0.5?TL(`; verlopen van ${nl1(aw.trend.early)} naar ${nl1(aw.trend.late)}${aw.trend.delta<0?" — mogelijk afnemend hypogevoel":""}`,`; shifted from ${nl1(aw.trend.early)} to ${nl1(aw.trend.late)}${aw.trend.delta<0?" — possibly declining hypo awareness":""}`,`; mudou de ${nl1(aw.trend.early)} para ${nl1(aw.trend.late)}${aw.trend.delta<0?" — possivelmente perceção de hipo em declínio":""}`):``)+`.</p>`;
 
   const sig = watch.few ? "" : (watch.alerts.length
     ? `<ul class="rlist">`+watch.alerts.map(a=>`<li><b>${a.title}</b> — ${a.detail}</li>`).join("")+`</ul>`
-    : `<p class="rnone">Geen oplopende signalen de laatste 2 weken.</p>`);
+    : `<p class="rnone">${TL("Geen oplopende signalen de laatste 2 weken.","No rising signals in the last 2 weeks.","Sem sinais crescentes nas últimas 2 semanas.")}</p>`);
 
   let insP="";
-  if(ins.tdd!=null) insP+=`<p class="rp">Totale dagdosis ~<b>${nl1(ins.tdd)} E</b> (basaal/bolus ${Math.round(ins.basalPct*100)}/${Math.round(ins.bolusPct*100)}%, basaal geschat) · koolhydraten ~${Math.round(ins.carbsDay)} g/dag.</p>`;
-  if(pi) insP+=`<p class="rp">Profiel <b>${pi.name?esc(pi.name):"—"}</b>: basaal ${nl2(pi.basalDaily)} E/dag · ISF ${range(pi.isf,nl1)} mmol/L·E · KH-ratio ${range(pi.ic,icf)} g/E · DIA ${nl1(pi.dia)} u.</p>`;
-  if(oi&&oi.obs!=null) insP+=`<p class="rp">Gemeten daling ~<b>${nl1(oi.obs)} mmol/L per E</b> correctie (IQR ${nl1(oi.q25)}–${nl1(oi.q75)}, n=${oi.n})${oi.prof!=null?` naast ingestelde ISF ${nl1(oi.prof)}`:``} — meetwaarde, geen voorschrift.</p>`;
+  if(ins.tdd!=null) insP+=`<p class="rp">${TL(`Totale dagdosis ~<b>${nl1(ins.tdd)} E</b> (basaal/bolus ${Math.round(ins.basalPct*100)}/${Math.round(ins.bolusPct*100)}%, basaal geschat) · koolhydraten ~${Math.round(ins.carbsDay)} g/dag.`,`Total daily dose ~<b>${nl1(ins.tdd)} U</b> (basal/bolus ${Math.round(ins.basalPct*100)}/${Math.round(ins.bolusPct*100)}%, basal estimated) · carbs ~${Math.round(ins.carbsDay)} g/day.`,`Dose diária total ~<b>${nl1(ins.tdd)} U</b> (basal/bólus ${Math.round(ins.basalPct*100)}/${Math.round(ins.bolusPct*100)}%, basal estimada) · hidratos ~${Math.round(ins.carbsDay)} g/dia.`)}</p>`;
+  if(pi) insP+=`<p class="rp">${TL(`Profiel <b>${pi.name?esc(pi.name):"—"}</b>: basaal ${nl2(pi.basalDaily)} E/dag · ISF ${range(pi.isf,nl1)} mmol/L·E · KH-ratio ${range(pi.ic,icf)} g/E · DIA ${nl1(pi.dia)} u.`,`Profile <b>${pi.name?esc(pi.name):"—"}</b>: basal ${nl2(pi.basalDaily)} U/day · ISF ${range(pi.isf,nl1)} mmol/L·U · carb ratio ${range(pi.ic,icf)} g/U · DIA ${nl1(pi.dia)} h.`,`Perfil <b>${pi.name?esc(pi.name):"—"}</b>: basal ${nl2(pi.basalDaily)} U/dia · ISF ${range(pi.isf,nl1)} mmol/L·U · rácio de hidratos ${range(pi.ic,icf)} g/U · DIA ${nl1(pi.dia)} h.`)}</p>`;
+  if(oi&&oi.obs!=null) insP+=`<p class="rp">${TL(`Gemeten daling ~<b>${nl1(oi.obs)} mmol/L per E</b> correctie (IQR ${nl1(oi.q25)}–${nl1(oi.q75)}, n=${oi.n})${oi.prof!=null?` naast ingestelde ISF ${nl1(oi.prof)}`:``} — meetwaarde, geen voorschrift.`,`Measured fall ~<b>${nl1(oi.obs)} mmol/L per U</b> correction (IQR ${nl1(oi.q25)}–${nl1(oi.q75)}, n=${oi.n})${oi.prof!=null?` next to set ISF ${nl1(oi.prof)}`:``} — measured value, not a prescription.`,`Descida medida ~<b>${nl1(oi.obs)} mmol/L por U</b> de correção (IQR ${nl1(oi.q25)}–${nl1(oi.q75)}, n=${oi.n})${oi.prof!=null?` face ao ISF definido ${nl1(oi.prof)}`:``} — valor medido, não uma prescrição.`)}</p>`;
 
   const besp = findings.length
     ? `<ul class="rlist">`+findings.map(f=>`<li><b>${f.title}:</b> ${f.read.replace(/<[^>]+>/g,"")}${f.dir?`<span class="rdir">→ ${f.dir}</span>`:``}</li>`).join("")+`</ul>`
-    : `<p class="rnone">Geen duidelijke mismatch tussen instellingen en data op de getoetste punten.</p>`;
+    : `<p class="rnone">${TL("Geen duidelijke mismatch tussen instellingen en data op de getoetste punten.","No clear mismatch between settings and data on the tested points.","Sem discrepância clara entre definições e dados nos pontos testados.")}</p>`;
 
   let wijz;
   if(changes.length){ wijz=`<ul class="rlist">`+changes.map(c=>{ const ba=beforeAfter(glucose,q,c.ts,14); let eff="";
-    if(ba.before.ok&&ba.after.ok){ const b=ba.before.m,a2=ba.after.m; eff=` — TIR ${pct0(b.tir)}→${pct0(a2.tir)}, hypo ${pct0(b.tbr)}→${pct0(a2.tbr)}${ba.dip?` <span style="color:var(--muted)">(periode ervóór was zelf een dip — effect deels terugveer)</span>`:``}`; }
-    return `<li>${fd(c.ts)}: ${c.note?esc(c.note):"instelling aangepast"}${eff}</li>`; }).join("")+`</ul>`
-    +`<p class="rnone" style="margin-top:.3rem">Voor/na is indicatief: verbetering ná een slechte periode kan terugval naar het gemiddelde zijn.</p>`; }
-  else wijz=`<p class="rnone">Geen instelwijzigingen gemarkeerd in deze periode.</p>`;
+    if(ba.before.ok&&ba.after.ok){ const b=ba.before.m,a2=ba.after.m; eff=TL(` — TIR ${pct0(b.tir)}→${pct0(a2.tir)}, hypo ${pct0(b.tbr)}→${pct0(a2.tbr)}${ba.dip?` <span style="color:var(--muted)">(periode ervóór was zelf een dip — effect deels terugveer)</span>`:``}`,` — TIR ${pct0(b.tir)}→${pct0(a2.tir)}, low ${pct0(b.tbr)}→${pct0(a2.tbr)}${ba.dip?` <span style="color:var(--muted)">(the period before was itself a dip — effect partly regression)</span>`:``}`,` — TIR ${pct0(b.tir)}→${pct0(a2.tir)}, hipo ${pct0(b.tbr)}→${pct0(a2.tbr)}${ba.dip?` <span style="color:var(--muted)">(o período anterior foi ele próprio uma queda — efeito em parte regressão)</span>`:``}`); }
+    return `<li>${fd(c.ts)}: ${c.note?esc(c.note):TL("instelling aangepast","setting changed","definição alterada")}${eff}</li>`; }).join("")+`</ul>`
+    +`<p class="rnone" style="margin-top:.3rem">${TL("Voor/na is indicatief: verbetering ná een slechte periode kan terugval naar het gemiddelde zijn.","Before/after is indicative: improvement after a poor period may be regression to the mean.","Antes/depois é indicativo: a melhoria após um período mau pode ser regressão à média.")}</p>`; }
+  else wijz=`<p class="rnone">${TL("Geen instelwijzigingen gemarkeerd in deze periode.","No setting changes marked in this period.","Nenhuma alteração de definição marcada neste período.")}</p>`;
 
   const vragen=[];
-  if(hy.nocturnal>=1) vragen.push(`Ik had ${hy.nocturnal} nachtelijke hypo('s) — kunnen we de nachtbasaal of avonddosering herzien?`);
-  if(m.tbr>=0.04) vragen.push(`Mijn tijd onder 3,9 is ${pct0(m.tbr)} (streef <4%) — hoe verlagen we dat veilig?`);
-  findings.forEach(f=>{ if(f.dir) vragen.push(`${f.title}: klopt de richting "${esc(f.dir.replace(/\s*—.*$/,"").trim())}"?`); });
-  if(aw.n>=6 && aw.trend && aw.trend.delta<=-0.5) vragen.push(`Mijn hypo-voelgrens lijkt te zakken (${nl1(aw.trend.early)}→${nl1(aw.trend.late)}) — moeten we mijn hypo-bewustzijn bespreken?`);
+  if(hy.nocturnal>=1) vragen.push(TL(`Ik had ${hy.nocturnal} nachtelijke hypo('s) — kunnen we de nachtbasaal of avonddosering herzien?`,`I had ${hy.nocturnal} nocturnal low(s) — can we review the night basal or evening dosing?`,`Tive ${hy.nocturnal} hipo(s) noturna(s) — podemos rever a basal noturna ou a dosagem da noite?`));
+  if(m.tbr>=0.04) vragen.push(TL(`Mijn tijd onder 3,9 is ${pct0(m.tbr)} (streef <4%) — hoe verlagen we dat veilig?`,`My time below 3.9 is ${pct0(m.tbr)} (aim <4%) — how do we lower that safely?`,`O meu tempo abaixo de 3,9 é ${pct0(m.tbr)} (meta <4%) — como o baixamos em segurança?`));
+  findings.forEach(f=>{ if(f.dir) vragen.push(TL(`${f.title}: klopt de richting "${esc(f.dir.replace(/\s*—.*$/,"").trim())}"?`,`${f.title}: is the direction "${esc(f.dir.replace(/\s*—.*$/,"").trim())}" right?`,`${f.title}: a direção "${esc(f.dir.replace(/\s*—.*$/,"").trim())}" está certa?`)); });
+  if(aw.n>=6 && aw.trend && aw.trend.delta<=-0.5) vragen.push(TL(`Mijn hypo-voelgrens lijkt te zakken (${nl1(aw.trend.early)}→${nl1(aw.trend.late)}) — moeten we mijn hypo-bewustzijn bespreken?`,`My hypo feel-threshold seems to be dropping (${nl1(aw.trend.early)}→${nl1(aw.trend.late)}) — should we discuss my hypo awareness?`,`O meu limiar de perceção de hipo parece estar a descer (${nl1(aw.trend.early)}→${nl1(aw.trend.late)}) — devemos discutir a minha perceção de hipo?`));
   const vragenHtml = vragen.length ? `<ul class="rlist">`+vragen.slice(0,6).map(v=>`<li>${v}</li>`).join("")+`</ul>` : `<p class="rnone">—</p>`;
 
   let clist=[]; try{ clist=(await DB.meta("consultlist"))||[]; }catch(_){}
   const clHtml = clist.length
-    ? `<h2>Door de patiënt aangevinkt</h2><ul class="rlist">${clist.map(c=>`<li>${esc(c.title)}</li>`).join("")}</ul>` : "";
+    ? `<h2>${TL("Door de patiënt aangevinkt","Flagged by the patient","Assinalado pelo paciente")}</h2><ul class="rlist">${clist.map(c=>`<li>${esc(c.title)}</li>`).join("")}</ul>` : "";
 
-  return `<div class="rtoolbar"><button class="ghost" id="btnRepPrint">🖨 Opslaan als PDF</button><button class="ghost" id="btnRepClose">✕ Sluiten</button></div>`+
-    `<div class="rep"><h1>Consultrapport — IDM</h1>`+
-    `<div class="rmeta">Periode ${fd(q.from)} – ${fd(q.to)} · ${q.usable.length}/${q.days.length} dagen · ${pct0(q.coverage)} dekking · opgesteld ${fd(Date.now())}</div>`+
-    `<h2>Kernwaarden</h2><table>${kern}</table>`+
-    `<h2>Veiligheid</h2>${veil}`+
-    (sig?`<h2>Wat verandert (laatste 2 weken)</h2>${sig}`:``)+
-    `<h2>Insuline &amp; profiel</h2>${insP||'<p class="rnone">Geen behandel-/profieldata beschikbaar.</p>'}`+
-    `<h2>Bespreekpunten</h2>${besp}`+clHtml+
-    `<h2>Wijzigingen &amp; effect</h2>${wijz}`+
-    `<h2>Vragen voor het gesprek</h2>${vragenHtml}`+
-    `<div class="rfoot">Observaties uit eigen CGM- en pompdata (Nightscout / AndroidAPS), automatisch samengevat door IDM. Geen insteladviezen; richtingen zijn hypotheses ter bespreking. Glucose in mmol/L.</div></div>`;
+  return `<div class="rtoolbar"><button class="ghost" id="btnRepPrint">🖨 ${TL("Opslaan als PDF","Save as PDF","Guardar como PDF")}</button><button class="ghost" id="btnRepClose">✕ ${TL("Sluiten","Close","Fechar")}</button></div>`+
+    `<div class="rep"><h1>${TL("Consultrapport — IDM","Consult report — IDM","Relatório de consulta — IDM")}</h1>`+
+    `<div class="rmeta">${TL("Periode","Period","Período")} ${fd(q.from)} – ${fd(q.to)} · ${q.usable.length}/${q.days.length} ${TL("dagen","days","dias")} · ${pct0(q.coverage)} ${TL("dekking","coverage","cobertura")} · ${TL("opgesteld","generated","gerado")} ${fd(Date.now())}</div>`+
+    `<h2>${TL("Kernwaarden","Key values","Valores-chave")}</h2><table>${kern}</table>`+
+    `<h2>${TL("Veiligheid","Safety","Segurança")}</h2>${veil}`+
+    (sig?`<h2>${TL("Wat verandert (laatste 2 weken)","What's changing (last 2 weeks)","O que muda (últimas 2 semanas)")}</h2>${sig}`:``)+
+    `<h2>${TL("Insuline &amp; profiel","Insulin &amp; profile","Insulina e perfil")}</h2>${insP||'<p class="rnone">'+TL("Geen behandel-/profieldata beschikbaar.","No treatment/profile data available.","Sem dados de tratamento/perfil disponíveis.")+'</p>'}`+
+    `<h2>${TL("Bespreekpunten","Discussion points","Pontos de discussão")}</h2>${besp}`+clHtml+
+    `<h2>${TL("Wijzigingen &amp; effect","Changes &amp; effect","Alterações e efeito")}</h2>${wijz}`+
+    `<h2>${TL("Vragen voor het gesprek","Questions for the consult","Perguntas para a consulta")}</h2>${vragenHtml}`+
+    `<div class="rfoot">${TL("Observaties uit eigen CGM- en pompdata (Nightscout / AndroidAPS), automatisch samengevat door IDM. Geen insteladviezen; richtingen zijn hypotheses ter bespreking. Glucose in mmol/L.","Observations from your own CGM and pump data (Nightscout / AndroidAPS), automatically summarized by IDM. No setting advice; directions are hypotheses for discussion. Glucose in mmol/L.","Observações dos seus próprios dados de CGM e bomba (Nightscout / AndroidAPS), resumidos automaticamente pelo IDM. Sem conselhos de definição; as direções são hipóteses para discussão. Glicose em mmol/L.")}</div></div>`;
 }
 async function openReport(){
   const el=document.getElementById("report");
