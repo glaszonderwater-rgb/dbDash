@@ -36,5 +36,5 @@ Playwright-browserinstallatie.
 - `pcheck` / `insulincheck` / `iobcheck` / `dscheck` — profiel, insulinetype, IOB/COB, devicestatus
 - `reportcheck` / `watchcheck` / `daycheck` / `foldcheck` / `tabcheck` / `themecheck` — rapport, signalen, dag-detail, lay-out, thema
 - `navshot` / `shot_redesign` — screenshots licht/donker · `perf` — rekentijd-meting
-- `langcheck` — talen (nl · en · pt): de taalschakelaar vertaalt de vaste UI (tabs, koppen), zet `html lang`, wisselt het decimaalteken (Engels punt, NL/PT komma) en keert schoon terug naar Nederlands
+- `langcheck` — talen (nl · en · pt): de taalschakelaar vertaalt de vaste UI én dynamische analyse-tekst, zet `html lang`, wisselt het decimaalteken (Engels punt, NL/PT komma), vertaalt productnamen in de schatter (en matcht Engels/PT zoeken) en keert schoon terug naar Nederlands
 - `a11ycheck` — toegankelijkheid: verbindingsstatus en toast zijn aria-live-regio's, instellingen-knop heeft een label, reduced-motion- en summary-focus-regels aanwezig, chip-tap-hoogte ≥ 34px

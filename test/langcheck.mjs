@@ -35,6 +35,14 @@ const enTabs=await tabs(), en=await grab();
 // PT
 await page.evaluate(()=>setLang('pt')); await page.waitForTimeout(200);
 const ptTabs=await tabs(), pt=await grab();
+// productnaam-vertaling: in EN toont de schatter Engelse namen en matcht Engels zoeken
+await page.evaluate(()=>setLang('en')); await page.waitForTimeout(150);
+const food=await page.evaluate(()=>({
+  disp: typeof foodName==='function' ? foodName('Volkorenbrood') : '',
+  match: typeof foodMatch==='function' ? foodMatch('Volkorenbrood','bread') : false,
+}));
+console.log('EN food:', food.disp, '| matcht "bread":', food.match);
+const okFood = food.disp==='Wholemeal bread' && food.match===true;
 // terug naar NL
 await page.evaluate(()=>setLang('nl')); await page.waitForTimeout(200);
 const backTabs=await tabs(), back=await grab();
@@ -52,9 +60,9 @@ const okEN = enTabs==='Overview|Food|Analyses|Consult' && en.htmlLang==='en' && 
 const okPT = ptTabs==='Resumo|Comida|Análises|Consulta' && pt.htmlLang==='pt' && pt.kpiTitle==='Números-chave'
   && /,/.test(pt.hero) && /meta/.test(pt.kpiSub||'');   // Portugees: komma-decimaal + dynamische tekst
 const okBack = backTabs==='Overzicht|Eten|Analyses|Consult';
-console.log('NL ok:',okNL?'JA':'NEE','| EN ok:',okEN?'JA':'NEE','| PT ok:',okPT?'JA':'NEE','| terug NL ok:',okBack?'JA':'NEE');
+console.log('NL ok:',okNL?'JA':'NEE','| EN ok:',okEN?'JA':'NEE','| PT ok:',okPT?'JA':'NEE','| product ok:',okFood?'JA':'NEE','| terug NL ok:',okBack?'JA':'NEE');
 console.log('errors:', errors.length?errors:'geen');
-const ok = okNL && okEN && okPT && okBack && !errors.length;
+const ok = okNL && okEN && okPT && okFood && okBack && !errors.length;
 console.log('\nRESULTAAT:', ok?'OK':'FOUT');
 if(!ok) process.exitCode=1;
 await browser.close();
