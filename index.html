@@ -1542,6 +1542,14 @@ const DAYPARTS=[
   {key:"avond",  lo:1080,hi:1440, label:"avond 18–24",   mid:1260},
 ];
 const daypartOf=min=>DAYPARTS.find(d=>min>=d.lo&&min<d.hi)||DAYPARTS[0];
+// Dagdeel-namen drietalig (gedeeld door veel teksten). key → naam / label met uren.
+const _DPN={ nacht:["nacht","night","noite"], ochtend:["ochtend","morning","manhã"], middag:["middag","afternoon","tarde"], avond:["avond","evening","noite"] };
+const dpName = k => { const a=_DPN[k]; return a?TL(a[0],a[1],a[2]):k; };
+const _DPL={ nacht:["nacht 00–06","night 00–06","noite 00–06"], ochtend:["ochtend 06–12","morning 06–12","manhã 06–12"], middag:["middag 12–18","afternoon 12–18","tarde 12–18"], avond:["avond 18–24","evening 18–24","noite 18–24"] };
+const dpLabel = k => { const a=_DPL[k]; return a?TL(a[0],a[1],a[2]):k; };
+// Maaltijd-dagdelen (ontbijt/lunch/diner) drietalig.
+const _MEALN={ ontbijt:["ontbijt","breakfast","pequeno-almoço"], lunch:["lunch","lunch","almoço"], diner:["diner","dinner","jantar"] };
+const mealName = k => { const a=_MEALN[k]; return a?TL(a[0],a[1],a[2]):k; };
 // Waargenomen ISF uit geïsoleerde correctiebolussen: hoeveel liet 1 E je glucose
 // werkelijk dalen? Streng gefilterd (geen koolhydraten, nauwelijks andere insuline,
 // verhoogde start) en uitdrukkelijk indicatief — basaaldrift en resterend eten storen.
@@ -1773,7 +1781,7 @@ function hypoStats(g){
     if (cur && x.ts-cur.end<=45*60e3){ cur.end=x.ts; cur.endIdx=i; cur.min=Math.min(cur.min,x.bg); }
     else { cur={start:x.ts,end:x.ts,min:x.bg,startIdx:i,endIdx:i}; runs.push(cur); } }
   const parts = new Array(4).fill(0);   // nacht 0-6, ochtend 6-12, middag 12-18, avond 18-24
-  const label = ["nacht (00–06)","ochtend (06–12)","middag (12–18)","avond (18–24)"];
+  const label = [`${dpName("nacht")} (00–06)`,`${dpName("ochtend")} (06–12)`,`${dpName("middag")} (12–18)`,`${dpName("avond")} (18–24)`];
   const eps=[]; let dips=0, level2=0, nocturnal=0, suspect=0;
   for (const e of runs){ e.dur=(e.end-e.start)/60000+5;    // +5 min voor het meetinterval
     // Sensordruk-patroon: zeer snelle duik én zeer snel herstel rond een korte low —
@@ -1821,41 +1829,41 @@ function explainHypo(e, glucose, treatments, timeline){
   const drop=(bgBefore!=null&&bgOnset!=null)?bgBefore-bgOnset:null;
   const fast=drop!=null && drop>=2.5;                        // ≥2,5 mmol/L in 45 min
   const THR=Math.max(0.4, basalHr!=null?basalHr*0.75:0.4);   // "noemenswaardige" IOB
-  const u=v=>nl2(v)+" E", part=[];
-  if(iobSMB>=0.15) part.push(`${u(iobSMB)} uit ${nSMB} loop-correctie${nSMB===1?"":"s"} (SMB)`);
-  if(iobMeal>=0.15) part.push(`${u(iobMeal)} uit een maaltijdbolus`);
-  if(iobMan>=0.15) part.push(`${u(iobMan)} uit een handmatige correctie`);
-  const iobLine=`Actieve insuline toen je onder 3,9 zakte: <b>${u(iob)}</b>${part.length?` (${part.join(", ")})`:""}.`;
-  const dropLine=drop!=null?`Je zakte ${nl1(drop)} mmol/L in ~45 min${fast?" — snel, dat past bij een insuline-effect":" — geleidelijk"}.`:null;
+  const u=v=>nl2(v)+" "+TL("E","U","U"), part=[];
+  if(iobSMB>=0.15) part.push(TL(`${u(iobSMB)} uit ${nSMB} loop-correctie${nSMB===1?"":"s"} (SMB)`,`${u(iobSMB)} from ${nSMB} loop correction${nSMB===1?"":"s"} (SMB)`,`${u(iobSMB)} de ${nSMB} correção${nSMB===1?"":"ões"} do loop (SMB)`));
+  if(iobMeal>=0.15) part.push(TL(`${u(iobMeal)} uit een maaltijdbolus`,`${u(iobMeal)} from a meal bolus`,`${u(iobMeal)} de um bólus de refeição`));
+  if(iobMan>=0.15) part.push(TL(`${u(iobMan)} uit een handmatige correctie`,`${u(iobMan)} from a manual correction`,`${u(iobMan)} de uma correção manual`));
+  const iobLine=TL(`Actieve insuline toen je onder 3,9 zakte: <b>${u(iob)}</b>${part.length?` (${part.join(", ")})`:""}.`,`Active insulin when you dropped below 3.9: <b>${u(iob)}</b>${part.length?` (${part.join(", ")})`:""}.`,`Insulina ativa quando desceu abaixo de 3,9: <b>${u(iob)}</b>${part.length?` (${part.join(", ")})`:""}.`);
+  const dropLine=drop!=null?TL(`Je zakte ${nl1(drop)} mmol/L in ~45 min${fast?" — snel, dat past bij een insuline-effect":" — geleidelijk"}.`,`You dropped ${nl1(drop)} mmol/L in ~45 min${fast?" — fast, that fits an insulin effect":" — gradually"}.`,`Desceu ${nl1(drop)} mmol/L em ~45 min${fast?" — rápido, encaixa num efeito de insulina":" — gradualmente"}.`):null;
 
   // Classificatie — eerste die past wint.
   let cause,label,conf;
-  if(e.suspect){ cause="sensordruk"; label="sensordruk — mogelijk geen echte hypo"; conf="matig";
-    return { cause,label,conf, steps:[`Snelle duik én snel herstel rond een korte low — het patroon van op de sensor liggen.`,`Een artefact telt niet als echte hypo; check de plek van je sensor.`] }; }
+  if(e.suspect){ cause="sensordruk"; label=TL("sensordruk — mogelijk geen echte hypo","sensor pressure — possibly not a real low","pressão no sensor — possivelmente não é hipo real"); conf=TL("matig","medium","média");
+    return { cause,label,conf, steps:[TL(`Snelle duik én snel herstel rond een korte low — het patroon van op de sensor liggen.`,`Fast dive and fast recovery around a short low — the lying-on-the-sensor pattern.`,`Mergulho e recuperação rápidos em torno de uma hipo curta — o padrão de deitar sobre o sensor.`),TL(`Een artefact telt niet als echte hypo; check de plek van je sensor.`,`An artifact doesn't count as a real low; check your sensor placement.`,`Um artefacto não conta como hipo real; verifique a posição do sensor.`)] }; }
   const dom=Math.max(iobSMB,iobMeal,iobMan);
   if(iob>=THR && dom>=0.15){
     const steps=[iobLine]; if(dropLine)steps.push(dropLine);
-    if(dom===iobSMB){ cause="smb-stapeling"; label="loop-correcties werkten door";
-      steps.push(`De loop stapelde ${nSMB} SMB'${nSMB===1?"s":"s"} tegen een stijging; die insuline werkte door tot ná de piek.`); }
-    else if(dom===iobMeal && cob<10){ cause="maaltijd-nawerking"; label="maaltijdbolus werkte na de koolhydraten door";
-      steps.push(`De koolhydraten waren vermoedelijk eerder op dan de insuline (nog ${nl1(cob)} g actief) — de staart van de bolus duwde je omlaag.`); }
-    else { cause="correctie-nawerking"; label="een correctiebolus werkte door";
-      steps.push(`De correctie bracht je verder omlaag dan nodig — mogelijk te vroeg gestapeld op nog actieve insuline.`); }
-    conf = dom>=0.6*iob && iob>=THR ? "hoog" : "matig";
-    if(rescue.length) steps.push(`Je vulde ${nl1(rescue.reduce((s,t)=>s+t.carbs,0))} g koolhydraten bij — reddingskoolhydraten, geen maaltijd.`);
+    if(dom===iobSMB){ cause="smb-stapeling"; label=TL("loop-correcties werkten door","loop corrections kept acting","correções do loop continuaram a atuar");
+      steps.push(TL(`De loop stapelde ${nSMB} SMB'${nSMB===1?"s":"s"} tegen een stijging; die insuline werkte door tot ná de piek.`,`The loop stacked ${nSMB} SMB${nSMB===1?"":"s"} against a rise; that insulin kept acting past the peak.`,`O loop acumulou ${nSMB} SMB contra uma subida; essa insulina continuou a atuar após o pico.`)); }
+    else if(dom===iobMeal && cob<10){ cause="maaltijd-nawerking"; label=TL("maaltijdbolus werkte na de koolhydraten door","meal bolus kept acting after the carbs","bólus de refeição continuou a atuar após os hidratos");
+      steps.push(TL(`De koolhydraten waren vermoedelijk eerder op dan de insuline (nog ${nl1(cob)} g actief) — de staart van de bolus duwde je omlaag.`,`The carbs were probably gone before the insulin (still ${nl1(cob)} g active) — the tail of the bolus pushed you down.`,`Os hidratos acabaram provavelmente antes da insulina (ainda ${nl1(cob)} g ativos) — a cauda do bólus empurrou-o para baixo.`)); }
+    else { cause="correctie-nawerking"; label=TL("een correctiebolus werkte door","a correction bolus kept acting","um bólus de correção continuou a atuar");
+      steps.push(TL(`De correctie bracht je verder omlaag dan nodig — mogelijk te vroeg gestapeld op nog actieve insuline.`,`The correction brought you further down than needed — possibly stacked too soon on still-active insulin.`,`A correção baixou-o mais do que o necessário — possivelmente acumulada cedo demais sobre insulina ainda ativa.`)); }
+    conf = dom>=0.6*iob && iob>=THR ? TL("hoog","high","alta") : TL("matig","medium","média");
+    if(rescue.length) steps.push(TL(`Je vulde ${nl1(rescue.reduce((s,t)=>s+t.carbs,0))} g koolhydraten bij — reddingskoolhydraten, geen maaltijd.`,`You took ${nl1(rescue.reduce((s,t)=>s+t.carbs,0))} g of carbs — rescue carbs, not a meal.`,`Tomou ${nl1(rescue.reduce((s,t)=>s+t.carbs,0))} g de hidratos — hidratos de resgate, não uma refeição.`));
     return { cause,label,conf,steps };
   }
   if(iob<THR && cob<10 && !rescue.length){
-    cause="basaal"; label="geen actieve bolus — dit venster leunt op je basaal"; conf = (drop!=null&&!fast)?"matig":"laag";
-    const steps=[`Nauwelijks actieve insuline (${u(iob)}) en geen recente koolhydraten toen je wegzakte.`];
+    cause="basaal"; label=TL("geen actieve bolus — dit venster leunt op je basaal","no active bolus — this window leans on your basal","sem bólus ativo — esta janela apoia-se na sua basal"); conf = (drop!=null&&!fast)?TL("matig","medium","média"):TL("laag","low","baixa");
+    const steps=[TL(`Nauwelijks actieve insuline (${u(iob)}) en geen recente koolhydraten toen je wegzakte.`,`Hardly any active insulin (${u(iob)}) and no recent carbs when you dropped.`,`Quase nenhuma insulina ativa (${u(iob)}) e sem hidratos recentes quando desceu.`)];
     if(dropLine)steps.push(dropLine);
-    steps.push(basalHr!=null?`Zonder bolus als verklaring lijkt de basaal van ~${nl2(basalHr)} E/u hier aan de hoge kant — een bespreekpunt, geen instelopdracht.`:`Zonder bolus als verklaring wijst dit richting je basaal in dit venster.`);
-    if(rescue.length) steps.push(`Je vulde koolhydraten bij (redding).`);
+    steps.push(basalHr!=null?TL(`Zonder bolus als verklaring lijkt de basaal van ~${nl2(basalHr)} E/u hier aan de hoge kant — een bespreekpunt, geen instelopdracht.`,`Without a bolus as explanation the basal of ~${nl2(basalHr)} U/h here seems on the high side — a discussion point, not a setting instruction.`,`Sem um bólus como explicação, a basal de ~${nl2(basalHr)} U/h aqui parece alta — um ponto de discussão, não uma instrução.`):TL(`Zonder bolus als verklaring wijst dit richting je basaal in dit venster.`,`Without a bolus as explanation this points to your basal in this window.`,`Sem um bólus como explicação, isto aponta para a sua basal nesta janela.`));
+    if(rescue.length) steps.push(TL(`Je vulde koolhydraten bij (redding).`,`You took rescue carbs.`,`Tomou hidratos de resgate.`));
     return { cause,label,conf,steps };
   }
-  cause="onverklaard"; label="geen duidelijke oorzaak in de data"; conf="laag";
+  cause="onverklaard"; label=TL("geen duidelijke oorzaak in de data","no clear cause in the data","sem causa clara nos dados"); conf=TL("laag","low","baixa");
   const steps=[iobLine]; if(dropLine)steps.push(dropLine);
-  steps.push(`Te weinig aanknopingspunten (insuline én koolhydraten laag) — mogelijk beweging, alcohol of een meetartefact.`);
+  steps.push(TL(`Te weinig aanknopingspunten (insuline én koolhydraten laag) — mogelijk beweging, alcohol of een meetartefact.`,`Too few clues (both insulin and carbs low) — possibly exercise, alcohol or a measurement artifact.`,`Poucas pistas (insulina e hidratos baixos) — possivelmente exercício, álcool ou um artefacto de medição.`));
   return { cause,label,conf,steps };
 }
 /* ── "Waarom"-motor voor post-maaltijd-pieken — verklaart één maaltijdpiek uit de
@@ -1863,18 +1871,18 @@ function explainHypo(e, glucose, treatments, timeline){
    automatische Nightscout-maaltijden; geen invoer nodig, geen dosisopdracht. ── */
 function explainSpike(r){
   const rise=r.peakRise, off=r.bolusOffset, frac=r.frac, t50=r.t50, tpk=r.tPeak;
-  const steps=[`Piek +${nl1(rise)} mmol/L, ${Math.round(tpk)} min na de maaltijd (${r.carbs} g koolhydraten).`];
-  let cause,label,conf="matig";
-  if(off!=null && off>10){ cause="prebolus"; label="je boluste laat — de insuline liep achter de koolhydraten aan";
-    steps.push(`Je bolus kwam ${Math.round(off)} min ná je koolhydraat-invoer; zonder voorsprong piekt je glucose hoger.`);
-    steps.push(`Een prebolus (~15 min vóór het eten) verlaagt juist die piek — een bespreekpunt over timing, geen instelopdracht.`); conf="hoog"; }
-  else if(frac>=1.25){ cause="kh-onderschat"; label="meer stijging dan bij je ingevoerde koolhydraten past";
-    steps.push(`Je zag ~${pct0(frac)} van de ingevoerde koolhydraten terug in je glucose — mogelijk ondergeschat, of de bolus dekte niet volledig.`); }
-  else if(t50!=null && t50>70){ cause="traag"; label="trage opname — grote of vette maaltijd";
-    steps.push(`Half opgenomen na ${Math.round(t50)} min: de koolhydraten kwamen traag los (vet/eiwit vertraagt), terwijl de bolus al werkte.`);
-    steps.push(`Bij zulke maaltijden hoort een latere piek; een verdeelde of latere bolus is een bespreekpunt.`); }
-  else { cause="verwacht"; label="binnen verwachting voor deze maaltijd"; conf="laag";
-    steps.push(`Timing en dekking ogen normaal; een piek van deze grootte hoort bij een maaltijd van ${r.carbs} g.`); }
+  const steps=[TL(`Piek +${nl1(rise)} mmol/L, ${Math.round(tpk)} min na de maaltijd (${r.carbs} g koolhydraten).`,`Peak +${nl1(rise)} mmol/L, ${Math.round(tpk)} min after the meal (${r.carbs} g carbs).`,`Pico +${nl1(rise)} mmol/L, ${Math.round(tpk)} min após a refeição (${r.carbs} g de hidratos).`)];
+  let cause,label,conf=TL("matig","medium","média");
+  if(off!=null && off>10){ cause="prebolus"; label=TL("je boluste laat — de insuline liep achter de koolhydraten aan","you bolused late — the insulin lagged behind the carbs","bolusou tarde — a insulina ficou atrás dos hidratos");
+    steps.push(TL(`Je bolus kwam ${Math.round(off)} min ná je koolhydraat-invoer; zonder voorsprong piekt je glucose hoger.`,`Your bolus came ${Math.round(off)} min after your carb entry; without a head start your glucose peaks higher.`,`O seu bólus veio ${Math.round(off)} min após a entrada de hidratos; sem avanço a glicose atinge um pico mais alto.`));
+    steps.push(TL(`Een prebolus (~15 min vóór het eten) verlaagt juist die piek — een bespreekpunt over timing, geen instelopdracht.`,`A prebolus (~15 min before eating) lowers exactly that peak — a discussion point about timing, not a setting instruction.`,`Um prebólus (~15 min antes de comer) baixa precisamente esse pico — um ponto de discussão sobre timing, não uma instrução.`)); conf=TL("hoog","high","alta"); }
+  else if(frac>=1.25){ cause="kh-onderschat"; label=TL("meer stijging dan bij je ingevoerde koolhydraten past","more rise than fits your entered carbs","mais subida do que os hidratos introduzidos justificam");
+    steps.push(TL(`Je zag ~${pct0(frac)} van de ingevoerde koolhydraten terug in je glucose — mogelijk ondergeschat, of de bolus dekte niet volledig.`,`You saw ~${pct0(frac)} of the entered carbs back in your glucose — possibly underestimated, or the bolus didn't fully cover.`,`Viu ~${pct0(frac)} dos hidratos introduzidos de volta na glicose — possivelmente subestimados, ou o bólus não cobriu totalmente.`)); }
+  else if(t50!=null && t50>70){ cause="traag"; label=TL("trage opname — grote of vette maaltijd","slow absorption — large or fatty meal","absorção lenta — refeição grande ou gorda");
+    steps.push(TL(`Half opgenomen na ${Math.round(t50)} min: de koolhydraten kwamen traag los (vet/eiwit vertraagt), terwijl de bolus al werkte.`,`Half absorbed after ${Math.round(t50)} min: the carbs came slowly (fat/protein delays), while the bolus was already working.`,`Metade absorvida após ${Math.round(t50)} min: os hidratos vieram devagar (gordura/proteína atrasam), enquanto o bólus já atuava.`));
+    steps.push(TL(`Bij zulke maaltijden hoort een latere piek; een verdeelde of latere bolus is een bespreekpunt.`,`Such meals come with a later peak; a split or later bolus is a discussion point.`,`Essas refeições trazem um pico mais tardio; um bólus dividido ou mais tarde é um ponto de discussão.`)); }
+  else { cause="verwacht"; label=TL("binnen verwachting voor deze maaltijd","within expectation for this meal","dentro do esperado para esta refeição"); conf=TL("laag","low","baixa");
+    steps.push(TL(`Timing en dekking ogen normaal; een piek van deze grootte hoort bij een maaltijd van ${r.carbs} g.`,`Timing and coverage look normal; a peak of this size fits a meal of ${r.carbs} g.`,`O timing e a cobertura parecem normais; um pico deste tamanho encaixa numa refeição de ${r.carbs} g.`)); }
   return { cause,label,conf,steps,rise };
 }
 // Correctie-stapeling vóór hypo's (case-control, gematcht op tijd-van-de-dag, begrensd)
@@ -1978,21 +1986,21 @@ function watchList(glucose, q){
   const mR=metrics(recent), mP=metrics(prior), hR=hypoStats(recent), hP=hypoStats(prior);
   const a=[];
   if(hR.nocturnal-hP.nocturnal>=2)
-    a.push({w:4,title:"Meer nachtelijke hypo's",detail:`${hP.nocturnal} → <b>${hR.nocturnal}</b> in 00–06 u — het gevaarlijkst omdat je slaapt.`});
+    a.push({w:4,title:TL("Meer nachtelijke hypo's","More nocturnal lows","Mais hipos noturnas"),detail:TL(`${hP.nocturnal} → <b>${hR.nocturnal}</b> in 00–06 u — het gevaarlijkst omdat je slaapt.`,`${hP.nocturnal} → <b>${hR.nocturnal}</b> in 00–06 h — most dangerous because you're asleep.`,`${hP.nocturnal} → <b>${hR.nocturnal}</b> em 00–06 h — o mais perigoso porque está a dormir.`)});
   if(mR.tbr-mP.tbr>=0.015 && mR.tbr>=0.04)
-    a.push({w:3,title:"Hypo-tijd loopt op",detail:`van ${pct0(mP.tbr)} naar <b>${pct0(mR.tbr)}</b> (streef <4%).`});
+    a.push({w:3,title:TL("Hypo-tijd loopt op","Low time rising","Tempo em hipo a subir"),detail:TL(`van ${pct0(mP.tbr)} naar <b>${pct0(mR.tbr)}</b> (streef <4%).`,`from ${pct0(mP.tbr)} to <b>${pct0(mR.tbr)}</b> (aim <4%).`,`de ${pct0(mP.tbr)} para <b>${pct0(mR.tbr)}</b> (meta <4%).`)});
   if(mP.tir-mR.tir>=0.06)
-    a.push({w:2,title:"Tijd in bereik zakt",detail:`van ${pct0(mP.tir)} naar <b>${pct0(mR.tir)}</b>.`});
+    a.push({w:2,title:TL("Tijd in bereik zakt","Time in range dropping","Tempo no alvo a descer"),detail:TL(`van ${pct0(mP.tir)} naar <b>${pct0(mR.tir)}</b>.`,`from ${pct0(mP.tir)} to <b>${pct0(mR.tir)}</b>.`,`de ${pct0(mP.tir)} para <b>${pct0(mR.tir)}</b>.`)});
   if(mR.cv-mP.cv>=0.03 && mR.cv>0.36)
-    a.push({w:1,title:"Variabiliteit neemt toe",detail:`CV van ${pct0(mP.cv)} naar <b>${pct0(mR.cv)}</b> (streef ≤36%).`,info:true});
+    a.push({w:1,title:TL("Variabiliteit neemt toe","Variability increasing","Variabilidade a aumentar"),detail:TL(`CV van ${pct0(mP.cv)} naar <b>${pct0(mR.cv)}</b> (streef ≤36%).`,`CV from ${pct0(mP.cv)} to <b>${pct0(mR.cv)}</b> (aim ≤36%).`,`CV de ${pct0(mP.cv)} para <b>${pct0(mR.cv)}</b> (meta ≤36%).`),info:true});
   a.sort((x,y)=>y.w-x.w);
   return { alerts:a, rD, pD };
 }
 function watchHtml(w){
   if(w.alerts.length===0)
-    return `<div class="obs" style="margin:0">Niets dat oploopt: je hypo-tijd, tijd in bereik en variabiliteit zijn de laatste 2 weken stabiel of beter dan de 2 weken daarvoor.</div>`;
+    return `<div class="obs" style="margin:0">${TL("Niets dat oploopt: je hypo-tijd, tijd in bereik en variabiliteit zijn de laatste 2 weken stabiel of beter dan de 2 weken daarvoor.","Nothing rising: your low time, time in range and variability are stable or better over the last 2 weeks than the 2 weeks before.","Nada a subir: o seu tempo em hipo, tempo no alvo e variabilidade estão estáveis ou melhores nas últimas 2 semanas face às 2 anteriores.")}</div>`;
   return w.alerts.map(x=>`<div class="watch${x.info?" info":""}"><div class="wt">${x.title}</div><div class="wd">${x.detail}</div></div>`).join("")+
-    `<div class="muted" style="margin-top:.5rem">Vergelijking: de laatste 2 weken vs de 2 weken daarvoor (alleen dagen met ≥70% dekking). Een vroeg signaal, geen alarm.</div>`;
+    `<div class="muted" style="margin-top:.5rem">${TL("Vergelijking: de laatste 2 weken vs de 2 weken daarvoor (alleen dagen met ≥70% dekking). Een vroeg signaal, geen alarm.","Comparison: the last 2 weeks vs the 2 weeks before (only days with ≥70% coverage). An early signal, not an alarm.","Comparação: as últimas 2 semanas vs as 2 anteriores (só dias com ≥70% cobertura). Um sinal precoce, não um alarme.")}</div>`;
 }
 
 // Grootste kans — veiligheid eerst
@@ -2072,9 +2080,9 @@ function dayNarrative(readings, events){
   const bolus=events.filter(e=>e.insulin>0).reduce((s,e)=>s+e.insulin,0);
   const hm=ts=>fmtMin(todMin(ts));
   const parts=[`TIR <b>${pct0(inR/n)}</b>`];
-  parts.push(eps ? `${eps} hypo${eps>1?"'s":""} (laagste ${nl1(minB)} om ${hm(minT)}${todMin(minT)<360?", 's nachts":""})` : `geen hypo's (laagste ${nl1(minB)})`);
-  parts.push(`hoogste ${nl1(maxB)} om ${hm(maxT)}`);
-  if(carbs||bolus) parts.push(`${Math.round(carbs)} g kh · ${nl1(bolus)} E`);
+  parts.push(eps ? TL(`${eps} hypo${eps>1?"'s":""} (laagste ${nl1(minB)} om ${hm(minT)}${todMin(minT)<360?", 's nachts":""})`,`${eps} low${eps>1?"s":""} (lowest ${nl1(minB)} at ${hm(minT)}${todMin(minT)<360?", at night":""})`,`${eps} hipo${eps>1?"s":""} (mínimo ${nl1(minB)} às ${hm(minT)}${todMin(minT)<360?", de noite":""})`) : TL(`geen hypo's (laagste ${nl1(minB)})`,`no lows (lowest ${nl1(minB)})`,`sem hipos (mínimo ${nl1(minB)})`));
+  parts.push(TL(`hoogste ${nl1(maxB)} om ${hm(maxT)}`,`highest ${nl1(maxB)} at ${hm(maxT)}`,`máximo ${nl1(maxB)} às ${hm(maxT)}`));
+  if(carbs||bolus) parts.push(`${Math.round(carbs)} g ${TL("kh","carbs","hidr.")} · ${nl1(bolus)} ${TL("E","U","U")}`);
   return parts.join(" · ")+".";
 }
 function hypoBarsSvg(hy){
@@ -2328,16 +2336,16 @@ function findingCard(f, st){
   let html = `<div class="${cls}" data-fid="${f.id}"><div class="fh"><span class="fdot ${dot}"></span>`+
     `<span class="ftxt">${f.title}</span>${f.when?`<span class="fwhen">${f.when}</span>`:""}</div>`;
   if (!seen && f.steps && f.steps.length){
-    html += `<details><summary>bewijs</summary><div class="chain">`+
+    html += `<details><summary>${TL("bewijs","evidence","evidência")}</summary><div class="chain">`+
       f.steps.map((sTxt,i)=>`<div class="step"><span class="no">${i+1}</span><span>${sTxt}</span></div>`).join("")+
       `</div>${f.fine?`<div class="ffine">${f.fine}</div>`:""}</details>`;
   }
   const acts=[];
-  if (!seen && f.dayKey) acts.push(`<button class="act" data-goday="${f.dayKey}">Bekijk de dag</button>`);
+  if (!seen && f.dayKey) acts.push(`<button class="act" data-goday="${f.dayKey}">${TL("Bekijk de dag","View the day","Ver o dia")}</button>`);
   if (f.consultable){ acts.push(st&&st.onList
-    ? `<button class="act done">✓ op consultlijst</button>`
-    : `<button class="act ghost" data-consult="${f.id}">→ consultlijst</button>`); }
-  if (f.seenable && !seen) acts.push(`<button class="act ghost" data-seen="${f.id}">✓ gezien</button>`);
+    ? `<button class="act done">${TL("✓ op consultlijst","✓ on consult list","✓ na lista de consulta")}</button>`
+    : `<button class="act ghost" data-consult="${f.id}">${TL("→ consultlijst","→ consult list","→ lista de consulta")}</button>`); }
+  if (f.seenable && !seen) acts.push(`<button class="act ghost" data-seen="${f.id}">${TL("✓ gezien","✓ seen","✓ visto")}</button>`);
   if (acts.length) html += `<div class="acts">${acts.join("")}</div>`;
   return html+`</div>`;
 }
@@ -2361,16 +2369,16 @@ async function renderFindings(ctx){
     // "Waarom"-motor: reconstrueer de oorzaak van deze low (alleen zinvol bij een
     // echte hypo, niet bij een sensordruk-artefact).
     let why=null; try{ if(!sus && treatments) why=explainHypo(e, glucose, treatments, timeline); }catch(_){}
-    const steps=[ `${nacht.length}× onder 3,9 tussen 00–06 u; laagste <b>${nl1(Math.min(...nacht.map(x=>x.min)))}</b>.` ];
-    if (why){ steps.push(`<b>Waarom (zekerheid: ${why.conf})</b> — ${why.label}.`); for(const s of why.steps) steps.push(s); }
-    else steps.push(sus?`Bij ${sus}: snelle duik én snel herstel — <b>te snel voor insuline</b>, het patroon van liggen op de sensor.`:`Duur ${Math.round(e.dur)} min.`);
-    steps.push(isEp?`Echte hypo (≥15 min) — telt mee in je maandcijfers.`:`Korte dip (&lt;15 min) — nog geen echte hypo.`);
-    today.push({ id:`nacht-${lastKey}`, sev:"w", when:"vannacht", seenable:true, consultable:true, dayKey:lastKey,
-      title:`<b>${isEp?"Hypo":"Dip"} om ${fmtHM(e.start)}</b>${sus?` — past bij sensordruk${nacht.length>1?`, ${nacht.length}× vannacht`:""}`:why?` — ${why.label}`:` — laagste ${nl1(e.min)}`}.`,
-      steps, fine:"vroeg signaal, geen alarm" });
+    const steps=[ TL(`${nacht.length}× onder 3,9 tussen 00–06 u; laagste <b>${nl1(Math.min(...nacht.map(x=>x.min)))}</b>.`,`${nacht.length}× below 3.9 between 00–06 h; lowest <b>${nl1(Math.min(...nacht.map(x=>x.min)))}</b>.`,`${nacht.length}× abaixo de 3,9 entre 00–06 h; mínimo <b>${nl1(Math.min(...nacht.map(x=>x.min)))}</b>.`) ];
+    if (why){ steps.push(TL(`<b>Waarom (zekerheid: ${why.conf})</b> — ${why.label}.`,`<b>Why (confidence: ${why.conf})</b> — ${why.label}.`,`<b>Porquê (confiança: ${why.conf})</b> — ${why.label}.`)); for(const s of why.steps) steps.push(s); }
+    else steps.push(sus?TL(`Bij ${sus}: snelle duik én snel herstel — <b>te snel voor insuline</b>, het patroon van liggen op de sensor.`,`For ${sus}: fast dive and fast recovery — <b>too fast for insulin</b>, the lying-on-the-sensor pattern.`,`Em ${sus}: mergulho e recuperação rápidos — <b>rápido demais para insulina</b>, o padrão de deitar sobre o sensor.`):TL(`Duur ${Math.round(e.dur)} min.`,`Duration ${Math.round(e.dur)} min.`,`Duração ${Math.round(e.dur)} min.`));
+    steps.push(isEp?TL(`Echte hypo (≥15 min) — telt mee in je maandcijfers.`,`Real low (≥15 min) — counts in your monthly figures.`,`Hipo real (≥15 min) — conta nos seus números mensais.`):TL(`Korte dip (&lt;15 min) — nog geen echte hypo.`,`Short dip (&lt;15 min) — not a real low yet.`,`Queda curta (&lt;15 min) — ainda não é uma hipo real.`));
+    today.push({ id:`nacht-${lastKey}`, sev:"w", when:TL("vannacht","last night","esta noite"), seenable:true, consultable:true, dayKey:lastKey,
+      title:TL(`<b>${isEp?"Hypo":"Dip"} om ${fmtHM(e.start)}</b>${sus?` — past bij sensordruk${nacht.length>1?`, ${nacht.length}× vannacht`:""}`:why?` — ${why.label}`:` — laagste ${nl1(e.min)}`}.`,`<b>${isEp?"Low":"Dip"} at ${fmtHM(e.start)}</b>${sus?` — fits sensor pressure${nacht.length>1?`, ${nacht.length}× last night`:""}`:why?` — ${why.label}`:` — lowest ${nl1(e.min)}`}.`,`<b>${isEp?"Hipo":"Queda"} às ${fmtHM(e.start)}</b>${sus?` — encaixa pressão no sensor${nacht.length>1?`, ${nacht.length}× esta noite`:""}`:why?` — ${why.label}`:` — mínimo ${nl1(e.min)}`}.`),
+      steps, fine:TL("vroeg signaal, geen alarm","early signal, no alarm","sinal precoce, sem alarme") });
   } else {
-    today.push({ id:`nacht-${lastKey}`, sev:"g", pos:true, when:"vannacht", seenable:false,
-      title:`<b>Rustige nacht</b> — geen waarden onder 3,9.` });
+    today.push({ id:`nacht-${lastKey}`, sev:"g", pos:true, when:TL("vannacht","last night","esta noite"), seenable:false,
+      title:TL(`<b>Rustige nacht</b> — geen waarden onder 3,9.`,`<b>Quiet night</b> — no values below 3.9.`,`<b>Noite tranquila</b> — sem valores abaixo de 3,9.`) });
   }
 
   // week — drie zinnen
@@ -2380,10 +2388,10 @@ async function renderFindings(ctx){
   // oorzaken op. Zo zie je niet alleen hóéveel lows je had, maar wáárom.
   const eps=(ctx.hy&&ctx.hy.eps)||[];
   if (eps.length>=3 && treatments){
-    const LBL={ "smb-stapeling":"loop-correcties (SMB's) werkten door",
-      "correctie-nawerking":"correctiebolus werkte door", "maaltijd-nawerking":"maaltijdbolus werkte door",
-      "basaal":"basaal aan de hoge kant in dat venster", "sensordruk":"sensordruk (mogelijk artefact)",
-      "onverklaard":"geen duidelijke oorzaak" };
+    const LBL={ "smb-stapeling":TL("loop-correcties (SMB's) werkten door","loop corrections (SMBs) kept acting","correções do loop (SMB) continuaram a atuar"),
+      "correctie-nawerking":TL("correctiebolus werkte door","correction bolus kept acting","bólus de correção continuou a atuar"), "maaltijd-nawerking":TL("maaltijdbolus werkte door","meal bolus kept acting","bólus de refeição continuou a atuar"),
+      "basaal":TL("basaal aan de hoge kant in dat venster","basal on the high side in that window","basal alta nessa janela"), "sensordruk":TL("sensordruk (mogelijk artefact)","sensor pressure (possible artifact)","pressão no sensor (possível artefacto)"),
+      "onverklaard":TL("geen duidelijke oorzaak","no clear cause","sem causa clara") };
     const tally={}; let done=0;
     for(const e of eps){ let w=null; try{ w=explainHypo(e, glucose, treatments, timeline); }catch(_){}
       if(!w) continue; tally[w.cause]=(tally[w.cause]||0)+1; done++; }
@@ -2394,15 +2402,15 @@ async function renderFindings(ctx){
       const breakdown=ranked.map(([c,n])=>`${n}× ${LBL[c]||c}`).join(" · ");
       const insulinCauses=(tally["smb-stapeling"]||0)+(tally["correctie-nawerking"]||0)+(tally["maaltijd-nawerking"]||0);
       week.push({ id:"waarom-patroon", sev: topCause==="sensordruk"?"n":"w", seenable:false, consultable:true,
-        title:`Van je <b>${done}</b> hypo's paste bij <b>${topN}</b> het vaakst: ${LBL[topCause]||topCause}.`,
-        steps:[ `Verdeling: ${breakdown}.`,
+        title:TL(`Van je <b>${done}</b> hypo's paste bij <b>${topN}</b> het vaakst: ${LBL[topCause]||topCause}.`,`Of your <b>${done}</b> lows, <b>${topN}</b> most often fit: ${LBL[topCause]||topCause}.`,`Das suas <b>${done}</b> hipos, <b>${topN}</b> encaixaram mais vezes: ${LBL[topCause]||topCause}.`),
+        steps:[ TL(`Verdeling: ${breakdown}.`,`Breakdown: ${breakdown}.`,`Distribuição: ${breakdown}.`),
           insulinCauses>=Math.ceil(done/2)
-            ? `Meer dan de helft draait om <b>actieve insuline die doorwerkte</b> — kijk naar bolus-timing en het stapelen van correcties, samen met je team.`
+            ? TL(`Meer dan de helft draait om <b>actieve insuline die doorwerkte</b> — kijk naar bolus-timing en het stapelen van correcties, samen met je team.`,`More than half is about <b>active insulin that kept working</b> — look at bolus timing and stacking corrections, together with your team.`,`Mais de metade tem a ver com <b>insulina ativa que continuou a atuar</b> — veja o timing do bólus e a acumulação de correções, com a sua equipa.`)
             : (tally["basaal"]>=Math.ceil(done/2)
-                ? `Vooral <b>basaal-gedreven</b> lows in stille vensters — een bespreekpunt voor je basaalprofiel, geen instelopdracht.`
-                : `Gemengd beeld — open een hypo hierboven voor de reconstructie per keer.`),
-          `Elke hypo is los doorgerekend uit je insuline, koolhydraten en daalsnelheid; open "vannacht" voor het bewijs per keer.` ],
-        fine:`n = ${done} doorgerekende hypo's` });
+                ? TL(`Vooral <b>basaal-gedreven</b> lows in stille vensters — een bespreekpunt voor je basaalprofiel, geen instelopdracht.`,`Mostly <b>basal-driven</b> lows in quiet windows — a discussion point for your basal profile, not a setting instruction.`,`Sobretudo hipos <b>de origem basal</b> em janelas calmas — um ponto de discussão para o seu perfil basal, não uma instrução.`)
+                : TL(`Gemengd beeld — open een hypo hierboven voor de reconstructie per keer.`,`Mixed picture — open a low above for the per-case reconstruction.`,`Quadro misto — abra uma hipo acima para a reconstrução caso a caso.`)),
+          TL(`Elke hypo is los doorgerekend uit je insuline, koolhydraten en daalsnelheid; open "vannacht" voor het bewijs per keer.`,`Each low is computed separately from your insulin, carbs and fall rate; open "last night" for the per-case evidence.`,`Cada hipo é calculada em separado a partir da sua insulina, hidratos e taxa de descida; abra "esta noite" para a evidência caso a caso.`) ],
+        fine:TL(`n = ${done} doorgerekende hypo's`,`n = ${done} computed lows`,`n = ${done} hipos calculadas`) });
     }
   }
 
@@ -2411,8 +2419,8 @@ async function renderFindings(ctx){
   if (MR && MR.results && MR.results.length){
     const notable=MR.results.filter(r=>r.peakRise>=3.0);
     if (notable.length>=3){
-      const SL={ prebolus:"een te late bolus (geen prebolus)", "kh-onderschat":"onderschatte koolhydraten of dekking",
-        traag:"een trage of vette maaltijd", verwacht:"binnen verwachting" };
+      const SL={ prebolus:TL("een te late bolus (geen prebolus)","a late bolus (no prebolus)","um bólus tardio (sem prebólus)"), "kh-onderschat":TL("onderschatte koolhydraten of dekking","underestimated carbs or coverage","hidratos ou cobertura subestimados"),
+        traag:TL("een trage of vette maaltijd","a slow or fatty meal","uma refeição lenta ou gorda"), verwacht:TL("binnen verwachting","as expected","dentro do esperado") };
       const tally={}; for(const r of notable){ const w=explainSpike(r); tally[w.cause]=(tally[w.cause]||0)+1; }
       const ranked=Object.entries(tally).sort((a,b)=>b[1]-a[1]).filter(([c])=>c!=="verwacht");
       if (ranked.length){
@@ -2421,11 +2429,11 @@ async function renderFindings(ctx){
         const bw=explainSpike(biggest);
         const breakdown=Object.entries(tally).map(([c,n])=>`${n}× ${SL[c]||c}`).join(" · ");
         week.push({ id:"waarom-pieken", sev:"n", seenable:false, consultable:true,
-          title:`Je hoogste pieken komen het vaakst door <b>${SL[top]}</b> (${topN}×).`,
-          steps:[ `Over ${notable.length} maaltijden met een piek ≥ 3,0 mmol/L: ${breakdown}.`,
-            `Grootste piek — ${bw.steps[0]} ${bw.label}.`,
-            `Elke piek is doorgerekend met je eigen ISF en KH-ratio en je bolus-timing; een bespreekpunt, geen dosisopdracht.` ],
-          fine:`n = ${notable.length} maaltijden met piek ≥ 3,0` });
+          title:TL(`Je hoogste pieken komen het vaakst door <b>${SL[top]}</b> (${topN}×).`,`Your highest peaks most often come from <b>${SL[top]}</b> (${topN}×).`,`Os seus picos mais altos vêm mais vezes de <b>${SL[top]}</b> (${topN}×).`),
+          steps:[ TL(`Over ${notable.length} maaltijden met een piek ≥ 3,0 mmol/L: ${breakdown}.`,`Over ${notable.length} meals with a peak ≥ 3.0 mmol/L: ${breakdown}.`,`Em ${notable.length} refeições com pico ≥ 3,0 mmol/L: ${breakdown}.`),
+            TL(`Grootste piek — ${bw.steps[0]} ${bw.label}.`,`Largest peak — ${bw.steps[0]} ${bw.label}.`,`Maior pico — ${bw.steps[0]} ${bw.label}.`),
+            TL(`Elke piek is doorgerekend met je eigen ISF en KH-ratio en je bolus-timing; een bespreekpunt, geen dosisopdracht.`,`Each peak is computed with your own ISF, carb ratio and bolus timing; a discussion point, not a dosing instruction.`,`Cada pico é calculado com o seu próprio ISF, rácio de hidratos e timing de bólus; um ponto de discussão, não uma instrução de dose.`) ],
+          fine:TL(`n = ${notable.length} maaltijden met piek ≥ 3,0`,`n = ${notable.length} meals with peak ≥ 3.0`,`n = ${notable.length} refeições com pico ≥ 3,0`) });
       }
     }
   }
@@ -2437,34 +2445,34 @@ async function renderFindings(ctx){
     if (dp.length>=2){ const top=[...dp].sort((a,b)=>b.rise-a.rise)[0], lo2=[...dp].sort((a,b)=>a.rise-b.rise)[0];
       if (top.rise-lo2.rise>=1.0)
         week.push({ id:"dagdeel", sev:"n", seenable:false, consultable:true,
-          title:`Je <b>${top.id}</b> piekt het hoogst: +${nl1(top.rise)} tegen +${nl1(lo2.rise)} bij ${lo2.id}.`,
-          steps:[`Mediaan over ${top.n} ${top.id}en vs ${lo2.n} ${lo2.id}s.`,
-            top.id==="ontbijt"?`Klassiek voor ochtendresistentie.`:`Patroon per dagdeel.`,
-            MR.moffset!=null&&MR.moffset<0?`Prebolus mediaan ${Math.round(-MR.moffset)} min vóór het eten — timing is het niet.`:`Bekijk ook je bolus-timing.`],
-          fine:`n = ${MR.results.length} maaltijden` }); }
+          title:TL(`Je <b>${mealName(top.id)}</b> piekt het hoogst: +${nl1(top.rise)} tegen +${nl1(lo2.rise)} bij ${mealName(lo2.id)}.`,`Your <b>${mealName(top.id)}</b> peaks highest: +${nl1(top.rise)} vs +${nl1(lo2.rise)} at ${mealName(lo2.id)}.`,`O seu <b>${mealName(top.id)}</b> tem o pico mais alto: +${nl1(top.rise)} contra +${nl1(lo2.rise)} no ${mealName(lo2.id)}.`),
+          steps:[TL(`Mediaan over ${top.n} ${mealName(top.id)} vs ${lo2.n} ${mealName(lo2.id)}.`,`Median over ${top.n} ${mealName(top.id)} vs ${lo2.n} ${mealName(lo2.id)}.`,`Mediana em ${top.n} ${mealName(top.id)} vs ${lo2.n} ${mealName(lo2.id)}.`),
+            top.id==="ontbijt"?TL(`Klassiek voor ochtendresistentie.`,`Classic for morning resistance.`,`Clássico da resistência matinal.`):TL(`Patroon per dagdeel.`,`Pattern by part of day.`,`Padrão por período do dia.`),
+            MR.moffset!=null&&MR.moffset<0?TL(`Prebolus mediaan ${Math.round(-MR.moffset)} min vóór het eten — timing is het niet.`,`Prebolus median ${Math.round(-MR.moffset)} min before eating — timing isn't the issue.`,`Prebólus mediano ${Math.round(-MR.moffset)} min antes de comer — o timing não é o problema.`):TL(`Bekijk ook je bolus-timing.`,`Also check your bolus timing.`,`Verifique também o timing do bólus.`)],
+          fine:TL(`n = ${MR.results.length} maaltijden`,`n = ${MR.results.length} meals`,`n = ${MR.results.length} refeições`) }); }
   }
   if (drift && drift.stat){
     if (!drift.up.length && !drift.down.length)
       week.push({ id:"drift-ok", sev:"g", pos:true, seenable:false,
-        title:`Je <b>basaal</b> hield je nuchtere uren vlak — geen drift.`,
-        steps:[`Geen enkel uur met structurele stijging of daling in maaltijd- en bolusvrije vensters.`],
-        fine:`n = ${drift.total.toLocaleString(LOCALE())} driftmetingen` });
+        title:TL(`Je <b>basaal</b> hield je nuchtere uren vlak — geen drift.`,`Your <b>basal</b> kept your fasting hours flat — no drift.`,`A sua <b>basal</b> manteve as horas de jejum planas — sem deriva.`),
+        steps:[TL(`Geen enkel uur met structurele stijging of daling in maaltijd- en bolusvrije vensters.`,`Not a single hour with structural rise or fall in meal- and bolus-free windows.`,`Nenhuma hora com subida ou descida estrutural em janelas sem refeição e sem bólus.`)],
+        fine:TL(`n = ${drift.total.toLocaleString(LOCALE())} driftmetingen`,`n = ${drift.total.toLocaleString(LOCALE())} drift readings`,`n = ${drift.total.toLocaleString(LOCALE())} medições de deriva`) });
     else week.push({ id:"drift", sev:"w", seenable:false, consultable:true,
-        title:`Nuchter ${drift.up.length?`stijg je rond <b>${joinHrs(drift.up.map(x=>x.h)).join(", ")}</b>`:""}${drift.up.length&&drift.down.length?" en ":""}${drift.down.length?`zak je rond <b>${joinHrs(drift.down.map(x=>x.h)).join(", ")}</b>`:""}.`,
-        steps:[`Drift tot ${nl1(Math.max(drift.peakUp||0,Math.abs(drift.peakDown||0)))} mmol/L per uur in stille vensters.`,
-          `In AAPS pas je een basaalblok ~1–2 u vóór het effect aan — bespreek met je team.`],
-        fine:`n = ${drift.total.toLocaleString(LOCALE())} driftmetingen` });
+        title:TL(`Nuchter ${drift.up.length?`stijg je rond <b>${joinHrs(drift.up.map(x=>x.h)).join(", ")}</b>`:""}${drift.up.length&&drift.down.length?" en ":""}${drift.down.length?`zak je rond <b>${joinHrs(drift.down.map(x=>x.h)).join(", ")}</b>`:""}.`,`When fasting you ${drift.up.length?`rise around <b>${joinHrs(drift.up.map(x=>x.h)).join(", ")}</b>`:""}${drift.up.length&&drift.down.length?" and ":""}${drift.down.length?`fall around <b>${joinHrs(drift.down.map(x=>x.h)).join(", ")}</b>`:""}.`,`Em jejum ${drift.up.length?`sobe por volta de <b>${joinHrs(drift.up.map(x=>x.h)).join(", ")}</b>`:""}${drift.up.length&&drift.down.length?" e ":""}${drift.down.length?`desce por volta de <b>${joinHrs(drift.down.map(x=>x.h)).join(", ")}</b>`:""}.`),
+        steps:[TL(`Drift tot ${nl1(Math.max(drift.peakUp||0,Math.abs(drift.peakDown||0)))} mmol/L per uur in stille vensters.`,`Drift up to ${nl1(Math.max(drift.peakUp||0,Math.abs(drift.peakDown||0)))} mmol/L per hour in quiet windows.`,`Deriva até ${nl1(Math.max(drift.peakUp||0,Math.abs(drift.peakDown||0)))} mmol/L por hora em janelas calmas.`),
+          TL(`In AAPS pas je een basaalblok ~1–2 u vóór het effect aan — bespreek met je team.`,`In AAPS you adjust a basal block ~1–2 h before the effect — discuss with your team.`,`No AAPS ajusta um bloco basal ~1–2 h antes do efeito — discuta com a sua equipa.`)],
+        fine:TL(`n = ${drift.total.toLocaleString(LOCALE())} driftmetingen`,`n = ${drift.total.toLocaleString(LOCALE())} drift readings`,`n = ${drift.total.toLocaleString(LOCALE())} medições de deriva`) });
   }
   try{
     const anns=(await DB.all("annotations")).filter(a=>a.type==="wijziging" && a.ts>Date.now()-21*DAY).sort((a,b)=>b.ts-a.ts);
     if (anns.length){ const c=anns[0]; const ba=beforeAfter(glucose,q,c.ts,14);
       if (ba.before.ok && ba.after.ok){ const b=ba.before.m, a2=ba.after.m; const up=a2.tir-b.tir>=0.03 && a2.tbr-b.tbr<=0.01;
         week.push({ id:`wijz-${c.ts}`, sev: up?"g":"n", pos:up, seenable:true, consultable:true,
-          title:`Je wijziging van <b>${new Date(c.ts).toLocaleDateString(LOCALE(),{day:"numeric",month:"long"})}</b>${up?" hield stand":""}: ${pct0(b.tir)} → ${pct0(a2.tir)} in bereik.`,
-          steps:[`Hypo-tijd ${pct0(b.tbr)} → ${pct0(a2.tbr)}.`,
-            ba.dip?`⚠ De periode vóór de wijziging was zelf een dip — winst kan deels terugveer zijn.`:`Kanttekening: winst na een mindere periode kan deels terugveer zijn.`,
-            `De komende weken maken het beeld hard.`],
-          fine:`14 d vóór vs ná · ≥70% dekking${c.note?` · "${esc(c.note)}"`:""}` }); } }
+          title:TL(`Je wijziging van <b>${new Date(c.ts).toLocaleDateString(LOCALE(),{day:"numeric",month:"long"})}</b>${up?" hield stand":""}: ${pct0(b.tir)} → ${pct0(a2.tir)} in bereik.`,`Your change of <b>${new Date(c.ts).toLocaleDateString(LOCALE(),{day:"numeric",month:"long"})}</b>${up?" held up":""}: ${pct0(b.tir)} → ${pct0(a2.tir)} in range.`,`A sua alteração de <b>${new Date(c.ts).toLocaleDateString(LOCALE(),{day:"numeric",month:"long"})}</b>${up?" manteve-se":""}: ${pct0(b.tir)} → ${pct0(a2.tir)} no alvo.`),
+          steps:[TL(`Hypo-tijd ${pct0(b.tbr)} → ${pct0(a2.tbr)}.`,`Low time ${pct0(b.tbr)} → ${pct0(a2.tbr)}.`,`Tempo em hipo ${pct0(b.tbr)} → ${pct0(a2.tbr)}.`),
+            ba.dip?TL(`⚠ De periode vóór de wijziging was zelf een dip — winst kan deels terugveer zijn.`,`⚠ The period before the change was itself a dip — some gain may be regression to the mean.`,`⚠ O período antes da alteração foi ele próprio uma queda — parte do ganho pode ser regressão à média.`):TL(`Kanttekening: winst na een mindere periode kan deels terugveer zijn.`,`Note: gains after a poorer period may partly be regression to the mean.`,`Nota: ganhos após um período pior podem ser em parte regressão à média.`),
+            TL(`De komende weken maken het beeld hard.`,`The coming weeks will firm up the picture.`,`As próximas semanas confirmarão o quadro.`)],
+          fine:TL(`14 d vóór vs ná · ≥70% dekking${c.note?` · "${esc(c.note)}"`:""}`,`14 d before vs after · ≥70% coverage${c.note?` · "${esc(c.note)}"`:""}`,`14 d antes vs depois · ≥70% cobertura${c.note?` · "${esc(c.note)}"`:""}`) }); } }
   }catch(_){}
 
   // Val nooit leeg terug: als geen enkel week-patroon vuurt (vaak bij een closed
@@ -2474,14 +2482,14 @@ async function renderFindings(ctx){
     if (wk.length>=100){
       const inR=wk.filter(x=>x.bg>=3.9&&x.bg<=10).length/wk.length, lo=wk.filter(x=>x.bg<3.9).length/wk.length;
       week.push({ id:"week-sum", sev:"n", seenable:false,
-        title:`Deze week <b>${pct0(inR)}</b> in bereik${lo>=0.005?`, ${pct0(lo)} onder 3,9`:", nauwelijks hypo's"}.`,
-        steps:[`Nog geen uitgesproken week-patroon om apart te melden.`,
-          `Bij een closed loop maskeren SMB's en temp-basaal vaak de basaaldrift; maaltijdpatronen komen pas met genoeg geïsoleerde, geboluste maaltijden.`],
-        fine:`laatste 7 dagen · n = ${wk.length.toLocaleString(LOCALE())}` });
+        title:TL(`Deze week <b>${pct0(inR)}</b> in bereik${lo>=0.005?`, ${pct0(lo)} onder 3,9`:", nauwelijks hypo's"}.`,`This week <b>${pct0(inR)}</b> in range${lo>=0.005?`, ${pct0(lo)} below 3.9`:", hardly any lows"}.`,`Esta semana <b>${pct0(inR)}</b> no alvo${lo>=0.005?`, ${pct0(lo)} abaixo de 3,9`:", quase sem hipos"}.`),
+        steps:[TL(`Nog geen uitgesproken week-patroon om apart te melden.`,`No pronounced weekly pattern to report separately yet.`,`Ainda sem um padrão semanal marcado para relatar à parte.`),
+          TL(`Bij een closed loop maskeren SMB's en temp-basaal vaak de basaaldrift; maaltijdpatronen komen pas met genoeg geïsoleerde, geboluste maaltijden.`,`With a closed loop, SMBs and temp basal often mask basal drift; meal patterns only appear with enough isolated, bolused meals.`,`Num closed loop, os SMB e a basal temporária mascaram muitas vezes a deriva basal; os padrões de refeição só surgem com refeições isoladas e com bólus suficientes.`)],
+        fine:TL(`laatste 7 dagen · n = ${wk.length.toLocaleString(LOCALE())}`,`last 7 days · n = ${wk.length.toLocaleString(LOCALE())}`,`últimos 7 dias · n = ${wk.length.toLocaleString(LOCALE())}`) });
     } else {
       week.push({ id:"week-none", sev:"n", seenable:false,
-        title:`Nog te weinig data deze week voor patronen.`,
-        steps:[`Met meer synchronisatie of historie verschijnt hier je week-beeld.`] });
+        title:TL(`Nog te weinig data deze week voor patronen.`,`Still too little data this week for patterns.`,`Ainda poucos dados esta semana para padrões.`),
+        steps:[TL(`Met meer synchronisatie of historie verschijnt hier je week-beeld.`,`With more syncing or history your weekly picture will appear here.`,`Com mais sincronização ou histórico, o seu quadro semanal aparecerá aqui.`)] });
     }
   }
 
@@ -3035,9 +3043,9 @@ function renderDayJump(){
   const el=document.getElementById("dayJump"); if(!el) return; const j=_notable||{};
   const active=_dayKeys[_dayIdx];
   const chips=[];
-  if(j.worst) chips.push([`⤓ Ergste hypo · ${nl1(j.worst.v)}`, j.worst.k]);
-  if(j.high)  chips.push([`⤒ Grootste piek · ${nl1(j.high.v)}`, j.high.k]);
-  if(j.best)  chips.push([`★ Beste dag · ${pct0(j.best.v)} TIR`, j.best.k]);
+  if(j.worst) chips.push([`⤓ ${TL("Ergste hypo","Worst low","Pior hipo")} · ${nl1(j.worst.v)}`, j.worst.k]);
+  if(j.high)  chips.push([`⤒ ${TL("Grootste piek","Highest peak","Maior pico")} · ${nl1(j.high.v)}`, j.high.k]);
+  if(j.best)  chips.push([`★ ${TL("Beste dag","Best day","Melhor dia")} · ${pct0(j.best.v)} TIR`, j.best.k]);
   el.innerHTML=chips.map(([label,key])=>`<button type="button" class="chip${key===active?" sel":""}" data-key="${key}">${label}</button>`).join("");
   el.querySelectorAll(".chip").forEach(b=>b.onclick=()=>{ const i=_dayKeys.indexOf(b.dataset.key); if(i>=0){ _dayIdx=i; renderDay(); } });
 }
@@ -3051,7 +3059,7 @@ function renderDay(){
   const dt=new Date(key+"T12:00:00");
   document.getElementById("dayLabel").textContent=dt.toLocaleDateString(LOCALE(),{weekday:"short",day:"2-digit",month:"short"});
   document.getElementById("dayChart").innerHTML=dayChartSvg(readings,events);
-  document.getElementById("dayNarr").innerHTML=readings.length>=3?dayNarrative(readings,events):"Te weinig metingen op deze dag.";
+  document.getElementById("dayNarr").innerHTML=readings.length>=3?dayNarrative(readings,events):TL("Te weinig metingen op deze dag.","Too few readings on this day.","Poucas leituras neste dia.");
   document.getElementById("dayPrev").disabled=_dayIdx<=0;
   document.getElementById("dayNext").disabled=_dayIdx>=_dayKeys.length-1;
   renderDayJump();
