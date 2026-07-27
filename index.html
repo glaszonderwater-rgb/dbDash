@@ -1296,11 +1296,11 @@ const NS = {
     let r;
     try { r = await fetch(u.toString(), { method:"GET", cache:"no-store", signal:ac.signal }); }
     catch(e){
-      if (e.name==="AbortError") throw new Error(`Nightscout antwoordde niet binnen ${this.TIMEOUT/1000}s.\nGratis hosting slaapt vaak in — probeer nog eens, of open je adres eerst los in een tabblad.`);
-      throw new Error("Geen verbinding met "+cfg.url+".\nMeestal een typefout in het adres, of je Nightscout staat uit.");
+      if (e.name==="AbortError") throw new Error(TL(`Nightscout antwoordde niet binnen ${this.TIMEOUT/1000}s.\nGratis hosting slaapt vaak in — probeer nog eens, of open je adres eerst los in een tabblad.`,`Nightscout didn't respond within ${this.TIMEOUT/1000}s.\nFree hosting often sleeps — try again, or open your address in a separate tab first.`,`O Nightscout não respondeu em ${this.TIMEOUT/1000}s.\nO alojamento gratuito adormece muitas vezes — tente de novo, ou abra primeiro o seu endereço num separador.`));
+      throw new Error(TL("Geen verbinding met ","No connection to ","Sem ligação a ")+cfg.url+TL(".\nMeestal een typefout in het adres, of je Nightscout staat uit.",".\nUsually a typo in the address, or your Nightscout is off.",".\nNormalmente um erro no endereço, ou o seu Nightscout está desligado."));
     } finally { clearTimeout(timer); }
-    if (r.status===401 || r.status===403) throw new Error("Nightscout weigert het token ("+r.status+").\nControleer of het subject de rol 'readable' heeft.");
-    if (!r.ok) throw new Error("Nightscout gaf HTTP "+r.status+" op "+path);
+    if (r.status===401 || r.status===403) throw new Error(TL("Nightscout weigert het token (","Nightscout rejects the token (","O Nightscout recusa o token (")+r.status+TL(").\nControleer of het subject de rol 'readable' heeft.",").\nCheck that the subject has the 'readable' role.",").\nVerifique se o subject tem o papel 'readable'."));
+    if (!r.ok) throw new Error("Nightscout HTTP "+r.status+" — "+path);
     return r.json();
   },
   *chunks(from, to, days){ for (let a=from; a<to; a+=days*DAY) yield [a-this.OVERLAP, Math.min(a+days*DAY, to)]; },
@@ -2033,7 +2033,7 @@ function agpSvg(ag){
     +" "+[...ag].reverse().map(a=>"L"+X(a.min).toFixed(1)+" "+Y(a[loK]).toFixed(1)).join(" ")+" Z";
   let ax="";
   for (const h of [0,6,12,18,24]){ const x=X(h*60); ax+=`<line x1="${x}" y1="0" x2="${x}" y2="${H-PB}" stroke="var(--line)" stroke-width="1"/>`+
-    `<text x="${x}" y="${H-4}" font-size="9" fill="var(--muted)" text-anchor="middle">${h}u</text>`; }
+    `<text x="${x}" y="${H-4}" font-size="9" fill="var(--muted)" text-anchor="middle">${h}${TL("u","h","h")}</text>`; }
   for (const b of [4,10,14]){ if(b<lo||b>hi) continue; const y=Y(b);
     ax+=`<line x1="${PL}" y1="${y}" x2="${W}" y2="${y}" stroke="var(--line)" stroke-width="1"/>`+
     `<text x="${PL-3}" y="${(y+3).toFixed(1)}" font-size="9" fill="var(--muted)" text-anchor="end">${b}</text>`; }
@@ -2056,7 +2056,7 @@ function dayChartSvg(readings, events){
   let ax="";
   for(const h of [0,6,12,18,24]){ const x=X(h*60);
     ax+=`<line x1="${x.toFixed(1)}" y1="${PT}" x2="${x.toFixed(1)}" y2="${H-PB}" stroke="var(--line)" stroke-width="1"/>`+
-        `<text x="${x.toFixed(1)}" y="${H-5}" font-size="9" fill="var(--muted)" text-anchor="middle">${h}u</text>`; }
+        `<text x="${x.toFixed(1)}" y="${H-5}" font-size="9" fill="var(--muted)" text-anchor="middle">${h}${TL("u","h","h")}</text>`; }
   for(const b of [4,10,14]){ if(b<lo||b>hi)continue; const y=Y(b);
     ax+=`<line x1="${PL}" y1="${y.toFixed(1)}" x2="${W}" y2="${y.toFixed(1)}" stroke="var(--line)" stroke-width="1"/>`+
         `<text x="${PL-3}" y="${(y+3).toFixed(1)}" font-size="9" fill="var(--muted)" text-anchor="end">${b}</text>`; }
@@ -2091,7 +2091,7 @@ function hypoBarsSvg(hy){
   hy.parts.forEach((v,i)=>{ const x=10+i*bw+bw*0.15, w=bw*0.7, h=(v/max)*(H-PB-PT), y=H-PB-h;
     s+=`<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${w.toFixed(1)}" height="${h.toFixed(1)}" rx="3" fill="${v?"var(--low)":"var(--line-2)"}"/>`+
       `<text x="${(x+w/2).toFixed(1)}" y="${(y-4).toFixed(1)}" font-size="10" fill="var(--ink)" text-anchor="middle" font-weight="600">${v||""}</text>`+
-      `<text x="${(x+w/2).toFixed(1)}" y="${H-14}" font-size="8" fill="var(--muted)" text-anchor="middle">${["nacht","ochtend","middag","avond"][i]}</text>`+
+      `<text x="${(x+w/2).toFixed(1)}" y="${H-14}" font-size="8" fill="var(--muted)" text-anchor="middle">${dpName(["nacht","ochtend","middag","avond"][i])}</text>`+
       `<text x="${(x+w/2).toFixed(1)}" y="${H-4}" font-size="7.5" fill="var(--dim)" text-anchor="middle">${["00–06","06–12","12–18","18–24"][i]}</text>`; });
   return s+"</svg>";
 }
@@ -2114,7 +2114,7 @@ function render(glucose, treatments, timeline){
   const ageMin = Math.round((Date.now()-last.ts)/6e4);
   const nv=document.getElementById("nowVal"); nv.textContent=nl1(last.bg); nv.style.color=colorOf(last.bg);
   document.getElementById("nowArrow").textContent = ARROWS[last.dir]||"";
-  const age=document.getElementById("nowAge"); age.textContent = ageMin<90?`${ageMin} min`:`${Math.round(ageMin/60)} u`;
+  const age=document.getElementById("nowAge"); age.textContent = ageMin<90?`${ageMin} min`:`${Math.round(ageMin/60)} ${TL("u","h","h")}`;
   age.classList.toggle("stale", ageMin>20);
   const ob = document.getElementById("onboard");
   if (treatments.length || _dsRecent.length){
@@ -2125,8 +2125,8 @@ function render(glucose, treatments, timeline){
     const viaLoop = dsFresh && dsLast.iob!=null;
     const fresh = ageMin<=20;
     const hint = fresh && iobNow>=1 && last.dir && /Down/i.test(last.dir) && last.bg<8
-      ? ` <span class="ob-hint">· let op dalen</span>` : "";
-    ob.innerHTML = `IOB <b>${nl1(iobNow)}</b> · COB <b>${Math.round(cobNow)}</b> g <span style="opacity:.7">${viaLoop?"· via loop":"· geschat"}</span>${hint}`;
+      ? ` <span class="ob-hint">${TL("· let op dalen","· watch, dropping","· atenção, a descer")}</span>` : "";
+    ob.innerHTML = `IOB <b>${nl1(iobNow)}</b> · COB <b>${Math.round(cobNow)}</b> g <span style="opacity:.7">${viaLoop?TL("· via loop","· via loop","· via loop"):TL("· geschat","· estimated","· estimado")}</span>${hint}`;
     ob.hidden = false;
   } else ob.hidden = true;
 
@@ -2544,7 +2544,7 @@ function driftSvg(stat){
   let s=`<svg class="chart" viewBox="0 0 ${W} ${H}">`;
   s+=`<line x1="${PL}" y1="${mid}" x2="${W}" y2="${mid}" stroke="var(--line-2)" stroke-width="1"/>`;
   s+=`<text x="${PL-3}" y="${(mid+3).toFixed(1)}" font-size="8" fill="var(--muted)" text-anchor="end">0</text>`;
-  for(const h of [0,6,12,18]){ const x=PL+h*bw; s+=`<text x="${x.toFixed(1)}" y="${H-4}" font-size="8" fill="var(--muted)">${h}u</text>`; }
+  for(const h of [0,6,12,18]){ const x=PL+h*bw; s+=`<text x="${x.toFixed(1)}" y="${H-4}" font-size="8" fill="var(--muted)">${h}${TL("u","h","h")}</text>`; }
   has.forEach(o=>{ const x=PL+o.h*bw+bw*.15,w=bw*.7,y0=Y(0),y=Y(o.med),cx=x+w/2;
     const col=o.structural?(o.med>0?"var(--high)":"var(--low)"):"var(--line-2)";
     s+=`<line x1="${cx.toFixed(1)}" y1="${Y(o.p75).toFixed(1)}" x2="${cx.toFixed(1)}" y2="${Y(o.p25).toFixed(1)}" stroke="var(--muted)" stroke-width="1"/>`;
@@ -2561,7 +2561,7 @@ function absorpSvg(GRID, medc, t50){
   if(t50!=null){ const x=X(t50); s+=`<line x1="${x.toFixed(1)}" y1="${Y(0).toFixed(1)}" x2="${x.toFixed(1)}" y2="${Y(100).toFixed(1)}" stroke="var(--high)" stroke-width="1" stroke-dasharray="2 2"/>`; }
   const d=GRID.map((x,i)=>(i?"L":"M")+X(x).toFixed(1)+" "+Y(medc[i]).toFixed(1)).join(" ");
   s+=`<path d="${d}" fill="none" stroke="var(--inRange)" stroke-width="2" vector-effect="non-scaling-stroke"/>`;
-  s+=`<text x="${PL}" y="10" font-size="7.5" fill="var(--dim)">% koolhydraten opgenomen na de maaltijd</text>`;
+  s+=`<text x="${PL}" y="10" font-size="7.5" fill="var(--dim)">${TL("% koolhydraten opgenomen na de maaltijd","% carbs absorbed after the meal","% de hidratos absorvidos após a refeição")}</text>`;
   return s+"</svg>";
 }
 
@@ -3088,7 +3088,7 @@ function initDeep(){
           : an==="meals" ? anMeals(glucose, treatments, q, timeline)
           : an==="stacking" ? anStacking(glucose, treatments, q)
           : "";
-      } catch(e){ body.innerHTML = `<div class="muted">Analyse mislukt: ${e.message}</div>`; console.error(an, e); }
+      } catch(e){ body.innerHTML = `<div class="muted">${TL("Analyse mislukt","Analysis failed","Análise falhou")}: ${e.message}</div>`; console.error(an, e); }
     });
   });
 }
@@ -3134,7 +3134,7 @@ async function renderLog(){
   const list=document.getElementById("logList"); if(!list) return;
   let anns=[]; try{ anns=await DB.all("annotations"); }catch(_){}
   anns=anns.filter(a=>a.type!=="hypogevoel").sort((a,b)=>b.ts-a.ts);   // hypo-gevoel heeft z'n eigen sectie
-  if(!anns.length){ list.innerHTML=`<div class="muted" style="padding-top:.3rem">Nog geen markeringen. Leg een instelling-wijziging of gebeurtenis vast — bij een wijziging vergelijkt de app vanzelf de periode ervóór en erná.</div>`; return; }
+  if(!anns.length){ list.innerHTML=`<div class="muted" style="padding-top:.3rem">${TL("Nog geen markeringen. Leg een instelling-wijziging of gebeurtenis vast — bij een wijziging vergelijkt de app vanzelf de periode ervóór en erná.","No marks yet. Note a setting change or event — for a change the app automatically compares the period before and after.","Ainda sem marcas. Registe uma alteração de definição ou evento — numa alteração a app compara automaticamente o período antes e depois.")}</div>`; return; }
   list.innerHTML=anns.map(an=>{ const t=annotType(an.type);
     const d=new Date(an.ts).toLocaleDateString(LOCALE(),{day:"2-digit",month:"short",year:"numeric"});
     return `<div class="logentry"><div class="leh"><span class="ic">${t.icon}</span><span class="lt">${esc(annotLabel(an.type))}</span><span class="ld">${d}</span><button class="del" data-id="${esc(an.id)}" title="${TL("verwijderen","delete","eliminar")}" aria-label="${TL("verwijderen","delete","eliminar")}">✕</button></div>`+
@@ -3156,23 +3156,23 @@ function buildAwChips(){
   c.querySelectorAll(".chip").forEach(ch=>ch.onclick=()=>{ _awSel=ch.dataset.int; buildAwChips(); });
 }
 function awareHtml(aw, hy){
-  if(!aw.n) return `<div class="muted" style="padding-top:.3rem">Nog geen hypo-gevoel gelogd. Leg vast wannéér je een hypo vóélt (met je meterwaarde) — dan volgt de app of die voelgrens over de tijd zakt.</div>`;
-  const thrTxt = aw.thr<3.3 ? `Je merkt hypo's mediaan pas bij <b>${nl1(aw.thr)} mmol/L</b> — vrij laag. Dat kán wijzen op verminderd hypogevoel.`
-    : aw.thr<3.9 ? `Je voelt hypo's mediaan rond <b>${nl1(aw.thr)} mmol/L</b>.`
-    : `Je voelt hypo's mediaan al rond <b>${nl1(aw.thr)} mmol/L</b> — ruim op tijd.`;
+  if(!aw.n) return `<div class="muted" style="padding-top:.3rem">${TL("Nog geen hypo-gevoel gelogd. Leg vast wannéér je een hypo vóélt (met je meterwaarde) — dan volgt de app of die voelgrens over de tijd zakt.","No hypo awareness logged yet. Note when you feel a hypo (with your meter value) — then the app tracks whether that feel-threshold drops over time.","Ainda sem perceção de hipo registada. Registe quando sente uma hipo (com o valor do medidor) — a app segue então se esse limiar desce ao longo do tempo.")}</div>`;
+  const thrTxt = aw.thr<3.3 ? TL(`Je merkt hypo's mediaan pas bij <b>${nl1(aw.thr)} mmol/L</b> — vrij laag. Dat kán wijzen op verminderd hypogevoel.`,`You notice lows at a median of only <b>${nl1(aw.thr)} mmol/L</b> — fairly low. That may indicate reduced hypo awareness.`,`Só nota hipos a uma mediana de <b>${nl1(aw.thr)} mmol/L</b> — bastante baixo. Pode indicar perceção de hipo reduzida.`)
+    : aw.thr<3.9 ? TL(`Je voelt hypo's mediaan rond <b>${nl1(aw.thr)} mmol/L</b>.`,`You feel lows at a median around <b>${nl1(aw.thr)} mmol/L</b>.`,`Sente hipos a uma mediana de cerca de <b>${nl1(aw.thr)} mmol/L</b>.`)
+    : TL(`Je voelt hypo's mediaan al rond <b>${nl1(aw.thr)} mmol/L</b> — ruim op tijd.`,`You feel lows at a median already around <b>${nl1(aw.thr)} mmol/L</b> — in good time.`,`Sente hipos a uma mediana já por volta de <b>${nl1(aw.thr)} mmol/L</b> — a tempo.`);
   const trendTxt = aw.trend && Math.abs(aw.trend.delta)>=0.5
-    ? (aw.trend.delta<0 ? ` Je voelgrens zakte van ${nl1(aw.trend.early)} naar ${nl1(aw.trend.late)} — houd dit in de gaten.`
-                        : ` Je voelgrens ging van ${nl1(aw.trend.early)} naar ${nl1(aw.trend.late)} omhoog — je merkt ze eerder.`)
+    ? (aw.trend.delta<0 ? TL(` Je voelgrens zakte van ${nl1(aw.trend.early)} naar ${nl1(aw.trend.late)} — houd dit in de gaten.`,` Your feel-threshold dropped from ${nl1(aw.trend.early)} to ${nl1(aw.trend.late)} — keep an eye on this.`,` O seu limiar desceu de ${nl1(aw.trend.early)} para ${nl1(aw.trend.late)} — fique atento.`)
+                        : TL(` Je voelgrens ging van ${nl1(aw.trend.early)} naar ${nl1(aw.trend.late)} omhoog — je merkt ze eerder.`,` Your feel-threshold rose from ${nl1(aw.trend.early)} to ${nl1(aw.trend.late)} — you notice them earlier.`,` O seu limiar subiu de ${nl1(aw.trend.early)} para ${nl1(aw.trend.late)} — nota-as mais cedo.`))
     : "";
   const kpis=[
-    ["Voelgrens", nl1(aw.thr), "mediaan mmol/L"],
-    ["Gelogd", String(aw.n), "hypo-gevoelens"],
-    ["Sensor bevestigd", pct0(aw.confirmedFrac), "&lt;3,9 in ±15 min"],
+    [TL("Voelgrens","Feel-threshold","Limiar"), nl1(aw.thr), TL("mediaan mmol/L","median mmol/L","mediana mmol/L")],
+    [TL("Gelogd","Logged","Registado"), String(aw.n), TL("hypo-gevoelens","hypo feelings","perceções de hipo")],
+    [TL("Sensor bevestigd","Sensor confirmed","Confirmado sensor"), pct0(aw.confirmedFrac), TL("&lt;3,9 in ±15 min","&lt;3.9 within ±15 min","&lt;3,9 em ±15 min")],
   ].map(([k,v,s])=>`<div class="kpi"><div class="k">${k}</div><div class="v">${v}</div><div class="s">${s}</div></div>`).join("");
   let cov="";
   if(hy && hy.allLows && hy.allLows.length){ const felt=aw.ev.map(e=>e.ts);
     const covered=hy.allLows.filter(ep=>felt.some(ft=>Math.abs(ft-ep.start)<=30*60e3)).length;
-    cov=`<div class="muted" style="margin-top:.45rem">Van je ${hy.allLows.length} sensor-lows had ${covered} een gelogd gevoel eromheen. Weinig overlap kan betekenen dat je ze niet voelt — of niet logt. Een hint, geen diagnose.</div>`; }
+    cov=`<div class="muted" style="margin-top:.45rem">${TL(`Van je ${hy.allLows.length} sensor-lows had ${covered} een gelogd gevoel eromheen. Weinig overlap kan betekenen dat je ze niet voelt — of niet logt. Een hint, geen diagnose.`,`Of your ${hy.allLows.length} sensor lows, ${covered} had a logged feeling around them. Little overlap may mean you don't feel them — or don't log them. A hint, not a diagnosis.`,`Das suas ${hy.allLows.length} hipos de sensor, ${covered} tiveram uma perceção registada por perto. Pouca sobreposição pode significar que não as sente — ou não as regista. Uma pista, não um diagnóstico.`)}</div>`; }
   return `<div class="kpis">${kpis}</div><div class="obs">${thrTxt}${trendTxt}</div>`+cov;
 }
 async function renderAware(){
@@ -3184,7 +3184,7 @@ async function renderAware(){
   const recent=[...felt].sort((a,b)=>b.ts-a.ts).slice(0,6);
   list.innerHTML = recent.length ? `<div style="margin-top:.6rem">`+recent.map(f=>{
     const d=new Date(f.ts).toLocaleString(LOCALE(),{day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"});
-    return `<div class="logentry"><div class="leh"><span class="ic">📉</span><span class="lt">${f.measured!=null?nl1(f.measured)+" mmol/L":"gevoeld"}</span><span class="ld">${esc(f.intensity||"")} · ${d}</span><button class="del" data-id="${esc(f.id)}" title="verwijderen" aria-label="verwijderen">✕</button></div></div>`;
+    return `<div class="logentry"><div class="leh"><span class="ic">📉</span><span class="lt">${f.measured!=null?nl1(f.measured)+" mmol/L":TL("gevoeld","felt","sentido")}</span><span class="ld">${esc(f.intensity?intensLabel(f.intensity):"")} · ${d}</span><button class="del" data-id="${esc(f.id)}" title="${TL("verwijderen","delete","eliminar")}" aria-label="${TL("verwijderen","delete","eliminar")}">✕</button></div></div>`;
   }).join("")+`</div>` : "";
   list.querySelectorAll(".del").forEach(btn=>btn.onclick=async()=>{
     try{ await DB.delRow("annotations",btn.dataset.id); }catch(e){ toast(TL("Verwijderen mislukt.","Delete failed.","Falha ao eliminar.")); return; }
@@ -3280,9 +3280,9 @@ async function buildReport(){
 }
 async function openReport(){
   const el=document.getElementById("report");
-  el.innerHTML=`<div class="rep"><p class="rnone">Rapport opstellen…</p></div>`;
+  el.innerHTML=`<div class="rep"><p class="rnone">${TL("Rapport opstellen…","Building report…","A montar relatório…")}</p></div>`;
   el.hidden=false; document.body.classList.add("reporting");
-  try{ el.innerHTML=await buildReport(); }catch(e){ el.innerHTML=`<div class="rep"><p class="rnone">Rapport mislukte: ${esc(e.message)}</p></div>`; }
+  try{ el.innerHTML=await buildReport(); }catch(e){ el.innerHTML=`<div class="rep"><p class="rnone">${TL("Rapport mislukte","Report failed","Relatório falhou")}: ${esc(e.message)}</p></div>`; }
   const bp=document.getElementById("btnRepPrint"); if(bp) bp.onclick=()=>window.print();
   const bc=document.getElementById("btnRepClose"); if(bc) bc.onclick=closeReport;
   window.scrollTo({top:0});
