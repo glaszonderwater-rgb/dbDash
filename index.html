@@ -325,6 +325,15 @@ details.fold>.foldbody{padding:0 1.05rem 1.05rem}
 .askA .askAct{margin-top:.55rem;display:flex;gap:.4rem;flex-wrap:wrap}
 .askA .askAct .act{font-size:.74rem}
 .askNone{font-size:.8rem;color:var(--muted);line-height:1.5}
+.askA.ai{border-left-color:var(--carb)}
+.askA .askBadge{font-size:.66rem;color:var(--dim);margin-top:.5rem;display:flex;align-items:center;gap:.3rem}
+.askA .askBadge b{color:var(--carb);font-weight:700}
+.askA details.aiSent{margin-top:.4rem}
+.askA details.aiSent summary{font-size:.68rem;color:var(--dim);cursor:pointer}
+.askA details.aiSent pre{font-size:.66rem;white-space:pre-wrap;color:var(--muted);background:var(--surface-2);border-radius:.5rem;padding:.5rem .6rem;margin:.35rem 0 0;max-height:11rem;overflow:auto}
+.aitog{display:flex;align-items:center;gap:.5rem;margin-top:.5rem;font-size:.85rem;color:var(--ink)}
+.aitog input{width:auto;margin:0}
+#inAiUrl,#inAiModel,#inAiKey{margin-top:.4rem}
 #cbSearch{width:100%;box-sizing:border-box;font-size:.95rem;padding:.7rem .85rem;border:1px solid var(--line-2);border-radius:.7rem;background:var(--surface);color:var(--ink);box-shadow:var(--shadow-sm)}
 #cbSearch:focus{outline:none;border-color:var(--accent)}
 /* categorie-chips: één horizontale scroll-strip i.p.v. een muur */
@@ -965,6 +974,13 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
     <button class="ghost" id="btnImport" data-i18n="cfg.import">⭱ Importeer</button>
     <input type="file" id="fileImport" accept="application/json,.json" hidden>
   </div>
+
+  <label style="margin-top:1.1rem" data-i18n="cfg.aiLabel">AI-assistent (optioneel)</label>
+  <div class="hint" data-i18n="cfg.aiHint">Voor vrije vragen bovenop de lokale antwoorden. Werkt met je <b>eigen</b> sleutel bij een OpenAI-compatibele dienst — of een lokale Ollama/LM Studio, dan blijft alles op je machine. Er gaan alléén de samenvattende cijfers naartoe die ook op je scherm staan, nooit je ruwe sensorstroom. Antwoorden zijn gegenereerd (kunnen fouten bevatten) en nooit dosisadvies. Je sleutel staat lokaal op dit toestel.</div>
+  <label class="aitog"><input type="checkbox" id="inAiOn"> <span data-i18n="cfg.aiEnable">AI-assistent inschakelen</span></label>
+  <input id="inAiUrl" type="url" placeholder="https://api.openai.com/v1" autocomplete="off" spellcheck="false">
+  <input id="inAiModel" type="text" placeholder="gpt-4o-mini" autocomplete="off" spellcheck="false">
+  <input id="inAiKey" type="password" placeholder="sk-… (API-sleutel)" autocomplete="off" spellcheck="false">
 </dialog>
 
 <script>
@@ -972,7 +988,7 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
 
 /* ── Config ─────────────────────────────────────────────────────────────── */
 const CFG_KEY = "dbdash.cfg";
-const cfg = Object.assign({ url:"", token:"", days:30, peak:75, lang:"" },
+const cfg = Object.assign({ url:"", token:"", days:30, peak:75, lang:"", aiOn:false, aiUrl:"", aiModel:"", aiKey:"" },
   JSON.parse(localStorage.getItem(CFG_KEY) || "{}"));
 const saveCfg = () => localStorage.setItem(CFG_KEY, JSON.stringify(cfg));
 
@@ -1130,6 +1146,16 @@ Object.assign(I18N, {
   "cfg.export":{ en:"⭳ Export logbook", pt:"⭳ Exportar diário" },
   "cfg.import":{ en:"⭱ Import", pt:"⭱ Importar" },
   "ask.ph":{ en:"Ask something about your data…", pt:"Pergunte algo sobre os seus dados…" },
+  "cfg.aiLabel":{ en:"AI assistant (optional)", pt:"Assistente de IA (opcional)" },
+  "cfg.aiHint":{ en:"For free-form questions on top of the local answers. Works with your <b>own</b> key at an OpenAI-compatible service — or a local Ollama/LM Studio, keeping everything on your machine. Only the summary figures that are already on your screen are sent, never your raw sensor stream. Answers are generated (may contain errors) and never dosing advice. Your key is stored locally on this device.", pt:"Para perguntas livres além das respostas locais. Funciona com a sua <b>própria</b> chave num serviço compatível com OpenAI — ou um Ollama/LM Studio local, mantendo tudo na sua máquina. Só os números-resumo já visíveis no ecrã são enviados, nunca o seu fluxo de sensor em bruto. As respostas são geradas (podem conter erros) e nunca conselhos de dose. A sua chave fica guardada localmente neste dispositivo." },
+  "cfg.aiEnable":{ en:"Enable AI assistant", pt:"Ativar assistente de IA" },
+  // Ask-tab AI
+  "ask.aiBtn":{ nl:"🤖 Vraag de AI-assistent", en:"🤖 Ask the AI assistant", pt:"🤖 Perguntar ao assistente de IA" },
+  "ask.aiThinking":{ nl:"AI denkt na…", en:"AI is thinking…", pt:"A IA está a pensar…" },
+  "ask.aiBadge":{ nl:"AI · gegenereerd, kan fouten bevatten · geen dosisadvies", en:"AI · generated, may contain errors · no dosing advice", pt:"IA · gerado, pode conter erros · sem conselho de dose" },
+  "ask.aiWhatSent":{ nl:"Wat wordt er verstuurd?", en:"What is sent?", pt:"O que é enviado?" },
+  "ask.aiOff":{ nl:"Schakel de AI-assistent eerst in bij Instellingen (met je eigen sleutel).", en:"Enable the AI assistant first in Settings (with your own key).", pt:"Ative primeiro o assistente de IA nas Definições (com a sua própria chave)." },
+  "ask.aiErr":{ nl:"AI-verzoek mislukt", en:"AI request failed", pt:"Pedido de IA falhou" },
 });
 // Uitleg-sectie ("Uitleg & leren") — één sleutel met de volledige HTML per taal.
 Object.assign(I18N, { "meth.body":{
@@ -2713,6 +2739,56 @@ function askData(query){
   if(!best || bestScore===0) return { unknown:true };
   const ans=best.run(D); ans._id=best.id; return ans;
 }
+// Contextpakket voor de AI: uitsluitend de reeds-berekende samenvattende cijfers
+// (dezelfde die op je scherm staan). Nooit de ruwe sensorstroom. Plain getallen.
+function buildAskContext(){
+  const c=_ctx; if(!c||!c.glucose||!c.glucose.length) return null;
+  const g=c.glucose.filter(x=>c.q.usableKeys.has(localDayKey(x.ts)));
+  const f1=v=>v==null||!isFinite(v)?"?":v.toFixed(1), P=v=>Math.round(v*100)+"%";
+  const m=metrics(g), hy=c.hy||hypoStats(g), MR=mealResults(c.glucose,c.treatments,c.timeline),
+    oi=observedISF(c.glucose,c.treatments,c.timeline), drift=basalDrift(c.glucose,c.treatments,c.q),
+    ins=insulinCarbs(c.treatments,c.timeline,c.q), dawn=drift&&drift.stat?dawnPattern(drift):null,
+    sg=somogyiPattern(c.glucose,c.q), watch=watchList(c.glucose,c.q);
+  const L=[];
+  L.push(`Period: ${c.q.usable.length}/${c.q.days.length} days, coverage ${P(c.q.coverage)}. Glucose unit mmol/L.`);
+  L.push(`Time in range 3.9-10.0: ${P(m.tir)} (target >70%). Time <3.9: ${P(m.tbr)} (target <4%). Time <3.0: ${P(m.veryLow)}. Time >10.0: ${P(m.tar)}. Time >13.9: ${P(m.veryHigh)}. CV ${P(m.cv)} (target <=36%). GMI ${f1(m.gmi)}%. Mean ${f1(m.mean)}.`);
+  L.push(`Lows: ${hy.episodes} episodes >=15min (${hy.level2} severe <3.0; ${hy.nocturnal} nocturnal 00-06h); ${hy.dips} short dips <15min.`);
+  if(MR&&MR.results.length>=MEAL_MIN) L.push(`Meal response (n=${MR.results.length}): median peak ${Math.round(MR.mtpk)} min after eating; t50 ${MR.mt50==null?"?":Math.round(MR.mt50)} min; median ${P(MR.mfrac)} of entered carbs seen back; manual-bolus timing median ${MR.moffset==null?"?":Math.round(MR.moffset)+" min vs meal (negative = prebolus)"}.`);
+  else L.push(`Meal response: too few isolated meals with a manual bolus to analyse.`);
+  if(oi&&oi.obs!=null) L.push(`Measured ISF: 1 unit lowers ~${f1(oi.obs)} mmol/L (IQR ${f1(oi.q25)}-${f1(oi.q75)}, n=${oi.n})${oi.prof!=null?`, set profile ISF ${f1(oi.prof)}`:""}.`);
+  else L.push(`Measured ISF: too few clean manual corrections to measure.`);
+  if(dawn) L.push(`Dawn phenomenon detected: fasting early-morning rise ~${f1(dawn.rise)} mmol/L per hour around hours ${dawn.hours.join(",")}.`);
+  else if(drift&&drift.stat){ const u=(drift.up||[]).map(s=>s.h), d=(drift.down||[]).map(s=>s.h);
+    L.push(`Fasting drift: ${u.length?"rise around hours "+u.join(","):""}${u.length&&d.length?"; ":""}${d.length?"fall around hours "+d.join(","):""}${!u.length&&!d.length?"flat, no structural drift":""}.`); }
+  if(sg) L.push(`Somogyi pattern: ${sg.rebounds}/${sg.nights} nights with a low were followed by a morning high (debated phenomenon; could also be dawn or breakfast).`);
+  if(ins&&ins.tdd!=null) L.push(`Insulin: total daily dose ~${f1(ins.tdd)} U (basal/bolus ${Math.round(ins.basalPct*100)}/${Math.round(ins.bolusPct*100)}%), carbs ~${Math.round(ins.carbsDay)} g/day.`);
+  if(!watch.few && watch.alerts.length) L.push(`Recent trend (last 2 weeks vs prior 2): `+watch.alerts.map(a=>a.title.replace(/<[^>]+>/g,"")).join("; ")+".");
+  return { text:L.join("\n") };
+}
+const _AI_LANG = { nl:"Dutch", en:"English", pt:"Portuguese" };
+async function askAI(question){
+  const out=document.getElementById("askAnswer"); if(!out) return;
+  if(!cfg.aiOn || !cfg.aiKey || !cfg.aiUrl){ out.innerHTML=`<div class="askA"><div class="askAb askNone">${t("ask.aiOff")}</div></div>`; return; }
+  const ctx=buildAskContext();
+  if(!ctx){ out.innerHTML=`<div class="askA"><div class="askAb">${TL("Nog geen data.","No data yet.","Ainda sem dados.")}</div></div>`; return; }
+  const lang=_AI_LANG[LANG]||"Dutch";
+  const sys=`You are a careful assistant helping a person with type 1 diabetes review THEIR OWN CGM and pump data. Answer ONLY using the FACTS provided below. If the facts do not contain the answer, say so plainly — never invent numbers. You are NOT a medical device: never give insulin doses, dose sizes, dose changes, correction amounts, or prescriptions. Frame everything as observations and discussion points for their care team. Glucose is in mmol/L. Be concise (at most ~4 sentences). Reply in ${lang}.\n\nFACTS:\n${ctx.text}`;
+  out.innerHTML=`<div class="askA ai"><div class="askAb">${t("ask.aiThinking")}</div></div>`;
+  try{
+    const r=await fetch(cfg.aiUrl.replace(/\/+$/,"")+"/chat/completions",{ method:"POST",
+      headers:{ "Content-Type":"application/json", "Authorization":"Bearer "+cfg.aiKey },
+      body:JSON.stringify({ model:cfg.aiModel||"gpt-4o-mini", temperature:0.2, max_tokens:400,
+        messages:[{role:"system",content:sys},{role:"user",content:question}] }) });
+    if(!r.ok){ const tx=await r.text().catch(()=>""); throw new Error("HTTP "+r.status+(tx?" — "+tx.slice(0,160):"")); }
+    const j=await r.json();
+    const msg=(j&&j.choices&&j.choices[0]&&j.choices[0].message&&j.choices[0].message.content||"").trim()
+      || TL("Geen antwoord ontvangen.","No answer received.","Nenhuma resposta recebida.");
+    out.innerHTML=`<div class="askA ai"><div class="askAb">${esc(msg).replace(/\n/g,"<br>")}</div>`+
+      `<div class="askBadge">${t("ask.aiBadge")}</div>`+
+      `<details class="aiSent"><summary>${t("ask.aiWhatSent")}</summary><pre>${esc(ctx.text)}</pre></details></div>`;
+  }catch(e){ out.innerHTML=`<div class="askA ai"><div class="askAb">${t("ask.aiErr")}: ${esc(e.message)}</div></div>`; }
+}
+const aiEnabled = () => !!(cfg.aiOn && cfg.aiKey && cfg.aiUrl);
 async function renderAsk(query){
   const out=document.getElementById("askAnswer"); if(!out) return;
   // hypo-gevoel-logs voor de awareness-intentie
@@ -2720,12 +2796,14 @@ async function renderAsk(query){
   const r=askData(query);
   if(!r){ out.innerHTML=""; return; }
   if(r.none){ out.innerHTML=`<div class="askA"><div class="askAb">${r.msg}</div></div>`; return; }
-  if(r.unknown){ out.innerHTML=`<div class="askA"><div class="askAb askNone">${TL("Die vraag snap ik (nog) niet. Probeer bijvoorbeeld:","I don't understand that question (yet). Try for example:","Não entendo essa pergunta (ainda). Tente por exemplo:")}</div><div class="chips askFollow">${_askExamples().slice(0,5).map(x=>`<button type="button" class="chip" data-ask="${esc(x)}">${esc(x)}</button>`).join("")}</div></div>`; wireAsk(out); return; }
+  const aiBtn = aiEnabled()?`<button type="button" class="act ghost" data-askai="${esc(query)}">${t("ask.aiBtn")}</button>`:"";
+  if(r.unknown){ out.innerHTML=`<div class="askA"><div class="askAb askNone">${TL("Die vraag snap ik (nog) niet. Probeer bijvoorbeeld:","I don't understand that question (yet). Try for example:","Não entendo essa pergunta (ainda). Tente por exemplo:")}</div>${aiBtn?`<div class="askAct">${aiBtn}</div>`:""}<div class="chips askFollow">${_askExamples().slice(0,5).map(x=>`<button type="button" class="chip" data-ask="${esc(x)}">${esc(x)}</button>`).join("")}</div></div>`; wireAsk(out); return; }
   const foll=(r.follow||[]).map(id=>_askQtext(id)).filter(Boolean);
   out.innerHTML=`<div class="askA"><div class="askAh">${r.t}</div><div class="askAb">${r.b}</div>${r.e?`<div class="askAe">${r.e}</div>`:""}`+
     `<div class="askAct">`+
       (r.consult?`<button type="button" class="act ghost" data-askconsult='${esc(JSON.stringify(r.consult))}'>${TL("→ consultlijst","→ consult list","→ lista de consulta")}</button>`:"")+
       (r.goto?`<button type="button" class="act ghost" data-askgoto="${r.goto}">${TL("Open Consult","Open Consult","Abrir Consulta")}</button>`:"")+
+      aiBtn+
     `</div>`+
     (foll.length?`<div class="chips askFollow">${foll.map(x=>`<button type="button" class="chip" data-ask="${esc(x)}">${esc(x)}</button>`).join("")}</div>`:"")+
     `</div>`;
@@ -2734,6 +2812,7 @@ async function renderAsk(query){
 function wireAsk(scope){
   scope.querySelectorAll("[data-ask]").forEach(b=>b.onclick=()=>{ const inp=document.getElementById("askInput"); if(inp) inp.value=b.dataset.ask; renderAsk(b.dataset.ask); });
   scope.querySelectorAll("[data-askgoto]").forEach(b=>b.onclick=()=>showTab(b.dataset.askgoto));
+  scope.querySelectorAll("[data-askai]").forEach(b=>b.onclick=()=>askAI(b.dataset.askai));
   scope.querySelectorAll("[data-askconsult]").forEach(b=>b.onclick=async()=>{ let cc; try{cc=JSON.parse(b.dataset.askconsult);}catch(_){return;}
     let l=[]; try{ l=(await DB.meta("consultlist"))||[]; }catch(_){}
     if(!l.some(x=>x.id===cc.id)){ l.push(cc); await DB.meta("consultlist",l); toast(TL("Op je consultlijst gezet.","Added to your consult list.","Adicionado à lista de consulta.")); renderConsult(); }
@@ -3617,6 +3696,8 @@ document.getElementById("btnCfg").onclick = ()=>{
   document.getElementById("inUrl").value=cfg.url; document.getElementById("inTok").value=cfg.token;
   document.getElementById("inDays").value=cfg.days; document.getElementById("inInsulin").value=String(cfg.peak||75);
   document.getElementById("inLang").value=LANG;
+  document.getElementById("inAiOn").checked=!!cfg.aiOn;
+  document.getElementById("inAiUrl").value=cfg.aiUrl||""; document.getElementById("inAiModel").value=cfg.aiModel||""; document.getElementById("inAiKey").value=cfg.aiKey||"";
   document.getElementById("cfgErr").hidden=true; openDlg(); };
 document.getElementById("inLang").onchange=e=>setLang(e.target.value);   // direct effect, geen "Bewaren" nodig
 document.getElementById("btnClose").onclick = closeDlg;
@@ -3628,6 +3709,11 @@ document.getElementById("btnSave").onclick = async ()=>{
   cfg.days=Math.min(365,Math.max(7,+document.getElementById("inDays").value||30));
   cfg.peak=[45,55,75].includes(+document.getElementById("inInsulin").value)?+document.getElementById("inInsulin").value:75;
   PEAK_MIN=cfg.peak;
+  // AI-assistent (optioneel, eigen sleutel/endpoint)
+  cfg.aiOn=document.getElementById("inAiOn").checked;
+  cfg.aiUrl=document.getElementById("inAiUrl").value.trim().replace(/\/+$/,"");
+  cfg.aiModel=document.getElementById("inAiModel").value.trim();
+  cfg.aiKey=document.getElementById("inAiKey").value.trim();
   setConn("busy",t("conn.checking"));
   try { await NS.get("/api/v1/status.json"); saveCfg(); document.getElementById("btnSync").disabled=false; closeDlg(); await doSync(); }
   catch(e){ setConn("err",t("conn.noconn")); err.textContent=e.message; err.hidden=false; }
