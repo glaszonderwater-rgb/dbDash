@@ -2465,6 +2465,27 @@ async function renderFindings(ctx){
           TL(`In AAPS pas je een basaalblok ~1–2 u vóór het effect aan — bespreek met je team.`,`In AAPS you adjust a basal block ~1–2 h before the effect — discuss with your team.`,`No AAPS ajusta um bloco basal ~1–2 h antes do efeito — discuta com a sua equipa.`)],
         fine:TL(`n = ${drift.total.toLocaleString(LOCALE())} driftmetingen`,`n = ${drift.total.toLocaleString(LOCALE())} drift readings`,`n = ${drift.total.toLocaleString(LOCALE())} medições de deriva`) });
   }
+  // Dawn-fenomeen — nuchtere ochtendstijging (referentie §4)
+  { const dp=drift && drift.stat ? dawnPattern(drift) : null;
+    if(dp) week.push({ id:"dawn", sev:"n", seenable:false, consultable:true,
+      title:TL(`Dawn-fenomeen: je stijgt nuchter in de vroege ochtend (rond <b>${joinHrs(dp.hours).join(", ")}</b>).`,`Dawn phenomenon: you rise when fasting in the early morning (around <b>${joinHrs(dp.hours).join(", ")}</b>).`,`Fenómeno do amanhecer: sobe em jejum de madrugada (por volta de <b>${joinHrs(dp.hours).join(", ")}</b>).`),
+      steps:[TL(`Terwijl de nacht ervoor vlak bleef, loopt je glucose op met ~${nl1(dp.rise)} mmol/L per uur — het klassieke groeihormoon-patroon.`,`While the earlier night stayed flat, your glucose rises ~${nl1(dp.rise)} mmol/L per hour — the classic growth-hormone pattern.`,`Enquanto a noite anterior se manteve plana, a glicose sobe ~${nl1(dp.rise)} mmol/L por hora — o padrão clássico da hormona de crescimento.`),
+        TL(`Een iets hóger basaal in de vroege ochtend is hiervoor de gebruikelijke ingang — een bespreekpunt voor je team, geen instelopdracht.`,`A slightly higher basal in the early morning is the usual lever for this — a discussion point for your team, not a setting instruction.`,`Uma basal ligeiramente mais alta de madrugada é a alavanca habitual — um ponto de discussão para a sua equipa, não uma instrução.`)],
+      fine:TL(`n = ${dp.n.toLocaleString(LOCALE())} driftmetingen in stille vensters · bij een closed loop maskeert temp-basaal dit vaak`,`n = ${dp.n.toLocaleString(LOCALE())} drift readings in quiet windows · with a closed loop temp basal often masks this`,`n = ${dp.n.toLocaleString(LOCALE())} medições de deriva em janelas calmas · num closed loop a basal temporária mascara isto muitas vezes`) }); }
+  // Somogyi-rebound — nachtelijke laagte → ochtendhyper (referentie §4, omstreden)
+  { const sg=somogyiPattern(glucose, q);
+    if(sg) week.push({ id:"somogyi", sev:"w", seenable:false, consultable:true,
+      title:TL(`<b>${sg.rebounds}</b> van je <b>${sg.nights}</b> nachten met een laagte werden gevolgd door een ochtendhyper.`,`<b>${sg.rebounds}</b> of your <b>${sg.nights}</b> nights with a low were followed by a morning high.`,`<b>${sg.rebounds}</b> das suas <b>${sg.nights}</b> noites com uma hipo foram seguidas de uma hiperglicemia matinal.`),
+      steps:[TL(`Een nachtelijke laagte (onder 3,9 tussen 00–06 u) ging vooraf aan een hoge waarde (boven 10) tussen 06–10 u.`,`A nocturnal low (below 3.9 between 00–06 h) preceded a high value (above 10) between 06–10 h.`,`Uma hipo noturna (abaixo de 3,9 entre 00–06 h) precedeu um valor alto (acima de 10) entre 06–10 h.`),
+        TL(`Dit kán een Somogyi-rebound zijn (tegenregulatie na een laagte), maar net zo goed het dawn-fenomeen of je ontbijt. Minder insuline vóór de nacht is de klassieke gedachte — bespreek het, verander niets op eigen houtje.`,`This could be a Somogyi rebound (counter-regulation after a low), but just as easily the dawn phenomenon or your breakfast. Less insulin before the night is the classic idea — discuss it, don't change anything on your own.`,`Isto pode ser um efeito Somogyi (contrarregulação após uma hipo), mas tão facilmente o fenómeno do amanhecer ou o pequeno-almoço. Menos insulina antes da noite é a ideia clássica — discuta, não altere nada por si.`)],
+      fine:TL(`n = ${sg.nights} nachten met een laagte · omstreden fenomeen, alleen als observatie`,`n = ${sg.nights} nights with a low · a debated phenomenon, observation only`,`n = ${sg.nights} noites com uma hipo · fenómeno debatido, apenas observação`) }); }
+  // Verlate hypo na inspanning (referentie §5) — leunt op "sport"-markeringen
+  try{ const sportAnns=await DB.all("annotations"); const ex=exerciseLatePattern(glucose, q, sportAnns);
+    if(ex) week.push({ id:"exercise-late", sev:"w", seenable:false, consultable:true,
+      title:TL(`Ná je <b>sport</b>-momenten zie ik meer laagtes in de uren erna.`,`After your <b>exercise</b> markers I see more lows in the hours that follow.`,`Após os seus momentos de <b>exercício</b> vejo mais hipos nas horas seguintes.`),
+      steps:[TL(`In het venster 4–12 u ná inspanning zat je <b>${pct0(ex.wRate)}</b> van de tijd onder 3,9, tegen <b>${pct0(ex.bRate)}</b> normaal — passend bij verlate hypo doordat je spieren later glucose aanvullen.`,`In the 4–12 h window after exercise you were below 3.9 <b>${pct0(ex.wRate)}</b> of the time, vs <b>${pct0(ex.bRate)}</b> normally — fitting delayed-onset lows as your muscles replenish glucose later.`,`Na janela de 4–12 h após o exercício esteve abaixo de 3,9 <b>${pct0(ex.wRate)}</b> do tempo, contra <b>${pct0(ex.bRate)}</b> normalmente — compatível com hipos tardias enquanto os músculos repõem glicose mais tarde.`),
+        TL(`Een lager nachtbasaal of langzame koolhydraten ná het sporten zijn de gebruikelijke ingangen — een bespreekpunt, geen instelopdracht.`,`A lower overnight basal or slow carbs after exercise are the usual levers — a discussion point, not a setting instruction.`,`Uma basal noturna mais baixa ou hidratos lentos após o exercício são as alavancas habituais — um ponto de discussão, não uma instrução.`)],
+      fine:TL(`n = ${ex.events} sport-markeringen · leunt op je logboek`,`n = ${ex.events} exercise markers · relies on your logbook`,`n = ${ex.events} marcas de exercício · depende do seu diário`) }); }catch(_){}
   try{
     const anns=(await DB.all("annotations")).filter(a=>a.type==="wijziging" && a.ts>Date.now()-21*DAY).sort((a,b)=>b.ts-a.ts);
     if (anns.length){ const c=anns[0]; const ba=beforeAfter(glucose,q,c.ts,14);
@@ -2585,6 +2606,55 @@ function basalDrift(glucose, treatments, q){
   const peak=l=>l.reduce((m,s)=>Math.abs(s.med)>Math.abs(m)?s.med:m,0);
   return { total, stat, up, down, peakUp:peak(up), peakDown:peak(down), TH };
 }
+// ── Circadiane & context-patronen (referentie: T1D-managementmethoden, §4 & §5).
+// Alles is observatie + bespreekpunt; nooit een dosis of protocol-instructie.
+
+// Dawn-fenomeen: structurele nuchtere stijging in de vroege ochtend (04–08 u),
+// klassiek door groeihormoon. Afgeleid uit de al berekende basaaldrift.
+function dawnPattern(drift){
+  if(!drift || !drift.stat) return null;
+  const DAWN=[4,5,6,7], med=a=>{const s=[...a].sort((x,y)=>x-y);return s.length?s[Math.floor(s.length/2)]:null;};
+  const up=(drift.up||[]).filter(s=>DAWN.includes(s.h));
+  if(up.length<2) return null;                       // ≥2 dawn-uren met structurele stijging
+  const pre=(drift.stat||[]).filter(s=>[0,1,2,3].includes(s.h)&&s.med!=null);
+  const preFlat = !pre.length || med(pre.map(s=>Math.abs(s.med))) < drift.TH;   // nacht ervoor relatief vlak
+  if(!preFlat) return null;                          // anders is het algemene drift, geen dawn
+  return { hours:up.map(s=>s.h).sort((a,b)=>a-b), rise:med(up.map(s=>s.med)), n:drift.total };
+}
+
+// Somogyi-rebound (omstreden): een nachtelijke laagte gevolgd door een ochtendhyper.
+// Puur observatie — het kan net zo goed het dawn-fenomeen of het ontbijt zijn.
+function somogyiPattern(glucose, q){
+  const g=glucose.filter(x=>q.usableKeys.has(localDayKey(x.ts)));
+  if(g.length<200) return null;
+  const byDay=new Map();
+  for(const x of g){ const k=localDayKey(x.ts); (byDay.get(k)||byDay.set(k,[]).get(k)).push(x); }
+  let nights=0, rebounds=0;
+  for(const [,arr] of byDay){
+    if(!arr.some(x=>todMin(x.ts)<360 && x.bg<3.9)) continue;      // nachtelijke laagte (00–06)
+    nights++;
+    if(arr.some(x=>{const m=todMin(x.ts); return m>=360 && m<600 && x.bg>10;})) rebounds++;  // ochtendhyper (06–10)
+  }
+  if(nights<3 || rebounds<3 || rebounds/nights<0.5) return null;
+  return { nights, rebounds, frac:rebounds/nights };
+}
+
+// Verlate hypo na inspanning (delayed-onset): meer laagtes 4–12 u ná een
+// "sport"-markering dan normaal. Leunt op je eigen logboek-markeringen.
+function exerciseLatePattern(glucose, q, anns){
+  const sport=(anns||[]).filter(a=>a.type==="sport").map(a=>a.ts);
+  if(sport.length<3) return null;
+  const g=glucose.filter(x=>q.usableKeys.has(localDayKey(x.ts)));
+  if(!g.length) return null;
+  const inWin=ts=>sport.some(s=>ts>=s+4*3600e3 && ts<=s+12*3600e3);
+  let wLow=0,wN=0,bLow=0,bN=0;
+  for(const x of g){ if(inWin(x.ts)){ wN++; if(x.bg<3.9)wLow++; } else { bN++; if(x.bg<3.9)bLow++; } }
+  if(wN<40) return null;
+  const wRate=wLow/wN, bRate=bLow/Math.max(1,bN);
+  if(wRate < bRate+0.02) return null;                // duidelijk verhoogd
+  return { events:sport.length, wRate, bRate };
+}
+
 function anDagpatroon(glucose, treatments, q){
   const d=basalDrift(glucose, treatments, q);
   if(!d.stat) return `<div class="muted">Te weinig maaltijd-/bolusvrije momenten (${d.total}) voor een dagpatroon. Bijna al je uren vallen binnen 5 uur na een maaltijd of bolus — met meer nuchtere periodes of historie komt dit beschikbaar.</div>`;
