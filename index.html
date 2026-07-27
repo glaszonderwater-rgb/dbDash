@@ -1629,36 +1629,36 @@ function profileHtml(pi, oi, ins, MR){
     (rows.length?rows.map(b=>`<div class="prow"><span>${fmtMin(b.from)}</span><b>${fmt(b.value)}</b></div>`).join(""):`<div class="prow"><span>—</span><b>—</b></div>`)+
     `<div class="pu">${unit}</div></div>`;
   const kpis=[
-    ["Basaal / dag", nl2(pi.basalDaily)+" E", `${pi.basal.length} blok${pi.basal.length===1?"":"ken"}`],
-    ["ISF", range(pi.isf,nl1), "mmol/L per E"],
-    ["KH-ratio", range(pi.ic,icf), "g per E"],
+    [TL("Basaal / dag","Basal / day","Basal / dia"), nl2(pi.basalDaily)+" "+TL("E","U","U"), TL(`${pi.basal.length} blok${pi.basal.length===1?"":"ken"}`,`${pi.basal.length} block${pi.basal.length===1?"":"s"}`,`${pi.basal.length} bloco${pi.basal.length===1?"":"s"}`)],
+    ["ISF", range(pi.isf,nl1), TL("mmol/L per E","mmol/L per U","mmol/L por U")],
+    [TL("KH-ratio","Carb ratio","Rácio hidr."), range(pi.ic,icf), TL("g per E","g per U","g por U")],
   ].map(([k,v,s])=>`<div class="kpi"><div class="k">${k}</div><div class="v">${v}</div><div class="s">${s}</div></div>`).join("");
 
   // Koppeling profiel ↔ data
   const obs=[];
-  if(ins&&ins.basalPct!=null) obs.push(`Je basaal telt op tot <b>${nl2(pi.basalDaily)} E/dag</b> — ${Math.round(ins.basalPct*100)}% van je totale dosis. Voor pomptherapie ligt basaal vaak rond 40–50%.`);
+  if(ins&&ins.basalPct!=null) obs.push(TL(`Je basaal telt op tot <b>${nl2(pi.basalDaily)} E/dag</b> — ${Math.round(ins.basalPct*100)}% van je totale dosis. Voor pomptherapie ligt basaal vaak rond 40–50%.`,`Your basal totals <b>${nl2(pi.basalDaily)} U/day</b> — ${Math.round(ins.basalPct*100)}% of your total dose. For pump therapy basal is often around 40–50%.`,`A sua basal soma <b>${nl2(pi.basalDaily)} U/dia</b> — ${Math.round(ins.basalPct*100)}% da dose total. Na terapia com bomba a basal ronda muitas vezes 40–50%.`));
   // Piektijd: gemeten steilste-daling-moment naast de ingestelde piektijd van het model.
   { const pk=observedPeak(oi);
     if(pk.obs!=null){ const d=pk.obs-PEAK_MIN;   // meet stelselmatig ~10–15 min vroeg → asymmetrische band
-      const judge = (d>=-30 && d<=20) ? `sluit aan bij je ingestelde <b>${PEAK_MIN} min</b>.`
-        : d<-30 ? `duidelijk eerder dan je ingestelde <b>${PEAK_MIN} min</b> — je insuline lijkt sneller (Fiasp/Lyumjev pieken eerder); check je insulinesoort-instelling.`
-        : `later dan je ingestelde <b>${PEAK_MIN} min</b> — je insuline lijkt trager. Bespreekpunt.`;
-      obs.push(`Piektijd: steilste daling mediaan rond <b>${pk.obs} min</b> (n=${pk.n}) — ${judge} Vormt je IOB-curve, waar je loop op stuurt. Leest ~10–15 min vroeg; indicatie, geen exacte meting.`); } }
+      const judge = (d>=-30 && d<=20) ? TL(`sluit aan bij je ingestelde <b>${PEAK_MIN} min</b>.`,`aligns with your set <b>${PEAK_MIN} min</b>.`,`alinha com os seus <b>${PEAK_MIN} min</b> definidos.`)
+        : d<-30 ? TL(`duidelijk eerder dan je ingestelde <b>${PEAK_MIN} min</b> — je insuline lijkt sneller (Fiasp/Lyumjev pieken eerder); check je insulinesoort-instelling.`,`clearly earlier than your set <b>${PEAK_MIN} min</b> — your insulin seems faster (Fiasp/Lyumjev peak earlier); check your insulin-type setting.`,`claramente mais cedo que os seus <b>${PEAK_MIN} min</b> definidos — a sua insulina parece mais rápida (Fiasp/Lyumjev picam mais cedo); verifique a definição do tipo de insulina.`)
+        : TL(`later dan je ingestelde <b>${PEAK_MIN} min</b> — je insuline lijkt trager. Bespreekpunt.`,`later than your set <b>${PEAK_MIN} min</b> — your insulin seems slower. Discussion point.`,`mais tarde que os seus <b>${PEAK_MIN} min</b> definidos — a sua insulina parece mais lenta. Ponto de discussão.`);
+      obs.push(TL(`Piektijd: steilste daling mediaan rond <b>${pk.obs} min</b> (n=${pk.n}) — ${judge} Vormt je IOB-curve, waar je loop op stuurt. Leest ~10–15 min vroeg; indicatie, geen exacte meting.`,`Peak time: steepest fall median around <b>${pk.obs} min</b> (n=${pk.n}) — ${judge} It shapes your IOB curve, which your loop steers on. Reads ~10–15 min early; an indication, not an exact measurement.`,`Tempo de pico: descida mais acentuada mediana por volta de <b>${pk.obs} min</b> (n=${pk.n}) — ${judge} Molda a sua curva de IOB, que o loop controla. Lê ~10–15 min mais cedo; uma indicação, não uma medição exata.`)); } }
   // Gemeten ISF/basaal naast je instelling staat op Overzicht (samenvatting) en in
   // Bespreekwaarden (per dagdeel) — hier alleen je ingestelde schema.
   if(MR&&MR.results.length>=MEAL_MIN){ const fr=MR.mfrac;
-    obs.push(`Van je ingevoerde koolhydraten zie ik mediaan <b>${pct0(fr)}</b> terug. Let op: deze maat telt alleen posítieve afwijkingen en valt daardoor structureel te hoog uit — alleen als context, nooit als bewijs van onderschatten.`); }
+    obs.push(TL(`Van je ingevoerde koolhydraten zie ik mediaan <b>${pct0(fr)}</b> terug. Let op: deze maat telt alleen posítieve afwijkingen en valt daardoor structureel te hoog uit — alleen als context, nooit als bewijs van onderschatten.`,`Of your entered carbs I see a median of <b>${pct0(fr)}</b> back. Note: this measure only counts positive deviations and therefore runs structurally high — context only, never proof of underestimating.`,`Dos hidratos introduzidos vejo uma mediana de <b>${pct0(fr)}</b> de volta. Nota: esta medida só conta desvios positivos e por isso sai estruturalmente alta — apenas contexto, nunca prova de subestimação.`)); }
 
-  const meta=[]; if(pi.name) meta.push(`profiel <b>${esc(pi.name)}</b>`);
-  meta.push(`DIA ${nl1(pi.dia)} u`);
-  if(pi.source==="switch"&&pi.switchTs) meta.push(`profielwissel actief sinds ${new Date(pi.switchTs).toLocaleDateString(LOCALE(),{day:"2-digit",month:"short"})}`);
-  if(pi.pct!==100) meta.push(`<b>${pi.pct}%</b> ingesteld`);
-  if(pi.shift) meta.push(`tijdverschuiving ${pi.shift} u (niet in tijden verwerkt)`);
+  const meta=[]; if(pi.name) meta.push(TL(`profiel <b>${esc(pi.name)}</b>`,`profile <b>${esc(pi.name)}</b>`,`perfil <b>${esc(pi.name)}</b>`));
+  meta.push(`DIA ${nl1(pi.dia)} ${TL("u","h","h")}`);
+  if(pi.source==="switch"&&pi.switchTs) meta.push(TL(`profielwissel actief sinds ${new Date(pi.switchTs).toLocaleDateString(LOCALE(),{day:"2-digit",month:"short"})}`,`profile switch active since ${new Date(pi.switchTs).toLocaleDateString(LOCALE(),{day:"2-digit",month:"short"})}`,`troca de perfil ativa desde ${new Date(pi.switchTs).toLocaleDateString(LOCALE(),{day:"2-digit",month:"short"})}`));
+  if(pi.pct!==100) meta.push(TL(`<b>${pi.pct}%</b> ingesteld`,`<b>${pi.pct}%</b> set`,`<b>${pi.pct}%</b> definido`));
+  if(pi.shift) meta.push(TL(`tijdverschuiving ${pi.shift} u (niet in tijden verwerkt)`,`time shift ${pi.shift} h (not applied to times)`,`desvio de tempo ${pi.shift} h (não aplicado aos horários)`));
 
   return `<div class="kpis">${kpis}</div>`+
-    `<div class="prof3">${col("Basaal",pi.basal,"E/u",nl2)}${col("ISF",pi.isf,"mmol/L·E",nl1)}${col("KH-ratio",pi.ic,"g/E",icf)}</div>`+
+    `<div class="prof3">${col(TL("Basaal","Basal","Basal"),pi.basal,TL("E/u","U/h","U/h"),nl2)}${col("ISF",pi.isf,"mmol/L·"+TL("E","U","U"),nl1)}${col(TL("KH-ratio","Carb ratio","Rácio hidr."),pi.ic,"g/"+TL("E","U","U"),icf)}</div>`+
     `<div class="obs">${obs.join(" ")}</div>`+
-    `<div class="muted" style="margin-top:.5rem">${meta.join(" · ")}. Je ingestelde profiel uit Nightscout.</div>`;
+    `<div class="muted" style="margin-top:.5rem">${meta.join(" · ")}. ${TL("Je ingestelde profiel uit Nightscout.","Your configured profile from Nightscout.","O seu perfil configurado do Nightscout.")}</div>`;
 }
 // Fine-tune-paneel: per hefboom (basaal → ISF → KH-ratio → prebolus) een lezing —
 // "klopt", "mogelijk bijstellen + richting", of "te weinig data" — met het bewijs.
@@ -1671,44 +1671,44 @@ function fineTuneData(drift, oi, MR, stack, pi){
 
   // 1 — Basaal
   { let st="na", read, dir=null, ev;
-    if(!drift||!drift.stat){ read="Te weinig nuchtere vensters om basaaldrift te meten. Bij een closed loop maskeert temp-basaal de drift — zie <b>Loop-basaal</b> voor de betere ingang."; ev="drempel 0,3 mmol/L/u"; }
-    else if(!drift.up.length && !drift.down.length){ st="ok"; read="In stille vensters drijf je nergens structureel weg — je basaal lijkt over de dag in balans."; ev=`n = ${drift.total.toLocaleString(LOCALE())} driftmetingen`; }
+    if(!drift||!drift.stat){ read=TL("Te weinig nuchtere vensters om basaaldrift te meten. Bij een closed loop maskeert temp-basaal de drift — zie <b>Loop-basaal</b> voor de betere ingang.","Too few fasting windows to measure basal drift. With a closed loop, temp basal masks the drift — see <b>Loop basal</b> for the better entry point.","Poucas janelas em jejum para medir a deriva basal. Num closed loop a basal temporária mascara a deriva — veja <b>Basal do loop</b> para a melhor entrada."); ev=TL("drempel 0,3 mmol/L/u","threshold 0.3 mmol/L/h","limiar 0,3 mmol/L/h"); }
+    else if(!drift.up.length && !drift.down.length){ st="ok"; read=TL("In stille vensters drijf je nergens structureel weg — je basaal lijkt over de dag in balans.","In quiet windows you don't drift structurally anywhere — your basal seems balanced across the day.","Em janelas calmas não deriva estruturalmente em lado nenhum — a sua basal parece equilibrada ao longo do dia."); ev=TL(`n = ${drift.total.toLocaleString(LOCALE())} driftmetingen`,`n = ${drift.total.toLocaleString(LOCALE())} drift readings`,`n = ${drift.total.toLocaleString(LOCALE())} medições de deriva`); }
     else { st="warn"; const parts=[], dirs=[];
-      const eq = v => isfRef ? ` ≈ <b>${nl1(Math.abs(v)/isfRef)} E/u</b> verschil` : "";
-      if(drift.up.length){ parts.push(`stijg je nuchter rond <b>${joinHrs(drift.up.map(s=>s.h)).join(", ")}</b> (tot ${nl1(drift.peakUp)} mmol/L/u${eq(drift.peakUp)})`); dirs.push(`iets hóger basaal rond ${joinHrs(drift.up.map(s=>s.h)).join(", ")}`); }
-      if(drift.down.length){ parts.push(`zak je nuchter rond <b>${joinHrs(drift.down.map(s=>s.h)).join(", ")}</b> (tot ${nl1(drift.peakDown)} mmol/L/u${eq(drift.peakDown)})`); dirs.push(`iets láger basaal rond ${joinHrs(drift.down.map(s=>s.h)).join(", ")}`); }
-      read=parts.join(" en ")+`.${isfRef?" Het E/u-getal is de gemeten omvang van de drift.":""}`;
-      dir=dirs.join("; ")+" — in AAPS pas je een blok ~1–2 u vóór het effect aan"; ev=`n = ${drift.total.toLocaleString(LOCALE())} driftmetingen · omvang via ${oi&&oi.obs>0.5?"gemeten":"profiel-"}ISF`; }
-    rows.push({n:1,title:"Basaal",st,read,dir,ev}); }
+      const eq = v => isfRef ? TL(` ≈ <b>${nl1(Math.abs(v)/isfRef)} E/u</b> verschil`,` ≈ <b>${nl1(Math.abs(v)/isfRef)} U/h</b> difference`,` ≈ <b>${nl1(Math.abs(v)/isfRef)} U/h</b> de diferença`) : "";
+      if(drift.up.length){ parts.push(TL(`stijg je nuchter rond <b>${joinHrs(drift.up.map(s=>s.h)).join(", ")}</b> (tot ${nl1(drift.peakUp)} mmol/L/u${eq(drift.peakUp)})`,`you rise when fasting around <b>${joinHrs(drift.up.map(s=>s.h)).join(", ")}</b> (up to ${nl1(drift.peakUp)} mmol/L/h${eq(drift.peakUp)})`,`sobe em jejum por volta de <b>${joinHrs(drift.up.map(s=>s.h)).join(", ")}</b> (até ${nl1(drift.peakUp)} mmol/L/h${eq(drift.peakUp)})`)); dirs.push(TL(`iets hóger basaal rond ${joinHrs(drift.up.map(s=>s.h)).join(", ")}`,`slightly higher basal around ${joinHrs(drift.up.map(s=>s.h)).join(", ")}`,`basal ligeiramente mais alta por volta de ${joinHrs(drift.up.map(s=>s.h)).join(", ")}`)); }
+      if(drift.down.length){ parts.push(TL(`zak je nuchter rond <b>${joinHrs(drift.down.map(s=>s.h)).join(", ")}</b> (tot ${nl1(drift.peakDown)} mmol/L/u${eq(drift.peakDown)})`,`you fall when fasting around <b>${joinHrs(drift.down.map(s=>s.h)).join(", ")}</b> (up to ${nl1(drift.peakDown)} mmol/L/h${eq(drift.peakDown)})`,`desce em jejum por volta de <b>${joinHrs(drift.down.map(s=>s.h)).join(", ")}</b> (até ${nl1(drift.peakDown)} mmol/L/h${eq(drift.peakDown)})`)); dirs.push(TL(`iets láger basaal rond ${joinHrs(drift.down.map(s=>s.h)).join(", ")}`,`slightly lower basal around ${joinHrs(drift.down.map(s=>s.h)).join(", ")}`,`basal ligeiramente mais baixa por volta de ${joinHrs(drift.down.map(s=>s.h)).join(", ")}`)); }
+      read=parts.join(TL(" en "," and "," e "))+`.${isfRef?TL(" Het E/u-getal is de gemeten omvang van de drift."," The U/h figure is the measured size of the drift."," O valor U/h é a dimensão medida da deriva."):""}`;
+      dir=dirs.join("; ")+TL(" — in AAPS pas je een blok ~1–2 u vóór het effect aan"," — in AAPS you adjust a block ~1–2 h before the effect"," — no AAPS ajusta um bloco ~1–2 h antes do efeito"); ev=TL(`n = ${drift.total.toLocaleString(LOCALE())} driftmetingen · omvang via ${oi&&oi.obs>0.5?"gemeten":"profiel-"}ISF`,`n = ${drift.total.toLocaleString(LOCALE())} drift readings · size via ${oi&&oi.obs>0.5?"measured":"profile"} ISF`,`n = ${drift.total.toLocaleString(LOCALE())} medições de deriva · dimensão via ISF ${oi&&oi.obs>0.5?"medido":"do perfil"}`); }
+    rows.push({n:1,title:TL("Basaal","Basal","Basal"),st,read,dir,ev}); }
 
   // 2 — ISF (correctiefactor)
   { let st="na", read, dir=null, ev=`n = ${oi?oi.n:0}`;
-    if(!oi||oi.obs==null){ read=`Te weinig schone <b>handmatige</b> correcties (${oi?oi.n:0}/8) om je ISF te meten. Bij een closed loop corrigeer je meestal via SMB's.`; }
-    else if(oi.prof==null){ read=`Gemeten daling ~${nl1(oi.obs)} mmol/L per E (IQR ${nl1(oi.q25)}–${nl1(oi.q75)}), maar geen profiel-ISF om naast te leggen.`; ev=`n = ${oi.n}`; }
-    else { const r=oi.obs/oi.prof; ev=`n = ${oi.n} correcties · IQR ${nl1(oi.q25)}–${nl1(oi.q75)}`;
-      if(r>=0.8 && r<=1.25){ st="ok"; read=`Gemeten <b>${nl1(oi.obs)}</b> mmol/L per E naast ingesteld <b>${nl1(oi.prof)}</b> — die sluiten op elkaar aan.`; }
-      else if(r>1.25){ st="warn"; read=`Gemeten <b>${nl1(oi.obs)}</b> mmol/L per E naast ingesteld <b>${nl1(oi.prof)}</b> — je bent gevoeliger dan je profiel aanneemt; correcties kunnen doorschieten naar een low${stack&&stack.elevated?`, en gestapelde correcties gingen inderdaad vaak vóór je hypo's`:``}.`; dir=`een concreet getal — per dagdeel — staat bij Bespreekwaarden`; }
-      else { st="warn"; read=`Gemeten <b>${nl1(oi.obs)}</b> mmol/L per E naast ingesteld <b>${nl1(oi.prof)}</b> — correcties doen minder dan je profiel aanneemt.`; dir=`een concreet getal — per dagdeel — staat bij Bespreekwaarden`; } }
-    rows.push({n:2,title:"ISF · correctiefactor",st,read,dir,ev}); }
+    if(!oi||oi.obs==null){ read=TL(`Te weinig schone <b>handmatige</b> correcties (${oi?oi.n:0}/8) om je ISF te meten. Bij een closed loop corrigeer je meestal via SMB's.`,`Too few clean <b>manual</b> corrections (${oi?oi.n:0}/8) to measure your ISF. With a closed loop you usually correct via SMBs.`,`Poucas correções <b>manuais</b> limpas (${oi?oi.n:0}/8) para medir o seu ISF. Num closed loop corrige normalmente via SMB.`); }
+    else if(oi.prof==null){ read=TL(`Gemeten daling ~${nl1(oi.obs)} mmol/L per E (IQR ${nl1(oi.q25)}–${nl1(oi.q75)}), maar geen profiel-ISF om naast te leggen.`,`Measured fall ~${nl1(oi.obs)} mmol/L per U (IQR ${nl1(oi.q25)}–${nl1(oi.q75)}), but no profile ISF to compare against.`,`Descida medida ~${nl1(oi.obs)} mmol/L por U (IQR ${nl1(oi.q25)}–${nl1(oi.q75)}), mas sem ISF de perfil para comparar.`); ev=`n = ${oi.n}`; }
+    else { const r=oi.obs/oi.prof; ev=TL(`n = ${oi.n} correcties · IQR ${nl1(oi.q25)}–${nl1(oi.q75)}`,`n = ${oi.n} corrections · IQR ${nl1(oi.q25)}–${nl1(oi.q75)}`,`n = ${oi.n} correções · IQR ${nl1(oi.q25)}–${nl1(oi.q75)}`);
+      if(r>=0.8 && r<=1.25){ st="ok"; read=TL(`Gemeten <b>${nl1(oi.obs)}</b> mmol/L per E naast ingesteld <b>${nl1(oi.prof)}</b> — die sluiten op elkaar aan.`,`Measured <b>${nl1(oi.obs)}</b> mmol/L per U next to set <b>${nl1(oi.prof)}</b> — these align.`,`Medido <b>${nl1(oi.obs)}</b> mmol/L por U face ao definido <b>${nl1(oi.prof)}</b> — alinham.`); }
+      else if(r>1.25){ st="warn"; read=TL(`Gemeten <b>${nl1(oi.obs)}</b> mmol/L per E naast ingesteld <b>${nl1(oi.prof)}</b> — je bent gevoeliger dan je profiel aanneemt; correcties kunnen doorschieten naar een low${stack&&stack.elevated?`, en gestapelde correcties gingen inderdaad vaak vóór je hypo's`:``}.`,`Measured <b>${nl1(oi.obs)}</b> mmol/L per U next to set <b>${nl1(oi.prof)}</b> — you're more sensitive than your profile assumes; corrections may overshoot into a low${stack&&stack.elevated?`, and stacked corrections did indeed often precede your lows`:``}.`,`Medido <b>${nl1(oi.obs)}</b> mmol/L por U face ao definido <b>${nl1(oi.prof)}</b> — é mais sensível do que o perfil assume; as correções podem exceder para uma hipo${stack&&stack.elevated?`, e correções acumuladas precederam de facto muitas das suas hipos`:``}.`); dir=TL(`een concreet getal — per dagdeel — staat bij Bespreekwaarden`,`a concrete number — per part of day — is in Discussion values`,`um número concreto — por período do dia — está em Valores para discussão`); }
+      else { st="warn"; read=TL(`Gemeten <b>${nl1(oi.obs)}</b> mmol/L per E naast ingesteld <b>${nl1(oi.prof)}</b> — correcties doen minder dan je profiel aanneemt.`,`Measured <b>${nl1(oi.obs)}</b> mmol/L per U next to set <b>${nl1(oi.prof)}</b> — corrections do less than your profile assumes.`,`Medido <b>${nl1(oi.obs)}</b> mmol/L por U face ao definido <b>${nl1(oi.prof)}</b> — as correções fazem menos do que o perfil assume.`); dir=TL(`een concreet getal — per dagdeel — staat bij Bespreekwaarden`,`a concrete number — per part of day — is in Discussion values`,`um número concreto — por período do dia — está em Valores para discussão`); } }
+    rows.push({n:2,title:TL("ISF · correctiefactor","ISF · correction factor","ISF · fator de correção"),st,read,dir,ev}); }
 
   // 3 — KH-ratio (oordeel op de píék — de koolhydraatfractie is structureel geïnflateerd
   // door de alleen-positieve-deviaties-methode en telt daarom niet mee als criterium)
-  { let st="na", read, dir=null, ev=`n = ${nMeals} maaltijden`;
-    if(!mealsOk){ read="Nog te weinig geïsoleerde maaltijden (met profieldata) om je KH-ratio te toetsen."; }
-    else { const rise=MR.mrise; ev=`n = ${nMeals} maaltijden · oordeel op piek; KH-fractie alleen context`;
-      if(rise<2.5){ st="ok"; read=`Je maaltijdpieken blijven beperkt (mediaan +${nl1(rise)} mmol/L) — eten en insuline sluiten goed aan.`; }
-      else if(rise>=4){ st="warn"; read=`Grote maaltijdpiek (mediaan +${nl1(rise)} mmol/L, tot ~${nl1(MR.mpeak)}) — de maaltijddekking schiet tekort of komt te laat.`; dir="KH-ratio mogelijk te zwak (minder g per E) — óf de bolus komt te laat (zie timing hieronder)"; }
-      else { st="warn"; read=`Matige maaltijdpiek (mediaan +${nl1(rise)} mmol/L). Deels een dekkings-, deels een timingkwestie.`; dir="een iets sterkere KH-ratio óf eerdere prebolus — timing eerst (zie hieronder)"; } }
-    rows.push({n:3,title:"KH-ratio",st,read,dir,ev}); }
+  { let st="na", read, dir=null, ev=TL(`n = ${nMeals} maaltijden`,`n = ${nMeals} meals`,`n = ${nMeals} refeições`);
+    if(!mealsOk){ read=TL("Nog te weinig geïsoleerde maaltijden (met profieldata) om je KH-ratio te toetsen.","Still too few isolated meals (with profile data) to test your carb ratio.","Ainda poucas refeições isoladas (com dados de perfil) para testar o seu rácio de hidratos."); }
+    else { const rise=MR.mrise; ev=TL(`n = ${nMeals} maaltijden · oordeel op piek; KH-fractie alleen context`,`n = ${nMeals} meals · judged on peak; carb fraction context only`,`n = ${nMeals} refeições · avaliado no pico; fração de hidratos só contexto`);
+      if(rise<2.5){ st="ok"; read=TL(`Je maaltijdpieken blijven beperkt (mediaan +${nl1(rise)} mmol/L) — eten en insuline sluiten goed aan.`,`Your meal peaks stay limited (median +${nl1(rise)} mmol/L) — food and insulin align well.`,`Os seus picos de refeição mantêm-se limitados (mediana +${nl1(rise)} mmol/L) — comida e insulina alinham bem.`); }
+      else if(rise>=4){ st="warn"; read=TL(`Grote maaltijdpiek (mediaan +${nl1(rise)} mmol/L, tot ~${nl1(MR.mpeak)}) — de maaltijddekking schiet tekort of komt te laat.`,`Large meal peak (median +${nl1(rise)} mmol/L, up to ~${nl1(MR.mpeak)}) — meal coverage falls short or comes too late.`,`Pico de refeição grande (mediana +${nl1(rise)} mmol/L, até ~${nl1(MR.mpeak)}) — a cobertura da refeição é insuficiente ou tardia.`); dir=TL("KH-ratio mogelijk te zwak (minder g per E) — óf de bolus komt te laat (zie timing hieronder)","carb ratio possibly too weak (fewer g per U) — or the bolus comes too late (see timing below)","rácio de hidratos possivelmente fraco (menos g por U) — ou o bólus chega tarde (ver timing abaixo)"); }
+      else { st="warn"; read=TL(`Matige maaltijdpiek (mediaan +${nl1(rise)} mmol/L). Deels een dekkings-, deels een timingkwestie.`,`Moderate meal peak (median +${nl1(rise)} mmol/L). Partly a coverage, partly a timing issue.`,`Pico de refeição moderado (mediana +${nl1(rise)} mmol/L). Parte cobertura, parte timing.`); dir=TL("een iets sterkere KH-ratio óf eerdere prebolus — timing eerst (zie hieronder)","a slightly stronger carb ratio or an earlier prebolus — timing first (see below)","um rácio de hidratos ligeiramente mais forte ou um prebólus mais cedo — timing primeiro (ver abaixo)"); } }
+    rows.push({n:3,title:TL("KH-ratio","Carb ratio","Rácio de hidratos"),st,read,dir,ev}); }
 
   // 4 — Prebolus / timing
-  { let st="na", read, dir=null, ev=`n = ${nMeals} maaltijden`;
-    if(!mealsOk || MR.moffset==null){ read="Nog te weinig maaltijden met bolus-timing om je prebolus te beoordelen."; }
-    else { const off=MR.moffset, rise=MR.mrise; const nT=MR.results.filter(r=>r.bolusOffset!=null).length; ev=`n = ${nT} maaltijden · handmatige bolus t.o.v. je koolhydraat-invoer (= je bolusmoment als je met de wizard logt), SMB's tellen niet mee`;
-      if(off<-5){ st="ok"; read=`Je bolust gemiddeld ${Math.round(-off)} min vóór het eten — een goede prebolus.`; }
-      else if(rise>=3){ st="warn"; read=`Je bolust ${off>5?`gemiddeld ${Math.round(off)} min ná`:"rond het moment van"} eten en piekt +${nl1(rise)} mmol/L.`; dir="bolus 10–15 min eerder — dat dempt de piek zónder meer insuline"; }
-      else { st="ok"; read=`Je bolust ${off>5?`${Math.round(off)} min ná`:"rond"} het eten, maar je piek blijft beperkt — timing is hier geen knelpunt.`; } }
-    rows.push({n:4,title:"Prebolus · timing",st,read,dir,ev}); }
+  { let st="na", read, dir=null, ev=TL(`n = ${nMeals} maaltijden`,`n = ${nMeals} meals`,`n = ${nMeals} refeições`);
+    if(!mealsOk || MR.moffset==null){ read=TL("Nog te weinig maaltijden met bolus-timing om je prebolus te beoordelen.","Still too few meals with bolus timing to assess your prebolus.","Ainda poucas refeições com timing de bólus para avaliar o seu prebólus."); }
+    else { const off=MR.moffset, rise=MR.mrise; const nT=MR.results.filter(r=>r.bolusOffset!=null).length; ev=TL(`n = ${nT} maaltijden · handmatige bolus t.o.v. je koolhydraat-invoer (= je bolusmoment als je met de wizard logt), SMB's tellen niet mee`,`n = ${nT} meals · manual bolus relative to your carb entry (= your bolus moment when you log with the wizard), SMBs don't count`,`n = ${nT} refeições · bólus manual face à entrada de hidratos (= o momento do bólus quando regista com o assistente), os SMB não contam`);
+      if(off<-5){ st="ok"; read=TL(`Je bolust gemiddeld ${Math.round(-off)} min vóór het eten — een goede prebolus.`,`You bolus on average ${Math.round(-off)} min before eating — a good prebolus.`,`Bolusa em média ${Math.round(-off)} min antes de comer — um bom prebólus.`); }
+      else if(rise>=3){ st="warn"; read=TL(`Je bolust ${off>5?`gemiddeld ${Math.round(off)} min ná`:"rond het moment van"} eten en piekt +${nl1(rise)} mmol/L.`,`You bolus ${off>5?`on average ${Math.round(off)} min after`:"around the moment of"} eating and peak +${nl1(rise)} mmol/L.`,`Bolusa ${off>5?`em média ${Math.round(off)} min após`:"por volta do momento de"} comer e o pico é +${nl1(rise)} mmol/L.`); dir=TL("bolus 10–15 min eerder — dat dempt de piek zónder meer insuline","bolus 10–15 min earlier — that dampens the peak without more insulin","bólus 10–15 min mais cedo — isso reduz o pico sem mais insulina"); }
+      else { st="ok"; read=TL(`Je bolust ${off>5?`${Math.round(off)} min ná`:"rond"} het eten, maar je piek blijft beperkt — timing is hier geen knelpunt.`,`You bolus ${off>5?`${Math.round(off)} min after`:"around"} eating, but your peak stays limited — timing isn't a bottleneck here.`,`Bolusa ${off>5?`${Math.round(off)} min após`:"por volta de"} comer, mas o pico mantém-se limitado — o timing não é aqui um problema.`); } }
+    rows.push({n:4,title:TL("Prebolus · timing","Prebolus · timing","Prebólus · timing"),st,read,dir,ev}); }
 
   return rows;
 }
@@ -1717,20 +1717,20 @@ function fineTune(drift, oi, MR, stack, pi){
   const mealsOk=MR&&MR.results.length>=MEAL_MIN;
   const stTd=r=> r.st==="ok"?'<td class="st okd">✓</td>' : r.st==="warn"?'<td class="st wad">▲</td>' : '<td class="st" style="color:var(--dim)">·</td>';
   const driftPeak = drift&&drift.stat&&(drift.up.length||drift.down.length)
-    ? nl1(Math.max(drift.peakUp||0,Math.abs(drift.peakDown||0)))+" /u" : (drift&&drift.stat?"0,0 /u":"—");
+    ? nl1(Math.max(drift.peakUp||0,Math.abs(drift.peakDown||0)))+" /"+TL("u","h","h") : (drift&&drift.stat?num(0)+" /"+TL("u","h","h"):"—");
   const line=(label,gem,set2,r)=>`<tr><td>${label}</td><td>${gem}</td><td>${set2}</td>${stTd(r)}</tr>`;
   const table=`<table class="mvs">`+
     line("ISF", oi&&oi.obs!=null?nl1(oi.obs):"—", oi&&oi.prof!=null?nl1(oi.prof):"—", rows[1])+
-    line("Basaaldrift", driftPeak, "—", rows[0])+
-    line("Maaltijdpiek", mealsOk?"+"+nl1(MR.mrise):"—", "&lt;2,5", rows[2])+
-    line("Prebolus", mealsOk&&MR.moffset!=null?Math.round(MR.moffset)+" m":"—", "—", rows[3])+
+    line(TL("Basaaldrift","Basal drift","Deriva basal"), driftPeak, "—", rows[0])+
+    line(TL("Maaltijdpiek","Meal peak","Pico refeição"), mealsOk?"+"+nl1(MR.mrise):"—", "&lt;"+num(2.5), rows[2])+
+    line(TL("Prebolus","Prebolus","Prebólus"), mealsOk&&MR.moffset!=null?Math.round(MR.moffset)+" m":"—", "—", rows[3])+
     `</table>`;
   const chains=rows.map((r,i)=>`<div class="step"><span class="no">${i+1}</span><span><b>${r.title}.</b> ${r.read}${r.dir?`<br><span style="color:var(--ink)">→ ${r.dir}.</span>`:""}<br><span class="ffine" style="margin:0">${r.ev}</span></span></div>`).join("");
   const warns=rows.filter(r=>r.st==="warn").length;
   return table+
-    `<details style="margin-top:.6rem"><summary style="list-style:none;cursor:pointer;font-size:.76rem;font-weight:650;color:var(--accent)">${warns?`wat betekent ▲ (${warns})`:"uitleg per regel"} ↓</summary>`+
+    `<details style="margin-top:.6rem"><summary style="list-style:none;cursor:pointer;font-size:.76rem;font-weight:650;color:var(--accent)">${warns?TL(`wat betekent ▲ (${warns})`,`what does ▲ mean (${warns})`,`o que significa ▲ (${warns})`):TL("uitleg per regel","explanation per line","explicação por linha")} ↓</summary>`+
     `<div class="chain" style="margin-top:.5rem">${chains}</div>`+
-    `<div class="ffine" style="margin-left:0">meetwaarden, geen voorschriften · één ding tegelijk aanpassen, met je team</div></details>`;
+    `<div class="ffine" style="margin-left:0">${TL("meetwaarden, geen voorschriften · één ding tegelijk aanpassen, met je team","measured values, not prescriptions · change one thing at a time, with your team","valores medidos, não prescrições · altere uma coisa de cada vez, com a sua equipa")}</div></details>`;
 }
 
 /* ── Dekking ────────────────────────────────────────────────────────────── */
@@ -1967,7 +1967,7 @@ function trendSvg(weeks){
       `<text x="${(x+bw/2).toFixed(1)}" y="${(y-3).toFixed(1)}" font-size="9" fill="var(--ink)" text-anchor="middle" font-weight="600">${pct0(w.tir)}</text>`+
       `<text x="${(x+bw/2).toFixed(1)}" y="${H-16}" font-size="7.5" fill="var(--muted)" text-anchor="middle">${new Date(w.end).toLocaleDateString(LOCALE(),{day:"2-digit",month:"2-digit"})}</text>`; }
   );
-  s+=`<text x="${PL}" y="${H-4}" font-size="7.5" fill="var(--dim)">balken = tijd in bereik per week · stippellijn = streef 70%</text>`;
+  s+=`<text x="${PL}" y="${H-4}" font-size="7.5" fill="var(--dim)">${TL("balken = tijd in bereik per week · stippellijn = streef 70%","bars = time in range per week · dashed line = target 70%","barras = tempo no alvo por semana · linha tracejada = meta 70%")}</text>`;
   return s+"</svg>";
 }
 
@@ -2207,13 +2207,13 @@ function render(glucose, treatments, timeline){
     document.getElementById("secTrend").hidden = false;
     document.getElementById("trend").innerHTML = trendSvg(tr);
     const f=tr[0], l=tr[tr.length-1], dTir=l.tir-f.tir, dTbr=l.tbr-f.tbr;
-    const dir = dTir>0.05 ? "<b>omhoog</b>" : dTir<-0.05 ? "<b>omlaag</b>" : "<b>stabiel</b>";
+    const dir = dTir>0.05 ? "<b>"+TL("omhoog","up","a subir")+"</b>" : dTir<-0.05 ? "<b>"+TL("omlaag","down","a descer")+"</b>" : "<b>"+TL("stabiel","stable","estável")+"</b>";
     document.getElementById("trendObs").innerHTML =
-      `Over ${tr.length} weken beweegt je tijd in bereik ${dir} (${pct0(f.tir)} → ${pct0(l.tir)}).`+
-      (Math.abs(dTbr)>=0.01?` Hypo-tijd: ${pct0(f.tbr)} → ${pct0(l.tbr)}.`:"");
+      TL(`Over ${tr.length} weken beweegt je tijd in bereik ${dir} (${pct0(f.tir)} → ${pct0(l.tir)}).`,`Over ${tr.length} weeks your time in range moves ${dir} (${pct0(f.tir)} → ${pct0(l.tir)}).`,`Ao longo de ${tr.length} semanas o seu tempo no alvo move-se ${dir} (${pct0(f.tir)} → ${pct0(l.tir)}).`)+
+      (Math.abs(dTbr)>=0.01?TL(` Hypo-tijd: ${pct0(f.tbr)} → ${pct0(l.tbr)}.`,` Low time: ${pct0(f.tbr)} → ${pct0(l.tbr)}.`,` Tempo em hipo: ${pct0(f.tbr)} → ${pct0(l.tbr)}.`):"");
     document.getElementById("trendTable").innerHTML =
       `<div style="display:grid;grid-template-columns:auto 1fr 1fr 1fr;gap:.15rem .8rem;font-variant-numeric:tabular-nums">`+
-      `<b style="color:var(--muted)">week</b><b style="color:var(--muted)">TIR</b><b style="color:var(--muted)">hypo</b><b style="color:var(--muted)">CV</b>`+
+      `<b style="color:var(--muted)">${TL("week","week","semana")}</b><b style="color:var(--muted)">TIR</b><b style="color:var(--muted)">${TL("hypo","low","hipo")}</b><b style="color:var(--muted)">CV</b>`+
       tr.map(w=>`<span>${new Date(w.end).toLocaleDateString(LOCALE(),{day:"2-digit",month:"2-digit"})}</span><span>${pct0(w.tir)}</span><span>${pct0(w.tbr)}</span><span>${pct0(w.cv)}</span>`).join("")+`</div>`;
   }
   document.getElementById("secLog").hidden = false;
@@ -2268,19 +2268,19 @@ function render(glucose, treatments, timeline){
   else {
     document.getElementById("secInsulin").hidden = false;
     document.getElementById("insKpis").innerHTML = [
-      ins.tdd!=null ? ["Totale dagdosis", nl1(ins.tdd), "E/dag (schatting)"] : null,
-      ins.basalPct!=null ? ["Basaal / bolus", `${Math.round(ins.basalPct*100)}/${Math.round(ins.bolusPct*100)}`, "% verhouding"] : null,
-      ["Bolus + SMB", nl1(ins.bolusDay), "E/dag"],
-      ["Koolhydraten", Math.round(ins.carbsDay)+" g", "per dag"],
-      ["Bolussen", nl1(ins.nBolusDay), "handmatig/dag"],
-      ins.nSmbDay>0 ? ["SMB's", Math.round(ins.nSmbDay), "auto/dag"] : null,
+      ins.tdd!=null ? [TL("Totale dagdosis","Total daily dose","Dose diária total"), nl1(ins.tdd), TL("E/dag (schatting)","U/day (estimate)","U/dia (estimativa)")] : null,
+      ins.basalPct!=null ? [TL("Basaal / bolus","Basal / bolus","Basal / bólus"), `${Math.round(ins.basalPct*100)}/${Math.round(ins.bolusPct*100)}`, TL("% verhouding","% ratio","% rácio")] : null,
+      [TL("Bolus + SMB","Bolus + SMB","Bólus + SMB"), nl1(ins.bolusDay), TL("E/dag","U/day","U/dia")],
+      [TL("Koolhydraten","Carbs","Hidratos"), Math.round(ins.carbsDay)+" g", TL("per dag","per day","por dia")],
+      [TL("Bolussen","Boluses","Bólus"), nl1(ins.nBolusDay), TL("handmatig/dag","manual/day","manual/dia")],
+      ins.nSmbDay>0 ? [TL("SMB's","SMBs","SMB"), Math.round(ins.nSmbDay), TL("auto/dag","auto/day","auto/dia")] : null,
     ].filter(Boolean).map(([k,v,s3])=>`<div class="kpi"><div class="k">${k}</div><div class="v">${v}</div><div class="s">${s3}</div></div>`).join("");
     document.getElementById("insObs").innerHTML = (ins.tdd!=null
-      ? `Basaal is een schatting uit je profielschema (temp-basaal niet meegerekend). Bolus en koolhydraten zijn exact.`
-      : `Bolus en koolhydraten zijn exact. Basaal/bolus-verhouding ontbreekt (geen profiel met basaalschema gevonden).`)
+      ? TL(`Basaal is een schatting uit je profielschema (temp-basaal niet meegerekend). Bolus en koolhydraten zijn exact.`,`Basal is an estimate from your profile schedule (temp basal not included). Bolus and carbs are exact.`,`A basal é uma estimativa do seu esquema de perfil (basal temporária não incluída). Bólus e hidratos são exatos.`)
+      : TL(`Bolus en koolhydraten zijn exact. Basaal/bolus-verhouding ontbreekt (geen profiel met basaalschema gevonden).`,`Bolus and carbs are exact. Basal/bolus ratio is missing (no profile with a basal schedule found).`,`Bólus e hidratos são exatos. Falta o rácio basal/bólus (nenhum perfil com esquema basal encontrado).`))
       + (ins.nSmbDay>0
-        ? ` SMB's (automatische micro-bolus) worden apart geteld en tellen níét mee als handmatige correctie — zo blijven gemeten ISF en de patronen op jóuw bolussen gebaseerd.`
-        : ` Geen SMB's herkend — je gebruikt waarschijnlijk geen SMB's, of je Nightscout labelt ze anders dan bekend.`);
+        ? TL(` SMB's (automatische micro-bolus) worden apart geteld en tellen níét mee als handmatige correctie — zo blijven gemeten ISF en de patronen op jóuw bolussen gebaseerd.`,` SMBs (automatic micro-bolus) are counted separately and do not count as a manual correction — so measured ISF and the patterns stay based on your boluses.`,` Os SMB (micro-bólus automático) são contados à parte e não contam como correção manual — assim o ISF medido e os padrões continuam baseados nos seus bólus.`)
+        : TL(` Geen SMB's herkend — je gebruikt waarschijnlijk geen SMB's, of je Nightscout labelt ze anders dan bekend.`,` No SMBs recognized — you probably don't use SMBs, or your Nightscout labels them differently than expected.`,` Nenhum SMB reconhecido — provavelmente não usa SMB, ou o seu Nightscout rotula-os de forma diferente.`));
   }
 
   const pi = timeline ? profileInfo(timeline, q.to || Date.now()) : null;
@@ -2711,16 +2711,16 @@ function mealResults(glucose, treatments, timeline){
 function anMeals(glucose, treatments, q, timeline){
   const MR=mealResults(glucose, treatments, timeline);
   const results=MR.results, MIN_CARBS=MR.MIN_CARBS, MIN_MEALS=MEAL_MIN;
-  if(results.length<MIN_MEALS) return `<div class="muted">Te weinig geïsoleerde maaltijden (${results.length}, minimaal ${MIN_MEALS}) vanaf ${MIN_CARBS} g. Vereist ook profieldata (ISF/IC) uit Nightscout.</div>`;
+  if(results.length<MIN_MEALS) return `<div class="muted">${TL(`Te weinig geïsoleerde maaltijden (${results.length}, minimaal ${MIN_MEALS}) vanaf ${MIN_CARBS} g. Vereist ook profieldata (ISF/IC) uit Nightscout.`,`Too few isolated meals (${results.length}, minimum ${MIN_MEALS}) from ${MIN_CARBS} g. Also requires profile data (ISF/ICR) from Nightscout.`,`Poucas refeições isoladas (${results.length}, mínimo ${MIN_MEALS}) a partir de ${MIN_CARBS} g. Requer também dados de perfil (ISF/ICR) do Nightscout.`)}</div>`;
   const med=arr=>{const s=[...arr].sort((a,b)=>a-b);return s.length?s[Math.floor(s.length/2)]:null;};
   const mt50=MR.mt50,mfrac=MR.mfrac,mtpk=MR.mtpk;
   const GRID=[];for(let x=0;x<=240;x+=10)GRID.push(x);
   const pctAt=(c,x)=>{const fin=c[c.length-1].cum||1;let cc=0;for(const p of c){if(p.min<=x)cc=p.cum;else break;}return 100*cc/fin;};
   const per=results.map(r=>GRID.map(x=>pctAt(r.curve,x))), medc=GRID.map((_,gi)=>med(per.map(y=>y[gi])));
-  const speed=mt50==null?"":mt50>60?" Aan de trage kant — passend bij grote of vette maaltijden.":mt50<35?" Snel — dan telt prebolus-timing zwaar mee.":" Vrij gemiddeld.";
-  const acc=mfrac>=0.8&&mfrac<=1.2?"je koolhydraatschatting sluit redelijk aan bij wat je glucose laat zien":mfrac<0.8?"je ziet minder terug dan ingevoerd — mogelijk tel je te hoog, of dekt insuline ruim":"je ziet meer terug dan ingevoerd — mogelijk ondergeteld, of te weinig bolus";
-  const stats=`<div class="kpis" style="margin-top:.6rem"><div class="kpi"><div class="k">t50</div><div class="v">${mt50==null?"—":Math.round(mt50)}</div><div class="s">min tot 50%</div></div><div class="kpi"><div class="k">Piek</div><div class="v">${Math.round(mtpk)}</div><div class="s">min na maaltijd</div></div></div>`;
-  return absorpSvg(GRID,medc,mt50)+stats+mealDayparts(results,med)+`<div class="obs">Je maaltijden vanaf ${MIN_CARBS} g zijn mediaan na ${mt50==null?"—":Math.round(mt50)} min half opgenomen, piek rond ${Math.round(mtpk)} min.${speed} Bruikbaar voor je bolus-timing.</div><div class="muted" style="margin-top:.4rem">Terzijde: van je koolhydraten zie ik mediaan ${pct0(mfrac)} terug — ${acc}. Deze maat valt structureel te hoog uit (alleen positieve deviaties), dus alleen als context. n = ${results.length}.</div>`;
+  const speed=mt50==null?"":mt50>60?TL(" Aan de trage kant — passend bij grote of vette maaltijden."," On the slow side — fitting large or fatty meals."," Do lado lento — compatível com refeições grandes ou gordas."):mt50<35?TL(" Snel — dan telt prebolus-timing zwaar mee."," Fast — then prebolus timing matters a lot."," Rápido — então o timing do prebólus pesa muito."):TL(" Vrij gemiddeld."," Fairly average."," Bastante médio.");
+  const acc=mfrac>=0.8&&mfrac<=1.2?TL("je koolhydraatschatting sluit redelijk aan bij wat je glucose laat zien","your carb estimate reasonably matches what your glucose shows","a sua estimativa de hidratos corresponde razoavelmente ao que a glicose mostra"):mfrac<0.8?TL("je ziet minder terug dan ingevoerd — mogelijk tel je te hoog, of dekt insuline ruim","you see less back than entered — you may count too high, or insulin covers generously","vê menos do que introduziu — pode contar a mais, ou a insulina cobre com folga"):TL("je ziet meer terug dan ingevoerd — mogelijk ondergeteld, of te weinig bolus","you see more back than entered — possibly undercounted, or too little bolus","vê mais do que introduziu — possivelmente subcontado, ou bólus insuficiente");
+  const stats=`<div class="kpis" style="margin-top:.6rem"><div class="kpi"><div class="k">t50</div><div class="v">${mt50==null?"—":Math.round(mt50)}</div><div class="s">${TL("min tot 50%","min to 50%","min até 50%")}</div></div><div class="kpi"><div class="k">${TL("Piek","Peak","Pico")}</div><div class="v">${Math.round(mtpk)}</div><div class="s">${TL("min na maaltijd","min after meal","min após refeição")}</div></div></div>`;
+  return absorpSvg(GRID,medc,mt50)+stats+mealDayparts(results,med)+`<div class="obs">${TL(`Je maaltijden vanaf ${MIN_CARBS} g zijn mediaan na ${mt50==null?"—":Math.round(mt50)} min half opgenomen, piek rond ${Math.round(mtpk)} min.${speed} Bruikbaar voor je bolus-timing.`,`Your meals from ${MIN_CARBS} g are half absorbed after a median of ${mt50==null?"—":Math.round(mt50)} min, peak around ${Math.round(mtpk)} min.${speed} Useful for your bolus timing.`,`As suas refeições a partir de ${MIN_CARBS} g estão meio absorvidas após uma mediana de ${mt50==null?"—":Math.round(mt50)} min, pico por volta de ${Math.round(mtpk)} min.${speed} Útil para o timing do bólus.`)}</div><div class="muted" style="margin-top:.4rem">${TL(`Terzijde: van je koolhydraten zie ik mediaan ${pct0(mfrac)} terug — ${acc}. Deze maat valt structureel te hoog uit (alleen positieve deviaties), dus alleen als context. n = ${results.length}.`,`Aside: of your carbs I see a median of ${pct0(mfrac)} back — ${acc}. This measure runs structurally high (positive deviations only), so context only. n = ${results.length}.`,`À parte: dos seus hidratos vejo uma mediana de ${pct0(mfrac)} de volta — ${acc}. Esta medida sai estruturalmente alta (só desvios positivos), por isso apenas contexto. n = ${results.length}.`)}</div>`;
 }
 // Maaltijden per dagdeel: legt ochtendresistentie (hoger ontbijt-piek) bloot.
 function mealDayparts(results, med){
@@ -2730,23 +2730,23 @@ function mealDayparts(results, med){
   const shown=rows.filter(r=>r.n>=3);
   if(shown.length<2) return "";   // pas zinvol bij ≥2 dagdelen met genoeg maaltijden
   const cap=s=>s.charAt(0).toUpperCase()+s.slice(1);
-  const table=`<div class="watable" style="margin-top:.7rem"><div class="warow head"><span>dagdeel</span><span>piek (med.)</span><span>t50</span></div>`+
-    shown.map(r=>`<div class="warow"><span>${cap(r.id)} <span style="color:var(--dim)">· n=${r.n}</span></span><span>+${nl1(r.rise)}</span><span>${r.t50==null?"—":Math.round(r.t50)} min</span></div>`).join("")+`</div>`;
+  const table=`<div class="watable" style="margin-top:.7rem"><div class="warow head"><span>${TL("dagdeel","part of day","período")}</span><span>${TL("piek (med.)","peak (med.)","pico (med.)")}</span><span>t50</span></div>`+
+    shown.map(r=>`<div class="warow"><span>${cap(mealName(r.id))} <span style="color:var(--dim)">· n=${r.n}</span></span><span>+${nl1(r.rise)}</span><span>${r.t50==null?"—":Math.round(r.t50)} min</span></div>`).join("")+`</div>`;
   const withRise=shown.filter(r=>r.rise!=null).sort((a,b)=>b.rise-a.rise);
   let obs="";
   if(withRise.length>=2){ const top=withRise[0], lo=withRise[withRise.length-1];
-    if(top.rise-lo.rise>=1.5) obs=`<div class="obs" style="margin-top:.4rem">Je <b>${top.id}</b> piekt het hoogst (+${nl1(top.rise)} mmol/L) tegen +${nl1(lo.rise)} bij ${lo.id}${top.id==="ontbijt"?" — klassiek voor ochtendresistentie; een sterkere KH-ratio of ruimere prebolus rond het ontbijt kan schelen":""}.</div>`; }
+    if(top.rise-lo.rise>=1.5) obs=`<div class="obs" style="margin-top:.4rem">${TL(`Je <b>${mealName(top.id)}</b> piekt het hoogst (+${nl1(top.rise)} mmol/L) tegen +${nl1(lo.rise)} bij ${mealName(lo.id)}${top.id==="ontbijt"?" — klassiek voor ochtendresistentie; een sterkere KH-ratio of ruimere prebolus rond het ontbijt kan schelen":""}.`,`Your <b>${mealName(top.id)}</b> peaks highest (+${nl1(top.rise)} mmol/L) vs +${nl1(lo.rise)} at ${mealName(lo.id)}${top.id==="ontbijt"?" — classic for morning resistance; a stronger carb ratio or a more generous prebolus around breakfast can help":""}.`,`O seu <b>${mealName(top.id)}</b> tem o pico mais alto (+${nl1(top.rise)} mmol/L) contra +${nl1(lo.rise)} no ${mealName(lo.id)}${top.id==="ontbijt"?" — clássico da resistência matinal; um rácio de hidratos mais forte ou um prebólus mais generoso ao pequeno-almoço pode ajudar":""}.`)}</div>`; }
   return table+obs;
 }
 
 // Stapeling-detail: HTML voor het correctie-stapelen vóór hypo's
 function anStacking(glucose, treatments, q){
   const r=hypoStacking(glucose, treatments, q);
-  if(r.few!=null) return `<div class="muted">Te weinig hypo-episodes (${r.few}, minimaal 6)${r.thin?" of te weinig vergelijkbare controlemomenten":""} voor een betrouwbare vergelijking. Dat is op zich goed nieuws voor je tijd-in-bereik.</div>`;
+  if(r.few!=null) return `<div class="muted">${TL(`Te weinig hypo-episodes (${r.few}, minimaal 6)${r.thin?" of te weinig vergelijkbare controlemomenten":""} voor een betrouwbare vergelijking. Dat is op zich goed nieuws voor je tijd-in-bereik.`,`Too few low episodes (${r.few}, minimum 6)${r.thin?" or too few comparable control moments":""} for a reliable comparison. That's good news for your time in range.`,`Poucos episódios de hipo (${r.few}, mínimo 6)${r.thin?" ou poucos momentos de controlo comparáveis":""} para uma comparação fiável. Isso é boa notícia para o seu tempo no alvo.`)}</div>`;
   const obs=r.elevated
-    ? `Gestapelde correcties (≥2 handmatige bijspuiten in de 3 uur ervoor) gingen <b>${pct0(r.caseRate)}</b> van je hypo's vooraf, tegen <b>${pct0(r.ctrlRate)}</b> op vergelijkbare momenten zónder hypo. Even wachten tot een eerdere correctie is uitgewerkt vóór je opnieuw bijspuit kan dit type hypo schelen.`
-    : `Gestapelde correcties gingen ${pct0(r.caseRate)} van je hypo's vooraf, vergelijkbaar met ${pct0(r.ctrlRate)} op momenten zónder hypo — dit patroon springt er bij jou niet uit.`;
-  return `<div class="obs">${obs}</div><div class="muted" style="margin-top:.4rem">n = ${r.cases} hypo's vs ${r.controls} controlemomenten (zelfde tijdstip, andere dagen). Observatie, geen instelwaarde.</div>`;
+    ? TL(`Gestapelde correcties (≥2 handmatige bijspuiten in de 3 uur ervoor) gingen <b>${pct0(r.caseRate)}</b> van je hypo's vooraf, tegen <b>${pct0(r.ctrlRate)}</b> op vergelijkbare momenten zónder hypo. Even wachten tot een eerdere correctie is uitgewerkt vóór je opnieuw bijspuit kan dit type hypo schelen.`,`Stacked corrections (≥2 manual corrections in the 3 hours before) preceded <b>${pct0(r.caseRate)}</b> of your lows, vs <b>${pct0(r.ctrlRate)}</b> at comparable moments without a low. Waiting until an earlier correction has worn off before correcting again can help this type of low.`,`Correções acumuladas (≥2 correções manuais nas 3 horas anteriores) precederam <b>${pct0(r.caseRate)}</b> das suas hipos, contra <b>${pct0(r.ctrlRate)}</b> em momentos comparáveis sem hipo. Esperar que uma correção anterior se dissipe antes de corrigir de novo pode ajudar neste tipo de hipo.`)
+    : TL(`Gestapelde correcties gingen ${pct0(r.caseRate)} van je hypo's vooraf, vergelijkbaar met ${pct0(r.ctrlRate)} op momenten zónder hypo — dit patroon springt er bij jou niet uit.`,`Stacked corrections preceded ${pct0(r.caseRate)} of your lows, similar to ${pct0(r.ctrlRate)} at moments without a low — this pattern doesn't stand out for you.`,`Correções acumuladas precederam ${pct0(r.caseRate)} das suas hipos, semelhante a ${pct0(r.ctrlRate)} em momentos sem hipo — este padrão não se destaca em si.`);
+  return `<div class="obs">${obs}</div><div class="muted" style="margin-top:.4rem">${TL(`n = ${r.cases} hypo's vs ${r.controls} controlemomenten (zelfde tijdstip, andere dagen). Observatie, geen instelwaarde.`,`n = ${r.cases} lows vs ${r.controls} control moments (same time, other days). Observation, not a setting.`,`n = ${r.cases} hipos vs ${r.controls} momentos de controlo (mesma hora, outros dias). Observação, não um parâmetro.`)}</div>`;
 }
 
 // "Wat-als" nachtbasaal: eerste-orde contrafeitelijke simulatie. Neem je schone
