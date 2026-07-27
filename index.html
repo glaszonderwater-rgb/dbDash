@@ -2641,30 +2641,30 @@ function loopBasalSvg(hours){
     pmark+=`<line x1="${(x+.6).toFixed(1)}" y1="${yp.toFixed(1)}" x2="${(x+bw-.6).toFixed(1)}" y2="${yp.toFixed(1)}" stroke="var(--ink)" stroke-width="1.6"/>`; }
   const ax=[0,6,12,18,24].map(h=>`<text x="${X(Math.min(h,23.5)).toFixed(1)}" y="${H-4}" font-size="8" fill="var(--muted)" text-anchor="middle">${h}</text>`).join("");
   return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;display:block">${bars}${pmark}${ax}</svg>`+
-    `<div class="legend"><span><i style="background:var(--accent);opacity:.55"></i>loop geleverd</span><span><i style="background:var(--ink)"></i>profiel</span></div>`;
+    `<div class="legend"><span><i style="background:var(--accent);opacity:.55"></i>${TL("loop geleverd","loop delivered","entregue pelo loop")}</span><span><i style="background:var(--ink)"></i>${TL("profiel","profile","perfil")}</span></div>`;
 }
 function anLoopBasal(glucose, treatments, q, timeline){
   const r=loopBasal(treatments, timeline, q);
-  if(r.noprof) return `<div class="muted">Geen profiel met basaalschema in Nightscout gevonden — nodig om je loop-basaal naast je profiel te leggen.</div>`;
-  if(r.thin) return `<div class="muted">Te weinig nuchtere uren met loop-data om je basaal per uur te vergelijken.</div>`;
-  if(r.few!=null) return `<div class="muted">Te weinig temp-basaal-data (${r.few}). Werkt alleen bij een <b>closed loop</b> (AAPS/Loop) die temp-basaal naar Nightscout stuurt.</div>`;
+  if(r.noprof) return `<div class="muted">${TL("Geen profiel met basaalschema in Nightscout gevonden — nodig om je loop-basaal naast je profiel te leggen.","No profile with a basal schedule found in Nightscout — needed to compare your loop basal against your profile.","Nenhum perfil com esquema basal encontrado no Nightscout — necessário para comparar a basal do loop com o seu perfil.")}</div>`;
+  if(r.thin) return `<div class="muted">${TL("Te weinig nuchtere uren met loop-data om je basaal per uur te vergelijken.","Too few fasting hours with loop data to compare your basal per hour.","Poucas horas em jejum com dados do loop para comparar a sua basal por hora.")}</div>`;
+  if(r.few!=null) return `<div class="muted">${TL(`Te weinig temp-basaal-data (${r.few}). Werkt alleen bij een <b>closed loop</b> (AAPS/Loop) die temp-basaal naar Nightscout stuurt.`,`Too little temp-basal data (${r.few}). Only works with a <b>closed loop</b> (AAPS/Loop) that sends temp basal to Nightscout.`,`Poucos dados de basal temporária (${r.few}). Só funciona com um <b>closed loop</b> (AAPS/Loop) que envia basal temporária para o Nightscout.`)}</div>`;
   const TH=0.15;
   const dev=r.hours.filter(x=>x.act!=null && Math.abs(x.act-x.prof)/Math.max(0.05,x.prof)>=TH);
   const up=dev.filter(x=>x.act>x.prof).map(x=>x.h), down=dev.filter(x=>x.act<x.prof).map(x=>x.h);
   const pct=r.ratio!=null?Math.round((r.ratio-1)*100):0, ps=(pct>=0?"+":"")+pct+"%";
   let lead;
-  if(!up.length && !down.length) lead=`Je loop levert ongeveer je profiel-basaal (${ps} totaal) — je profiel sluit aan bij wat de loop nodig heeft.`;
+  if(!up.length && !down.length) lead=TL(`Je loop levert ongeveer je profiel-basaal (${ps} totaal) — je profiel sluit aan bij wat de loop nodig heeft.`,`Your loop delivers roughly your profile basal (${ps} total) — your profile matches what the loop needs.`,`O seu loop entrega aproximadamente a basal do perfil (${ps} total) — o seu perfil corresponde ao que o loop precisa.`);
   else { const parts=[];
-    if(up.length) parts.push(`rond <b>${joinHrs(up).join(", ")}</b> levert je loop <b>méér</b> — profiel mogelijk te <b>laag</b>`);
-    if(down.length) parts.push(`rond <b>${joinHrs(down).join(", ")}</b> <b>minder</b> — mogelijk te <b>hoog</b>`);
-    lead=`Je loop levert <b>${ps}</b> t.o.v. je profiel-basaal: ${parts.join("; ")}. Bespreekpunt, geen instelwaarde.`; }
-  const explain=`<details class="mini" style="margin:0 0 .6rem"><summary>Wat zie ik hier?</summary><div class="minibody">`+
-    `<div>Je <b>profiel</b> is je plan (streepjes); je <b>loop</b> wijkt daarvan af om je in bereik te houden (balken).</div>`+
-    `<div>Geeft je loop op een uur dag na dag <b>méér</b> dan je profiel, dan staat je profiel-basaal daar waarschijnlijk te <b>laag</b>; structureel <b>minder</b> = te <b>hoog</b>.</div>`+
-    `<div><b>Wat je eraan hebt:</b> het wijst aan welke basaal-blokken je in je profiel kunt bijstellen. Klopt je profiel beter, dan hoeft je loop minder te corrigeren — dat geeft vlakkere, voorspelbaardere waarden.</div>`+
+    if(up.length) parts.push(TL(`rond <b>${joinHrs(up).join(", ")}</b> levert je loop <b>méér</b> — profiel mogelijk te <b>laag</b>`,`around <b>${joinHrs(up).join(", ")}</b> your loop delivers <b>more</b> — profile possibly too <b>low</b>`,`por volta de <b>${joinHrs(up).join(", ")}</b> o loop entrega <b>mais</b> — perfil possivelmente <b>baixo</b>`));
+    if(down.length) parts.push(TL(`rond <b>${joinHrs(down).join(", ")}</b> <b>minder</b> — mogelijk te <b>hoog</b>`,`around <b>${joinHrs(down).join(", ")}</b> <b>less</b> — possibly too <b>high</b>`,`por volta de <b>${joinHrs(down).join(", ")}</b> <b>menos</b> — possivelmente <b>alto</b>`));
+    lead=TL(`Je loop levert <b>${ps}</b> t.o.v. je profiel-basaal: ${parts.join("; ")}. Bespreekpunt, geen instelwaarde.`,`Your loop delivers <b>${ps}</b> vs your profile basal: ${parts.join("; ")}. Discussion point, not a setting.`,`O seu loop entrega <b>${ps}</b> face à basal do perfil: ${parts.join("; ")}. Ponto de discussão, não um parâmetro.`); }
+  const explain=`<details class="mini" style="margin:0 0 .6rem"><summary>${TL("Wat zie ik hier?","What am I looking at?","O que estou a ver?")}</summary><div class="minibody">`+
+    `<div>${TL("Je <b>profiel</b> is je plan (streepjes); je <b>loop</b> wijkt daarvan af om je in bereik te houden (balken).","Your <b>profile</b> is your plan (ticks); your <b>loop</b> deviates from it to keep you in range (bars).","O seu <b>perfil</b> é o seu plano (traços); o seu <b>loop</b> desvia-se dele para o manter no alvo (barras).")}</div>`+
+    `<div>${TL("Geeft je loop op een uur dag na dag <b>méér</b> dan je profiel, dan staat je profiel-basaal daar waarschijnlijk te <b>laag</b>; structureel <b>minder</b> = te <b>hoog</b>.","If your loop gives <b>more</b> than your profile at an hour day after day, your profile basal is probably too <b>low</b> there; structurally <b>less</b> = too <b>high</b>.","Se o seu loop dá <b>mais</b> do que o perfil a uma hora dia após dia, a basal do perfil está provavelmente <b>baixa</b> aí; estruturalmente <b>menos</b> = <b>alta</b>.")}</div>`+
+    `<div><b>${TL("Wat je eraan hebt:","What it's good for:","Para que serve:")}</b> ${TL("het wijst aan welke basaal-blokken je in je profiel kunt bijstellen. Klopt je profiel beter, dan hoeft je loop minder te corrigeren — dat geeft vlakkere, voorspelbaardere waarden.","it points out which basal blocks you can adjust in your profile. When your profile fits better, your loop has to correct less — giving flatter, more predictable values.","aponta quais os blocos basais que pode ajustar no seu perfil. Quando o perfil encaixa melhor, o loop corrige menos — dando valores mais planos e previsíveis.")}</div>`+
     `</div></details>`;
   return explain+loopBasalSvg(r.hours)+`<div class="obs">${lead}</div>`+
-    `<div class="muted" style="margin-top:.4rem">Geleverde basaal (temp-basaal) vs. profiel, per uur over ${r.days} dagen; maaltijduren eruit gefilterd. Temp-basaal reageert ook op correcties, dus richting — geen exacte instelwaarde.</div>`;
+    `<div class="muted" style="margin-top:.4rem">${TL(`Geleverde basaal (temp-basaal) vs. profiel, per uur over ${r.days} dagen; maaltijduren eruit gefilterd. Temp-basaal reageert ook op correcties, dus richting — geen exacte instelwaarde.`,`Delivered basal (temp basal) vs profile, per hour over ${r.days} days; meal hours filtered out. Temp basal also responds to corrections, so direction — not an exact setting.`,`Basal entregue (basal temporária) vs perfil, por hora ao longo de ${r.days} dias; horas de refeição filtradas. A basal temporária também responde a correções, por isso direção — não um valor exato.`)}</div>`;
 }
 
 // Herbruikbare maaltijd-berekening (gebruikt door de kaart én door "Jouw vragen").
@@ -2841,11 +2841,11 @@ function isfCands(sub){
   const seen=new Set(), cands=[];
   for(const [tag,C] of [["behoudend",beh],["gemeten",vol]]){
     if(C===P || seen.has(C)) continue; seen.add(C);
-    const k=P/C, sim=correctionSim({obs:M,evRaw:sub.evRaw,n:sub.n},[1,k],5); let eff="niet apart doorgerekend", risky=false;
+    const k=P/C, sim=correctionSim({obs:M,evRaw:sub.evRaw,n:sub.n},[1,k],5); let eff=TL("niet apart doorgerekend","not computed separately","não calculado à parte"), risky=false;
     if(!sim.few){ const cur=sim.res.find(x=>x.k===1), c=sim.res.find(x=>x.k!==1);
-      eff=`correcties eindigen ${nl1(cur.endMed)} → ${nl1(c.endMed)} · te laag ${pct0(cur.lowFrac)} → ${pct0(c.lowFrac)}`;
+      eff=TL(`correcties eindigen ${nl1(cur.endMed)} → ${nl1(c.endMed)} · te laag ${pct0(cur.lowFrac)} → ${pct0(c.lowFrac)}`,`corrections end ${nl1(cur.endMed)} → ${nl1(c.endMed)} · too low ${pct0(cur.lowFrac)} → ${pct0(c.lowFrac)}`,`correções terminam ${nl1(cur.endMed)} → ${nl1(c.endMed)} · demasiado baixo ${pct0(cur.lowFrac)} → ${pct0(c.lowFrac)}`);
       risky = k>1 && c.lowFrac>cur.lowFrac+P_RISK; }
-    cands.push({tag, from:nl1(P), to:nl1(C), eff, risky, dir:C>P?"loop spuit iets minder bij":"loop spuit iets meer bij"}); }
+    cands.push({tag, from:nl1(P), to:nl1(C), eff, risky, dir:C>P?TL("loop spuit iets minder bij","loop corrects a bit less","o loop corrige um pouco menos"):TL("loop spuit iets meer bij","loop corrects a bit more","o loop corrige um pouco mais")}); }
   return cands.length?{cands, meta:`n=${sub.n} · IQR ${nl1(sub.q25)}–${nl1(sub.q75)}`}:null;
 }
 function proposalEngine(drift, oi, MR, pi, glucose, treatments, q, timeline){
@@ -2858,15 +2858,15 @@ function proposalEngine(drift, oi, MR, pi, glucose, treatments, q, timeline){
     for(const d of DAYPARTS){ const sub=oi&&oi.byDP&&oi.byDP[d.key];
       if(!sub || sub.n<5 || sub.obs==null || sub.prof==null){ grid[d.key]={status:"weinig", n:sub?sub.n:0}; continue; }
       const r=isfCands(sub);
-      if(r){ rows.push({label:d.label, dpKey:d.key, meta:r.meta, cands:r.cands});
+      if(r){ rows.push({label:dpLabel(d.key), dpKey:d.key, meta:r.meta, cands:r.cands});
         const beh=r.cands.find(c=>c.tag==="behoudend"), gem=r.cands.find(c=>c.tag==="gemeten"), any=beh||gem;
         grid[d.key]={status:"change", from:any.from, to:(beh&&gem&&beh.to!==gem.to)?`${beh.to}–${gem.to}`:(gem?gem.to:beh.to), risky:(beh&&beh.risky)||(gem&&gem.risky)}; }
       else grid[d.key]={status:"ok", n:sub.n}; }
     let allRow=null;
-    if(!rows.length && oi && oi.n>=8){ const r=isfCands(oi); if(r){ allRow={cands:r.cands, meta:r.meta}; rows.push({label:"hele dag", dpKey:"alle", meta:r.meta, cands:r.cands}); } }
+    if(!rows.length && oi && oi.n>=8){ const r=isfCands(oi); if(r){ allRow={cands:r.cands, meta:r.meta}; rows.push({label:TL("hele dag","whole day","dia inteiro"), dpKey:"alle", meta:r.meta, cands:r.cands}); } }
     if(rows.length || Object.values(grid).some(g=>g.status!=="weinig"))
-      items.push({ key:"isf", title:"ISF · correctiefactor", unit:"mmol/L per E", rows, grid, allRow,
-        why:`Hoeveel 1 eenheid je écht liet dalen, naast wat je profiel aanneemt. Verschilt per dagdeel: 's ochtends ben je vaak minder gevoelig.` }); }
+      items.push({ key:"isf", title:TL("ISF · correctiefactor","ISF · correction factor","ISF · fator de correção"), unit:TL("mmol/L per E","mmol/L per U","mmol/L por U"), rows, grid, allRow,
+        why:TL(`Hoeveel 1 eenheid je écht liet dalen, naast wat je profiel aanneemt. Verschilt per dagdeel: 's ochtends ben je vaak minder gevoelig.`,`How much 1 unit really lowered you, next to what your profile assumes. Varies by part of day: in the morning you're often less sensitive.`,`Quanto 1 unidade realmente o baixou, face ao que o perfil assume. Varia por período do dia: de manhã é muitas vezes menos sensível.`) }); }
 
   // 2 — Basaal per dagdeel. Bij een closed loop lezen we wat de lóóp werkelijk
   // leverde (temp-basaal vs. profiel) — die data is er wél; anders de nuchtere drift.
@@ -2882,9 +2882,9 @@ function proposalEngine(drift, oi, MR, pi, glucose, treatments, q, timeline){
               for(const [tag,frac] of [["behoudend",0.5],["gemeten",1.0]]){
                 const C=_pR05(prof+(act-prof)*frac); if(C===_pR05(prof)||C<0||seen.has(C)) continue; seen.add(C);
                 cands.push({tag, from:nl2(prof), to:nl2(C), risky:false,
-                  eff:`loop leverde gem. ${nl2(act)} vs profiel ${nl2(prof)} E/u`,
-                  dir:up?"loop levert méér — profiel mogelijk te laag":"loop levert minder — mogelijk te hoog"}); }
-              if(cands.length){ rows.push({label:d.label, dpKey:d.key, meta:`loop vs profiel · ${hrs.reduce((s,x)=>s+x.n,0).toLocaleString(LOCALE())} metingen`, cands});
+                  eff:TL(`loop leverde gem. ${nl2(act)} vs profiel ${nl2(prof)} E/u`,`loop delivered avg. ${nl2(act)} vs profile ${nl2(prof)} U/h`,`loop entregou méd. ${nl2(act)} vs perfil ${nl2(prof)} U/h`),
+                  dir:up?TL("loop levert méér — profiel mogelijk te laag","loop delivers more — profile possibly too low","loop entrega mais — perfil possivelmente baixo"):TL("loop levert minder — mogelijk te hoog","loop delivers less — possibly too high","loop entrega menos — possivelmente alto")}); }
+              if(cands.length){ rows.push({label:dpLabel(d.key), dpKey:d.key, meta:TL(`loop vs profiel · ${hrs.reduce((s,x)=>s+x.n,0).toLocaleString(LOCALE())} metingen`,`loop vs profile · ${hrs.reduce((s,x)=>s+x.n,0).toLocaleString(LOCALE())} readings`,`loop vs perfil · ${hrs.reduce((s,x)=>s+x.n,0).toLocaleString(LOCALE())} medições`), cands});
                 const beh=cands.find(c=>c.tag==="behoudend"), gem=cands.find(c=>c.tag==="gemeten"), any=beh||gem;
                 grid[d.key]={status:"change", from:any.from, to:(beh&&gem&&beh.to!==gem.to)?`${beh.to}–${gem.to}`:(gem?gem.to:beh.to), risky:false}; continue; } }
             grid[d.key]={status:"ok"}; continue; } } }
@@ -2899,19 +2899,19 @@ function proposalEngine(drift, oi, MR, pi, glucose, treatments, q, timeline){
           const C=_pR05(cb+sign*dB*frac); if(C===_pR05(cb)||C<0||seen.has(C)) continue; seen.add(C);
           const proj=agg*(1-frac);
           cands.push({tag, from:nl2(cb), to:nl2(C), risky:false,
-            eff:`nuchtere drift ${_pSd(agg)} → ${_pSd(proj)} mmol/L/u`,
-            dir:up?"hoger basaal (meer insuline)":"lager basaal (minder insuline)"}); }
-        if(cands.length){ rows.push({label:d.label, dpKey:d.key, meta:`stille vensters · drift ${_pSd(agg)} mmol/L/u`, cands});
+            eff:TL(`nuchtere drift ${_pSd(agg)} → ${_pSd(proj)} mmol/L/u`,`fasting drift ${_pSd(agg)} → ${_pSd(proj)} mmol/L/h`,`deriva em jejum ${_pSd(agg)} → ${_pSd(proj)} mmol/L/h`),
+            dir:up?TL("hoger basaal (meer insuline)","higher basal (more insulin)","basal mais alta (mais insulina)"):TL("lager basaal (minder insuline)","lower basal (less insulin)","basal mais baixa (menos insulina)")}); }
+        if(cands.length){ rows.push({label:dpLabel(d.key), dpKey:d.key, meta:TL(`stille vensters · drift ${_pSd(agg)} mmol/L/u`,`quiet windows · drift ${_pSd(agg)} mmol/L/h`,`janelas calmas · deriva ${_pSd(agg)} mmol/L/h`), cands});
           const beh=cands.find(c=>c.tag==="behoudend"), gem=cands.find(c=>c.tag==="gemeten"), any=beh||gem;
           grid[d.key]={status:"change", from:any.from, to:(beh&&gem&&beh.to!==gem.to)?`${beh.to}–${gem.to}`:(gem?gem.to:beh.to), risky:false}; }
         else grid[d.key]={status:"ok"}; }
       else grid[d.key]={status:"weinig"};
     }
     if(rows.length || Object.values(grid).some(g=>g.status!=="weinig"))
-      items.push({ key:"basaal", title:"Basaal", unit:"E/u", rows, grid,
+      items.push({ key:"basaal", title:TL("Basaal","Basal","Basal"), unit:TL("E/u","U/h","U/h"), rows, grid,
         why: source==="loop"
-          ? `Wat je loop werkelijk leverde (temp-basaal) naast je profiel-basaal, per dagdeel. Levert de loop structureel méér/minder, dan staat je profiel daar mogelijk te laag/hoog. Maaltijduren zijn eruit gefilterd.`
-          : `In maaltijd- en bolusvrije uren hoort je glucose vlak te lopen. Waar je toch wegdrijft, wijst dat op te veel of te weinig basaal — per dagdeel.` }); }
+          ? TL(`Wat je loop werkelijk leverde (temp-basaal) naast je profiel-basaal, per dagdeel. Levert de loop structureel méér/minder, dan staat je profiel daar mogelijk te laag/hoog. Maaltijduren zijn eruit gefilterd.`,`What your loop actually delivered (temp basal) next to your profile basal, per part of day. If the loop structurally delivers more/less, your profile may be too low/high there. Meal hours are filtered out.`,`O que o seu loop realmente entregou (basal temporária) face à basal do perfil, por período do dia. Se o loop entrega estruturalmente mais/menos, o seu perfil pode estar baixo/alto aí. As horas de refeição são filtradas.`)
+          : TL(`In maaltijd- en bolusvrije uren hoort je glucose vlak te lopen. Waar je toch wegdrijft, wijst dat op te veel of te weinig basaal — per dagdeel.`,`In meal- and bolus-free hours your glucose should run flat. Where you drift anyway points to too much or too little basal — per part of day.`,`Em horas sem refeição e sem bólus a sua glicose deve correr plana. Onde deriva mesmo assim aponta para basal a mais ou a menos — por período do dia.`) }); }
 
   // 3 — KH-ratio per maaltijdmoment (ontbijt/lunch/diner). Te hoge piek = onderdekking;
   // lager getal g/E = sterkere ratio = meer maaltijdinsuline.
@@ -2926,28 +2926,29 @@ function proposalEngine(drift, oi, MR, pi, glucose, treatments, q, timeline){
       const cic=blk.value, sim=mealSim({results:rs},oi,[1.0,1.05,1.10],MEAL_MIN), seen=new Set(), cands=[];
       for(const [tag,m] of [["behoudend",1.05],["gemeten",1.10]]){
         const C=_pR5g(cic/m); if(C===_pR5g(cic)||seen.has(C)) continue; seen.add(C);
-        let eff="niet apart doorgerekend", risky=false;
+        let eff=TL("niet apart doorgerekend","not computed separately","não calculado à parte"), risky=false;
         if(!sim.few){ const cur=sim.res.find(x=>x.k===1), c=sim.res.find(x=>x.k===m);
-          if(cur&&c){ eff=`piek +${nl1(cur.riseMed)} → +${nl1(c.riseMed)} · eindigt laag ${pct0(cur.lowFrac)} → ${pct0(c.lowFrac)}`;
+          if(cur&&c){ eff=TL(`piek +${nl1(cur.riseMed)} → +${nl1(c.riseMed)} · eindigt laag ${pct0(cur.lowFrac)} → ${pct0(c.lowFrac)}`,`peak +${nl1(cur.riseMed)} → +${nl1(c.riseMed)} · ends low ${pct0(cur.lowFrac)} → ${pct0(c.lowFrac)}`,`pico +${nl1(cur.riseMed)} → +${nl1(c.riseMed)} · termina baixo ${pct0(cur.lowFrac)} → ${pct0(c.lowFrac)}`);
             risky = c.lowFrac>cur.lowFrac+P_RISK; } }
-        cands.push({tag, from:nl1(cic), to:nl1(C), eff, risky, dir:"sterker (meer maaltijdinsuline)"}); }
-      if(cands.length){ rows.push({label:p.id, dpKey:p.dp, meta:`n=${rs.length} maaltijden · piek +${nl1(rise)}`, cands});
+        cands.push({tag, from:nl1(cic), to:nl1(C), eff, risky, dir:TL("sterker (meer maaltijdinsuline)","stronger (more meal insulin)","mais forte (mais insulina de refeição)")}); }
+      if(cands.length){ rows.push({label:mealName(p.id), dpKey:p.dp, meta:TL(`n=${rs.length} maaltijden · piek +${nl1(rise)}`,`n=${rs.length} meals · peak +${nl1(rise)}`,`n=${rs.length} refeições · pico +${nl1(rise)}`), cands});
         const beh=cands.find(c=>c.tag==="behoudend"), gem=cands.find(c=>c.tag==="gemeten"), any=beh||gem;
         grid[p.dp]={status:"change", from:any.from, to:(beh&&gem&&beh.to!==gem.to)?`${beh.to}–${gem.to}`:(gem?gem.to:beh.to), risky:(beh&&beh.risky)||(gem&&gem.risky)}; }
       else grid[p.dp]={status:"ok", n:rs.length}; }
-    if(rows.length || Object.values(grid).some(g=>g.status!=="weinig")){ const timingNote = (MR.moffset!=null && MR.moffset>-5) ? " Let op: je bolust laat — een vroegere prebolus dempt de piek zónder meer insuline (zie Maaltijdrespons)." : "";
-      items.push({ key:"ic", title:"KH-ratio", unit:"g per E", rows, grid,
-        why:`Waar je maaltijdpiek structureel te hoog is, schiet de dekking tekort — vaak juist bij het ontbijt.${timingNote}` }); }
+    if(rows.length || Object.values(grid).some(g=>g.status!=="weinig")){ const timingNote = (MR.moffset!=null && MR.moffset>-5) ? TL(" Let op: je bolust laat — een vroegere prebolus dempt de piek zónder meer insuline (zie Maaltijdrespons)."," Note: you bolus late — an earlier prebolus dampens the peak without more insulin (see Meal response)."," Nota: bolusa tarde — um prebólus mais cedo reduz o pico sem mais insulina (ver Resposta às refeições).") : "";
+      items.push({ key:"ic", title:TL("KH-ratio","Carb ratio","Rácio de hidratos"), unit:TL("g per E","g per U","g por U"), rows, grid,
+        why:TL(`Waar je maaltijdpiek structureel te hoog is, schiet de dekking tekort — vaak juist bij het ontbijt.${timingNote}`,`Where your meal peak is structurally too high, coverage falls short — often exactly at breakfast.${timingNote}`,`Onde o seu pico de refeição está estruturalmente alto, a cobertura é insuficiente — muitas vezes precisamente ao pequeno-almoço.${timingNote}`) }); }
   }
 
   return items;
 }
 function proposalsHtml(drift, oi, MR, pi, glucose, treatments, q, timeline){
-  if(!timeline) return `<div class="muted">Geen profiel met basaal/ISF/KH-ratio in Nightscout gevonden — nodig om bespreekwaarden naast je instellingen te leggen.</div>`;
+  if(!timeline) return `<div class="muted">${TL("Geen profiel met basaal/ISF/KH-ratio in Nightscout gevonden — nodig om bespreekwaarden naast je instellingen te leggen.","No profile with basal/ISF/carb ratio found in Nightscout — needed to place discussion values next to your settings.","Nenhum perfil com basal/ISF/rácio de hidratos encontrado no Nightscout — necessário para colocar os valores para discussão ao lado das suas definições.")}</div>`;
   const items=proposalEngine(drift, oi, MR, pi, glucose, treatments, q, timeline);
-  if(!items.length) return `<div class="pgood">Niets te bespreken. Op de hefbomen die genoeg data hebben, sluiten je instellingen aan bij wat je glucose laat zien — of er is nog te weinig schone data per dagdeel om een concreet getal te onderbouwen.</div>`;
+  if(!items.length) return `<div class="pgood">${TL("Niets te bespreken. Op de hefbomen die genoeg data hebben, sluiten je instellingen aan bij wat je glucose laat zien — of er is nog te weinig schone data per dagdeel om een concreet getal te onderbouwen.","Nothing to discuss. On the levers with enough data, your settings match what your glucose shows — or there's still too little clean data per part of day to back a concrete number.","Nada a discutir. Nas alavancas com dados suficientes, as suas definições correspondem ao que a glicose mostra — ou ainda há poucos dados limpos por período do dia para fundamentar um número concreto.")}</div>`;
+  const tagL=t=> t==="behoudend"?TL("behoudend","conservative","conservador"):t==="gemeten"?TL("gemeten","measured","medido"):t;
   const cand=c=>`<div class="pcand${c.risky?" risk":""}">
-      <div class="pctag">${c.tag}${c.risky?` <span class="prisk">hypo-risico ↑</span>`:""}</div>
+      <div class="pctag">${tagL(c.tag)}${c.risky?` <span class="prisk">${TL("hypo-risico ↑","low risk ↑","risco de hipo ↑")}</span>`:""}</div>
       <div class="pcval">${c.from} <span class="parr">→</span> <b>${c.to}</b></div>
       <div class="pcdir">${c.dir}</div>
       <div class="pceff">${c.eff}</div>
@@ -2962,27 +2963,27 @@ function proposalsHtml(drift, oi, MR, pi, glucose, treatments, q, timeline){
   // cel niet twee dingen tegelijk betekent: ✓ = gemeten sluit aan · — = te weinig
   // data · pijl = bespreekwaarde (huidig → behoudend–gemeten).
   const byKey=Object.fromEntries(items.map(it=>[it.key,it]));
-  const LEV=[["isf","ISF","mmol/E"],["basaal","Basaal","E/u"],["ic","KH","g/E"]];
+  const LEV=[["isf","ISF","mmol/"+TL("E","U","U")],["basaal",TL("Basaal","Basal","Basal"),TL("E/u","U/h","U/h")],["ic",TL("KH","Carb","Hidr"),"g/"+TL("E","U","U")]];
   const cellFor=(k,dpKey)=>{ const it=byKey[k]; return (it&&it.grid&&it.grid[dpKey])||{status:"weinig"}; };
   const cellHtml=g=>{
     if(g.status==="change") return `<td class="bwc chg${g.risky?" risk":""}">${g.from}<span class="parr">→</span><b>${g.to}</b></td>`;
-    if(g.status==="ok") return `<td class="bwc ok" title="gemeten sluit aan bij je instelling">✓</td>`;
-    return `<td class="bwc none" title="te weinig schone data in dit dagdeel">—</td>`; };
+    if(g.status==="ok") return `<td class="bwc ok" title="${TL("gemeten sluit aan bij je instelling","measured aligns with your setting","medido alinha com a sua definição")}">✓</td>`;
+    return `<td class="bwc none" title="${TL("te weinig schone data in dit dagdeel","too little clean data in this part of day","poucos dados limpos neste período")}">—</td>`; };
   const dpsShown=DAYPARTS.filter(d=>LEV.some(([k])=>cellFor(k,d.key).status!=="weinig"));
   const matrix = dpsShown.length ? `<table class="bwm">
-    <thead><tr><th>dagdeel</th>${LEV.map(([,l,u])=>`<th>${l}<span class="bwu">${u}</span></th>`).join("")}</tr></thead>
-    <tbody>${dpsShown.map(d=>`<tr><td class="bwd">${d.label.split(" ")[0]}</td>${LEV.map(([k])=>cellHtml(cellFor(k,d.key))).join("")}</tr>`).join("")}</tbody>
+    <thead><tr><th>${TL("dagdeel","part of day","período")}</th>${LEV.map(([,l,u])=>`<th>${l}<span class="bwu">${u}</span></th>`).join("")}</tr></thead>
+    <tbody>${dpsShown.map(d=>`<tr><td class="bwd">${dpName(d.key)}</td>${LEV.map(([k])=>cellHtml(cellFor(k,d.key))).join("")}</tr>`).join("")}</tbody>
   </table>
-  <div class="bwleg"><span><b class="lok">✓</b> gemeten sluit aan</span><span><b class="ldash">—</b> te weinig data</span><span><b class="larr">→</b> bespreekwaarde</span></div>` : "";
+  <div class="bwleg"><span><b class="lok">✓</b> ${TL("gemeten sluit aan","measured aligns","medido alinha")}</span><span><b class="ldash">—</b> ${TL("te weinig data","too little data","poucos dados")}</span><span><b class="larr">→</b> ${TL("bespreekwaarde","discussion value","valor de discussão")}</span></div>` : "";
   // ISF-terugval op de hele dag (geen dagdeel apart genoeg data).
   const allRow = byKey.isf && byKey.isf.allRow;
-  const allNote = allRow ? `<div class="bwall">ISF over de hele dag: <b>${allRow.cands[0].from} → ${allRow.cands.map(c=>c.to).join("–")}</b> <span class="pdmeta">${allRow.meta}</span></div>` : "";
+  const allNote = allRow ? `<div class="bwall">${TL("ISF over de hele dag","ISF over the whole day","ISF ao longo do dia inteiro")}: <b>${allRow.cands[0].from} → ${allRow.cands.map(c=>c.to).join("–")}</b> <span class="pdmeta">${allRow.meta}</span></div>` : "";
   const changed = items.filter(it=>it.rows && it.rows.length);
   const anyChange = changed.length>0;
   const lead = anyChange ? "" :
-    `<div class="pgood" style="margin-top:.6rem">Waar genoeg data is, sluiten je gemeten waarden aan bij je instellingen. Een — betekent te weinig data — geen oordeel.</div>`;
-  const caveat = `<div class="muted" style="margin-top:.6rem">Dóórgerekend met je eigen data; <span class="prisk">rood</span> = de simulatie ziet meer laagtes. Bespreekpunten voor je team — geen instel- of pompopdracht.</div>`;
-  const detail = anyChange ? `<details class="bwdetail"><summary>Onderbouwing per dagdeel — bewijs & effect</summary><div class="bwbody">${changed.map(card).join("")}</div></details>` : "";
+    `<div class="pgood" style="margin-top:.6rem">${TL("Waar genoeg data is, sluiten je gemeten waarden aan bij je instellingen. Een — betekent te weinig data — geen oordeel.","Where there's enough data, your measured values match your settings. A — means too little data — no judgment.","Onde há dados suficientes, os seus valores medidos correspondem às definições. Um — significa poucos dados — sem juízo.")}</div>`;
+  const caveat = `<div class="muted" style="margin-top:.6rem">${TL('Dóórgerekend met je eigen data; <span class="prisk">rood</span> = de simulatie ziet meer laagtes. Bespreekpunten voor je team — geen instel- of pompopdracht.','Computed with your own data; <span class="prisk">red</span> = the simulation sees more lows. Discussion points for your team — not a setting or pump instruction.','Calculado com os seus próprios dados; <span class="prisk">vermelho</span> = a simulação vê mais valores baixos. Pontos de discussão para a sua equipa — não uma instrução de definição ou bomba.')}</div>`;
+  const detail = anyChange ? `<details class="bwdetail"><summary>${TL("Onderbouwing per dagdeel — bewijs & effect","Rationale per part of day — evidence & effect","Fundamentação por período do dia — evidência e efeito")}</summary><div class="bwbody">${changed.map(card).join("")}</div></details>` : "";
   return matrix + allNote + lead + caveat + detail;
 }
 
@@ -3001,6 +3002,11 @@ const ANNOT_TYPES = [
 ];
 const annotType = id => ANNOT_TYPES.find(t=>t.id===id) || ANNOT_TYPES[ANNOT_TYPES.length-1];
 const INTENSITY = [ { id:"licht", label:"licht" }, { id:"duidelijk", label:"duidelijk" }, { id:"ernstig", label:"ernstig" } ];
+// Vertaalde labels voor logboek-types en hypo-gevoel-intensiteit (id → naam).
+const _ANNOTL={ wijziging:["Instelling aangepast","Setting changed","Definição alterada"], ziek:["Ziek","Ill","Doente"], cyclus:["Cyclus","Cycle","Ciclo"], sport:["Sport / activiteit","Exercise / activity","Exercício / atividade"], reis:["Reis / tijdzone","Travel / time zone","Viagem / fuso horário"], stress:["Stress","Stress","Stress"], notitie:["Notitie","Note","Nota"], maaltijd:["Maaltijd","Meal","Refeição"] };
+const annotLabel = id => { const a=_ANNOTL[id]; return a?TL(a[0],a[1],a[2]):(annotType(id).label); };
+const _INTL={ licht:["licht","mild","ligeiro"], duidelijk:["duidelijk","clear","claro"], ernstig:["ernstig","severe","grave"] };
+const intensLabel = id => { const a=_INTL[id]; return a?TL(a[0],a[1],a[2]):id; };
 const parseNum = s => { const v=parseFloat(String(s).replace(",",".").trim()); return isFinite(v)?v:null; };
 // Vergelijk de `win` dagen vóór een ankerpunt met de `win` dagen erna (alleen
 // bruikbare dagen), en geef de kernmaten + delta's terug.
@@ -3090,7 +3096,7 @@ const esc = s => String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&g
 let _logSel = "wijziging";
 function buildChips(){
   const c=document.getElementById("logChips");
-  c.innerHTML=ANNOT_TYPES.filter(t=>!t.hideChip).map(t=>`<button type="button" class="chip${t.id===_logSel?" sel":""}" data-type="${t.id}">${t.icon} ${t.label}</button>`).join("");
+  c.innerHTML=ANNOT_TYPES.filter(t=>!t.hideChip).map(t=>`<button type="button" class="chip${t.id===_logSel?" sel":""}" data-type="${t.id}">${t.icon} ${annotLabel(t.id)}</button>`).join("");
   c.querySelectorAll(".chip").forEach(ch=>ch.onclick=()=>{ _logSel=ch.dataset.type; buildChips(); });
 }
 // Voor/na-strip onder een ankerpunt (type "wijziging").
@@ -3129,7 +3135,7 @@ async function renderLog(){
   if(!anns.length){ list.innerHTML=`<div class="muted" style="padding-top:.3rem">Nog geen markeringen. Leg een instelling-wijziging of gebeurtenis vast — bij een wijziging vergelijkt de app vanzelf de periode ervóór en erná.</div>`; return; }
   list.innerHTML=anns.map(an=>{ const t=annotType(an.type);
     const d=new Date(an.ts).toLocaleDateString(LOCALE(),{day:"2-digit",month:"short",year:"numeric"});
-    return `<div class="logentry"><div class="leh"><span class="ic">${t.icon}</span><span class="lt">${esc(t.label)}</span><span class="ld">${d}</span><button class="del" data-id="${esc(an.id)}" title="verwijderen" aria-label="verwijderen">✕</button></div>`+
+    return `<div class="logentry"><div class="leh"><span class="ic">${t.icon}</span><span class="lt">${esc(annotLabel(an.type))}</span><span class="ld">${d}</span><button class="del" data-id="${esc(an.id)}" title="${TL("verwijderen","delete","eliminar")}" aria-label="${TL("verwijderen","delete","eliminar")}">✕</button></div>`+
       (an.carbs!=null?`<div class="lecarb">≈ ${an.carbs} g koolhydraten${an.items&&an.items.length?`<span class="litems"> · ${esc(an.items.map(i=>i.n).join(", "))}</span>`:``}</div>`:``)+
       (an.note?`<div class="lenote">${esc(an.note)}</div>`:``)+
       (t.anchor?baHtml(an.ts):``)+`</div>`;
@@ -3144,7 +3150,7 @@ async function renderLog(){
 let _awSel = "duidelijk";
 function buildAwChips(){
   const c=document.getElementById("awChips");
-  c.innerHTML=INTENSITY.map(t=>`<button type="button" class="chip${t.id===_awSel?" sel":""}" data-int="${t.id}">${t.label}</button>`).join("");
+  c.innerHTML=INTENSITY.map(t=>`<button type="button" class="chip${t.id===_awSel?" sel":""}" data-int="${t.id}">${intensLabel(t.id)}</button>`).join("");
   c.querySelectorAll(".chip").forEach(ch=>ch.onclick=()=>{ _awSel=ch.dataset.int; buildAwChips(); });
 }
 function awareHtml(aw, hy){
