@@ -39,7 +39,7 @@ const safety=order.list.indexOf('Veiligheid & bereik'), insulin=order.list.index
 console.log('onderbalk-tabs:', tabs);
 console.log('  4 tabs met icoon+label:', (bar.length===4&&allIcons)?'JA':'NEE');
 console.log('  Eten-tab aanwezig:', bar.some(b=>b.tab==='eten')?'JA':'NEE');
-console.log('dagcurve = open op Overzicht:', (dayFold.tag==='DETAILS'&&dayFold.open)?'JA':'NEE', `(${dayFold.tag}, open=${dayFold.open})`);
+console.log('dagcurve = fold onder Analyses:', (dayFold.tag==='DETAILS'&&!dayFold.open)?'JA':'NEE', `(${dayFold.tag}, open=${dayFold.open})`);
 console.log('analyses-volgorde:', order.list.join(' → '));
 console.log('  Maaltijden eerst:', order.first==='Maaltijden'&&order.firstId==='Maaltijden'?'JA':'NEE');
 console.log('  Veiligheid vóór Insuline:', (safety>-1&&insulin>-1&&safety<insulin)?'JA':'NEE');
@@ -47,7 +47,7 @@ console.log('Eten-tab → eigen view + schatter:', (eten.shown&&eten.hasSearch&&
 console.log('errors:', errors.length?errors:'geen');
 
 const ok = bar.length===4 && allIcons && tabs==='overzicht,eten,analyses,consult'
-  && dayFold.tag==='DETAILS' && dayFold.open && order.first==='Maaltijden' && safety<insulin
+  && dayFold.tag==='DETAILS' && !dayFold.open && order.first==='Maaltijden' && safety<insulin
   && eten.shown && eten.hasSearch && eten.cats>0 && !errors.length;
 console.log('\nRESULTAAT:', ok?'OK':'FOUT');
 if(!ok) process.exitCode=1;

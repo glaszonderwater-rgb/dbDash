@@ -688,6 +688,8 @@ details.why>summary::after{content:" ›"}
 .daylabel{font-size:.85rem}
 .isfrule{display:flex;justify-content:space-between;gap:.6rem}
 .brand .mark{width:26px;height:26px;color:var(--ink)} .brandtxt{font-weight:650;font-size:1.15rem;letter-spacing:-.02em}
+.l24leg{font-size:.68rem;margin-top:.2rem}
+.view[data-view="analyses"]>.scope{border-top:0;border-bottom:1px solid var(--line);margin-bottom:.6rem}
 </style>
 </head>
 <body>
@@ -713,7 +715,6 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
       <button id="btnSync" data-i18n="btn.sync" disabled>Sync</button>
       <button class="ghost" id="btnCfg" data-i18n-al="btn.settings" title="Instellingen" aria-label="Instellingen">⚙</button>
     </div>
-    <div class="scope" id="scope"><span><i>periode</i> <b>—</b></span></div>
   </div>
 </header>
 
@@ -753,24 +754,9 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
       </div>
     </details>
     <div id="secWatch" hidden><div id="watch" style="margin-top:.6rem"></div></div>
-    <details class="fold homeday" id="secDay" hidden open>
-      <summary><span data-i18n="home.dayCurve">Dagcurve</span> <span class="foldhint" data-i18n="home.dayCurveHint">je dag per uur — eten, bolus, hypo's</span></summary>
-      <div class="foldbody">
-        <div class="chips" id="dayJump" style="margin-bottom:.55rem"></div>
-        <div class="daynav">
-          <button class="ghost" id="dayPrev" aria-label="vorige dag">◀</button>
-          <div class="daylabel" id="dayLabel">—</div>
-          <button class="ghost" id="dayNext" aria-label="volgende dag">▶</button>
-        </div>
-        <div id="dayChart"></div>
-        <div class="legend">
-          <span><i style="background:var(--carb)"></i><span data-i18n="legend.carbs">koolhydraten</span></span>
-          <span><i style="background:var(--accent)"></i><span data-i18n="legend.bolus">bolus</span></span>
-          <span><i style="background:var(--low)"></i><span data-i18n="legend.hypo">hypo</span></span>
-        </div>
-        <div class="obs" id="dayNarr"></div>
-      </div>
-    </details>
+    <div class="chead"><span><span data-i18n="home.last24">Laatste 24 uur</span></span> <span class="sub" id="l24sub"></span></div>
+    <div id="last24"></div>
+    <div class="legend l24leg"><span><i style="background:var(--carb)"></i><span data-i18n="legend.carbs">koolhydraten</span></span><span><i style="background:var(--accent)"></i><span data-i18n="legend.bolus">bolus</span></span><span><i style="background:var(--low)"></i><span data-i18n="legend.hypo">hypo</span></span></div>
 
 
     <div class="chead" id="epVandaag"><span data-i18n="home.attention">Aandacht</span> <span class="sub" id="todaySub"></span></div>
@@ -785,6 +771,7 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
 
   <!-- ANALYSES — de bibliotheek: alles bij naam, één tik -->
   <div class="view" data-view="analyses" hidden>
+  <div class="scope" id="scope"><span><i>periode</i> <b>—</b></span></div>
     <div class="ask" id="askBox" hidden>
       <div class="askrow">
         <svg class="askic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
@@ -850,6 +837,24 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
   </details>
 
   <div class="h3" data-i18n="an.progress">Voortgang</div>
+    <details class="fold" id="secDay" hidden>
+    <summary><span data-i18n="home.dayCurve">Dagcurve</span> <span class="foldhint" data-i18n="home.dayCurveHint">je dag per uur — eten, bolus, hypo's</span></summary>
+    <div class="foldbody">
+      <div class="chips" id="dayJump" style="margin-bottom:.55rem"></div>
+      <div class="daynav">
+        <button class="ghost" id="dayPrev" aria-label="vorige dag">◀</button>
+        <div class="daylabel" id="dayLabel">—</div>
+        <button class="ghost" id="dayNext" aria-label="volgende dag">▶</button>
+      </div>
+      <div id="dayChart"></div>
+      <div class="legend">
+        <span><i style="background:var(--carb)"></i><span data-i18n="legend.carbs">koolhydraten</span></span>
+        <span><i style="background:var(--accent)"></i><span data-i18n="legend.bolus">bolus</span></span>
+        <span><i style="background:var(--low)"></i><span data-i18n="legend.hypo">hypo</span></span>
+      </div>
+      <div class="obs" id="dayNarr"></div>
+    </div>
+  </details>
   <details class="fold" id="secTrend" hidden open>
     <summary><span data-i18n="an.trend">Weektrend</span> <span class="foldhint" data-i18n="an.trendHint">tijd in bereik per week</span></summary>
     <div class="foldbody">
@@ -1319,6 +1324,7 @@ Object.assign(I18N, {
   // Eten
   "eten.title":{ en:"Estimate carbs", pt:"Estimar hidratos" },
   "eten.sub":{ en:"pick food + portion → grams", pt:"escolha alimento + porção → gramas" },
+  "home.last24":{ nl:"Laatste 24 uur", en:"Last 24 hours", pt:"Últimas 24 horas" },
   "eten.note":{ nl:"Tabelwaarden, <b>geen dosisadvies</b>.", en:"Table values, <b>not dosing advice</b>.", pt:"Valores de tabela, <b>não é conselho de dose</b>." },
   "eten.searchPh":{ en:"search food… (e.g. banana, rice, cola)", pt:"procurar alimento… (ex. banana, arroz, cola)" },
   "eten.plateHead":{ en:"On your plate", pt:"No seu prato" },

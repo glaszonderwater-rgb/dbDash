@@ -854,28 +854,43 @@ function agpSvg(ag){
 }
 // Dag-detail: één dag (00:00–24:00) met de glucosecurve, hypo's rood, en
 // markers voor maaltijden (koolhydraten) en bolussen — forensica per dag.
-function dayChartSvg(readings, events){
-  if(readings.length<3) return `<div class="muted">Te weinig metingen op deze dag.</div>`;
+function dayChartSvg(readings, events, win){
+  if(readings.length<3) return `<div class="muted">${TL("Te weinig metingen.","Too few readings.","Poucas leituras.")}</div>`;
   const W=320,H=175,PB=18,PL=22,PT=12;
   const lo=Math.min(3,...readings.map(r=>r.bg))-.5, hi=Math.max(13,...readings.map(r=>r.bg))+.5;
-  const X=min=>PL+(min/1440)*(W-PL), Y=b=>(H-PB)-(b-lo)/(hi-lo)*(H-PB-PT);
+  // win = {from,to}: doorlopend venster (bv. laatste 24 u); anders een kalenderdag.
+  const pos = win ? (ts=>(ts-win.from)/60000) : (ts=>todMin(ts)), span = win ? (win.to-win.from)/60000 : 1440;
+  const X=min=>PL+(min/span)*(W-PL), Y=b=>(H-PB)-(b-lo)/(hi-lo)*(H-PB-PT);
   let ax="";
-  for(const h of [0,6,12,18,24]){ const x=X(h*60);
+  const ticks = win ? (()=>{ const out=[]; const first=win.from+((360-(todMin(win.from)%360))%360)*60000;
+      for(let t=first;t<=win.to;t+=6*36e5) out.push({m:(t-win.from)/60000, lab:Math.round(todMin(t)/60)%24}); return out; })()
+    : [0,6,12,18,24].map(h=>({m:h*60, lab:h}));
+  for(const tk of ticks){ const x=X(tk.m);
     ax+=`<line x1="${x.toFixed(1)}" y1="${PT}" x2="${x.toFixed(1)}" y2="${H-PB}" stroke="var(--line)" stroke-width="1"/>`+
-        `<text x="${x.toFixed(1)}" y="${H-5}" font-size="9" fill="var(--muted)" text-anchor="middle">${h}${TL("u","h","h")}</text>`; }
+        `<text x="${x.toFixed(1)}" y="${H-5}" font-size="9" fill="var(--muted)" text-anchor="middle">${tk.lab}${TL("u","h","h")}</text>`; }
   for(const b of [4,10,14]){ if(b<lo||b>hi)continue; const y=Y(b);
     ax+=`<line x1="${PL}" y1="${y.toFixed(1)}" x2="${W}" y2="${y.toFixed(1)}" stroke="var(--line)" stroke-width="1"/>`+
         `<text x="${PL-3}" y="${(y+3).toFixed(1)}" font-size="9" fill="var(--muted)" text-anchor="end">${b}</text>`; }
   const band=`<rect x="${PL}" y="${Y(10).toFixed(1)}" width="${W-PL}" height="${(Y(3.9)-Y(10)).toFixed(1)}" fill="var(--inRange)" opacity=".08"/>`;
-  const pts=readings.map(r=>({x:X(todMin(r.ts)),y:Y(r.bg),bg:r.bg}));
+  const pts=readings.map(r=>({x:X(pos(r.ts)),y:Y(r.bg),bg:r.bg}));
   let d=""; pts.forEach((p,i)=>{ d+=(i?"L":"M")+p.x.toFixed(1)+" "+p.y.toFixed(1); });
   let red=""; for(let i=1;i<pts.length;i++){ if(readings[i].bg<3.9 || readings[i-1].bg<3.9)
     red+=`<line x1="${pts[i-1].x.toFixed(1)}" y1="${pts[i-1].y.toFixed(1)}" x2="${pts[i].x.toFixed(1)}" y2="${pts[i].y.toFixed(1)}" stroke="var(--low)" stroke-width="2.5" vector-effect="non-scaling-stroke"/>`; }
-  let mk=""; for(const e of events){ const x=X(todMin(e.ts));
+  let mk=""; for(const e of events){ const x=X(pos(e.ts));
     if(e.carbs>0){ mk+=`<circle cx="${x.toFixed(1)}" cy="${PT}" r="3" fill="var(--carb)"/>`;
       if(e.carbs>=10) mk+=`<text x="${x.toFixed(1)}" y="${(PT+12)}" font-size="8" fill="var(--muted)" text-anchor="middle">${Math.round(e.carbs)}g</text>`; }
     if(e.insulin>0 && !e.isSMB) mk+=`<line x1="${x.toFixed(1)}" y1="${H-PB}" x2="${x.toFixed(1)}" y2="${H-PB-9}" stroke="var(--accent)" stroke-width="2"/>`; }
   return `<svg class="chart" viewBox="0 0 ${W} ${H}">${band}${ax}<path d="${d}" fill="none" stroke="var(--ink)" stroke-width="1.5" vector-effect="non-scaling-stroke"/>${red}${mk}</svg>`;
+}
+// Overzicht: doorlopend venster van de laatste 24 uur (eindigt bij de laatste meting).
+function renderLast24(){
+  const host=document.getElementById("last24"); if(!host||!_ctx) return;
+  const g=_ctx.glucose; if(!g.length){ host.innerHTML=""; return; }
+  const to=Math.max(g[g.length-1].ts, Date.now()-5*60e3), from=to-24*36e5;
+  const rd=g.filter(x=>x.ts>=from&&x.ts<=to), ev=(_ctx.treatments||[]).filter(t=>t.ts>=from&&t.ts<=to);
+  host.innerHTML=dayChartSvg(rd,ev,{from,to});
+  const sub=document.getElementById("l24sub");
+  if(sub){ const n=rd.length; sub.textContent = n>=3 ? TL(`${pct0(rd.filter(x=>x.bg>=3.9&&x.bg<10).length/n)} in bereik`,`${pct0(rd.filter(x=>x.bg>=3.9&&x.bg<10).length/n)} in range`,`${pct0(rd.filter(x=>x.bg>=3.9&&x.bg<10).length/n)} no alvo`) : ""; }
 }
 function dayNarrative(readings, events){
   const n=readings.length; let inR=0,maxB=-Infinity,maxT=0,minB=Infinity,minT=0;
@@ -978,6 +993,7 @@ function render(glucose, treatments, timeline){
   _dayIdx = _dayKeys.length-1;
   document.getElementById("secDay").hidden = !_dayKeys.length;
   renderDay();
+  renderLast24();
   const tk=_dayKeys[_dayKeys.length-1], ts2=dayStats.get(tk);
   document.getElementById("todaySub").textContent = ts2 ? `${pct0(ts2.inr/ts2.n)} ${TL("in bereik tot nu","in range so far","no alvo até agora")}` : "";
   document.getElementById("secAware").hidden = false;
@@ -1360,7 +1376,8 @@ async function renderFindings(ctx){
     await DB.meta("consultlist",l2); toast(TL("Op je consultlijst gezet.","Added to your consult list.","Adicionado à sua lista de consulta.")); renderFindings(ctx); renderConsult(); });
   document.querySelectorAll("[data-goday]").forEach(b2=>b2.onclick=()=>{
     const i=_dayKeys.indexOf(b2.dataset.goday); if(i>=0){ _dayIdx=i; renderDay(); }
-    document.getElementById("secDay").scrollIntoView({behavior:"smooth",block:"center"}); });
+    if(typeof showTab==="function") showTab("analyses"); const sd=document.getElementById("secDay"); sd.open=true;
+    sd.scrollIntoView({behavior:"smooth",block:"center"}); });
 }
 
 /* ── Consultlijst — verzamelt bespreekpunten richting je afspraak ────────── */
