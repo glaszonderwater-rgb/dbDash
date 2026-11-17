@@ -63,3 +63,7 @@ insteladviezen. Wat je met een patroon doet, bespreek je met je behandelteam.
 - **Besluiten**: accepteren / aanpassen / afwijzen. Accepteren legt een "wijziging" vast; 14 dagen later staat de meting onder *Effect van doorgevoerde wijzigingen* (verbeterd · gelijk · verslechterd · onduidelijk, met aparte veiligheidscheck <3,0).
 - De app schrijft nooit naar AAPS of je pomp. Een periodevergelijking is geen herhaling van het oref1-algoritme en bewijst geen oorzaak.
 - **Koppellink**: Instellingen → "Kopieer koppellink" zet adres+token in één keer op een ander apparaat.
+
+## Structuur en tests
+- `index.html` (UI), `js/core.js` (rekenkern: eenheden, opslag, sync, metrics, maaltijd-/loop-analyse, voorstellen/vangrails). Klassieke scripts, geen modules, zodat openen via `file://` blijft werken.
+- `node test/unit.mjs` — unit-tests van de kern zonder browser. `node test/run-all.mjs` — alles (unit + browsertests); CI draait dit bij elke push (`.github/workflows/test.yml`, `CHROME_PATH` wijst naar Chromium).
