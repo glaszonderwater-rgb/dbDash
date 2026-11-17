@@ -21,8 +21,11 @@ installatie/offline-cache.
   worden nooit onderschept of gecachet — die gaan altijd live.
 - Je **Nightscout-adres en token** worden in je browser opgeslagen (`localStorage`),
   je **opgehaalde data** in `IndexedDB`. Beide blijven op jouw apparaat.
-- De app doet uitsluitend **read-only** verzoeken aan je eigen Nightscout. Er gaat
-  niets naar een andere server.
+- De app doet **read-only** verzoeken aan je eigen Nightscout. Er gaat niets naar een
+  andere server. **Enige uitzondering:** het tabblad **Import** (NEVO → Nightscout)
+  schrijft naar je voedseldatabase. Dat gebruikt een eigen token met schrijfrechten
+  dat je daar invult, nooit wordt opgeslagen en bij sluiten verdwijnt. Het
+  Excel-leesprogramma voor .xlsx wordt alleen op dat moment van cdnjs geladen (CSV werkt offline).
 
 ## Gebruik
 
@@ -41,3 +44,9 @@ host zetten.
 
 Dit is een persoonlijk analysehulpmiddel. De bevindingen zijn observaties, geen
 insteladviezen. Wat je met een patroon doet, bespreek je met je behandelteam.
+
+## Tabbladen
+
+- **Import** — NEVO-voedingsmiddelen naar de voedseldatabase van Nightscout (voor AAPS).
+- **Eten → Laad NEVO-producten** — leest die database (alleen lezen) en voegt de producten toe aan de koolhydraat-schatter.
+- **Analyses → Lunchtijd** — verdeling van lunchtijd, dagen zonder lunch en glucose na late lunch.
