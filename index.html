@@ -772,6 +772,8 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
     <summary><span data-i18n="an.proposals">Bespreekwaarden</span> <span class="foldhint" data-i18n="an.proposalsHint">concrete getallen om met je team te bespreken</span></summary>
     <div class="foldbody"><div id="proposals"></div></div>
   </details>
+  <details class="deep" data-an="maand"><summary><span>Maandtrend</span> <span class="foldhint">tijd in bereik per maand</span></summary><div class="body"><div class="loading">…</div></div></details>
+  <details class="deep" data-an="uur"><summary><span>Per uur</span> <span class="foldhint">spreiding, hypo's &amp; hoogtes per uur</span></summary><div class="body"><div class="loading">…</div></div></details>
   <details class="deep" data-an="loopbasal"><summary><span data-i18n="an.loopBasal">Loop-basaal</span> <span class="foldhint" data-i18n="an.loopBasalHint">wat je loop echt levert vs. je profiel</span></summary><div class="body"><div class="loading" data-i18n="loading">Openklappen om te berekenen…</div></div></details>
   <details class="deep" data-an="dagpatroon"><summary><span data-i18n="an.daypattern">Dagpatroon</span> <span class="foldhint" data-i18n="an.daypatternHint">vaste uren waarop je wegdrijft (basaal)</span></summary><div class="body"><div class="loading" data-i18n="loading">Openklappen om te berekenen…</div></div></details>
   <details class="fold" id="secInsulin" hidden>
@@ -3265,12 +3267,12 @@ function anLunch(glucose, treatments, q){
 function mealDayparts(results, med){
   const parts=[ {id:"ontbijt",lo:240,hi:660}, {id:"lunch",lo:660,hi:900}, {id:"diner",lo:900,hi:1320} ];
   const rows=parts.map(p=>{ const rs=results.filter(r=>r.ts!=null && todMin(r.ts)>=p.lo && todMin(r.ts)<p.hi);
-    return { id:p.id, n:rs.length, rise:med(rs.map(r=>r.peakRise)), t50:med(rs.filter(r=>r.t50!=null).map(r=>r.t50)) }; });
+    return { id:p.id, n:rs.length, rise:med(rs.map(r=>r.peakRise)), frac:med(rs.map(r=>r.frac)), t50:med(rs.filter(r=>r.t50!=null).map(r=>r.t50)) }; });
   const shown=rows.filter(r=>r.n>=3);
   if(shown.length<2) return "";   // pas zinvol bij ≥2 dagdelen met genoeg maaltijden
   const cap=s=>s.charAt(0).toUpperCase()+s.slice(1);
-  const table=`<div class="watable" style="margin-top:.7rem"><div class="warow head"><span>${TL("dagdeel","part of day","período")}</span><span>${TL("piek (med.)","peak (med.)","pico (med.)")}</span><span>t50</span></div>`+
-    shown.map(r=>`<div class="warow"><span>${cap(mealName(r.id))} <span style="color:var(--dim)">· n=${r.n}</span></span><span>+${nl1(r.rise)}</span><span>${r.t50==null?"—":Math.round(r.t50)} min</span></div>`).join("")+`</div>`;
+  const table=`<div class="watable" style="margin-top:.7rem"><div class="warow head"><span>${TL("dagdeel","part of day","período")}</span><span>${TL("piek (med.)","peak (med.)","pico (med.)")}</span><span>t50</span><span>${TL("KH-schatting","carb est.","est. HC")}</span></div>`+
+    shown.map(r=>`<div class="warow"><span>${cap(mealName(r.id))} <span style="color:var(--dim)">· n=${r.n}</span></span><span>+${nl1(r.rise)}</span><span>${r.t50==null?"—":Math.round(r.t50)} min</span><span>${r.frac==null?"—":Math.round(r.frac*100)+"%"}</span></div>`).join("")+`</div><div class="muted" style="font-size:.7rem">${TL("KH-schatting = wat je glucose liet zien t.o.v. wat je invoerde (100% = klopt; &lt;80% = waarschijnlijk te hoog geschat, &gt;120% = te laag). Observatie.","Carb est. = what glucose implied vs what you entered (100% = matches; &lt;80% = likely overestimated, &gt;120% = underestimated). Observation.","Est. HC = o que a glicose indicou vs o que introduziu (100% = certo). Observação.")}</div>`;
   const withRise=shown.filter(r=>r.rise!=null).sort((a,b)=>b.rise-a.rise);
   let obs="";
   if(withRise.length>=2){ const top=withRise[0], lo=withRise[withRise.length-1];
@@ -3612,6 +3614,38 @@ function renderDay(){
 function toast(msg){ let t=document.getElementById("toast");
   if(!t){ t=document.createElement("div"); t.id="toast"; t.setAttribute("role","status"); t.setAttribute("aria-live","polite"); document.body.appendChild(t); }
   t.textContent=msg; t.classList.add("show"); clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove("show"),3200); }
+
+/* ── Fase 2: maandtrend & uurtabel ──────────────────────────────────────────── */
+function anMonths(glucose, q){
+  const g=glucose.filter(x=>q.usableKeys.has(localDayKey(x.ts)));
+  const by=new Map(); for(const x of g){ const d=new Date(x.ts), k=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0"); (by.get(k)||by.set(k,[]).get(k)).push(x); }
+  const rows=[...by.entries()].sort().map(([k,a])=>({k,days:new Set(a.map(x=>localDayKey(x.ts))).size,m:metrics(a),n:a.length})).filter(r=>r.days>=7);
+  if(rows.length<2) return `<div class="muted">${TL("Nog geen 2 maanden met ≥7 bruikbare dagen. Zet bij Instellingen het aantal dagen hoger (bv. 180 of 365).","Not yet 2 months with ≥7 usable days. Raise the number of days in Settings (e.g. 180 or 365).","Ainda não há 2 meses com ≥7 dias utilizáveis. Aumente o número de dias nas Definições.")}</div>`;
+  const hd=`<div class="warow head"><span>${TL("maand","month","mês")}</span><span>${TL("in bereik","in range","no alvo")}</span><span>${TL("strak","tight","estreito")}</span><span>&lt;3,9</span><span>CV</span></div>`;
+  const body=rows.map(r=>`<div class="warow"><span>${r.k} <span style="color:var(--dim)">· ${r.days}d</span></span><span>${pct0(r.m.tir)}</span><span>${pct0(r.m.titr)}</span><span>${pct0(r.m.tbr)}</span><span>${pct0(r.m.cv)}</span></div>`).join("");
+  const a=rows[rows.length-1], b=rows[rows.length-2], d=a.m.tir-b.m.tir;
+  const gaps=(q.loopGaps||[]).length;
+  return `<div class="watable">${hd}${body}</div><div class="obs" style="margin-top:.5rem">${TL(`Laatste maand t.o.v. de vorige: tijd in bereik ${d>=0?"+":""}${Math.round(d*100)} procentpunt.`,`Latest month vs previous: time in range ${d>=0?"+":""}${Math.round(d*100)} percentage points.`,`Último mês vs anterior: tempo no alvo ${d>=0?"+":""}${Math.round(d*100)} pontos percentuais.`)}</div>`+
+    `<div class="muted" style="margin-top:.4rem">${TL(`Alleen dagen met ≥70% dekking${gaps?` en zonder loop-gat (${gaps} dagen uitgesloten)`:""}. Observatie, geen instelwaarde.`,`Only days with ≥70% coverage${gaps?` and without loop gap (${gaps} days excluded)`:""}. Observation, not a setting.`,`Só dias com ≥70% de cobertura${gaps?` e sem falha do loop (${gaps} dias excluídos)`:""}. Observação, não uma definição.`)}</div>`;
+}
+function anHours(glucose, q){
+  const g=glucose.filter(x=>q.usableKeys.has(localDayKey(x.ts)));
+  const days=new Set(g.map(x=>localDayKey(x.ts))).size;
+  if(days<7) return `<div class="muted">${TL("Te weinig bruikbare dagen (min. 7).","Too few usable days (min. 7).","Poucos dias utilizáveis (mín. 7).")}</div>`;
+  const H=Array.from({length:24},()=>[]);
+  for(const x of g) H[Math.floor(todMin(x.ts)/60)%24].push(x.bg);
+  // hypo-episodes: ≥15 min aaneengesloten <3,9; start-uur
+  const starts=Array(24).fill(0); let run=null;
+  for(let i=0;i<g.length;i++){ const x=g[i], ok=i>0&&x.ts-g[i-1].ts<=20*60e3;
+    if(x.bg<3.9){ if(!run||!ok) run={t0:x.ts,cnt:false}; if(!run.cnt&&x.ts-run.t0>=15*60e3){ run.cnt=true; starts[Math.floor(todMin(run.t0)/60)%24]++; } } else run=null; }
+  const pc=(a,p)=>{const s=[...a].sort((x,y)=>x-y);return s.length?s[Math.min(s.length-1,Math.floor(p*s.length))]:null;};
+  const rows=H.map((a,h)=>({h,n:a.length,p10:pc(a,.1),p50:pc(a,.5),p90:pc(a,.9),low:a.filter(v=>v<3.9).length/(a.length||1),high:a.filter(v=>v>10).length/(a.length||1),ep:starts[h]}));
+  const worstLow=[...rows].sort((a,b)=>b.low-a.low)[0], worstHigh=[...rows].sort((a,b)=>b.high-a.high)[0];
+  const tr=rows.map(r=>`<div class="warow"><span>${String(r.h).padStart(2,"0")}:00</span><span>${nl1(r.p10)}–${nl1(r.p90)}</span><span style="${r.low>0.04?"color:var(--low);font-weight:600":""}">${pct0(r.low)}</span><span style="${r.high>0.25?"color:var(--high);font-weight:600":""}">${pct0(r.high)}</span><span>${r.ep}</span></div>`).join("");
+  return `<div class="watable"><div class="warow head"><span>${TL("uur","hour","hora")}</span><span>p10–p90</span><span>&lt;3,9</span><span>&gt;10</span><span>${TL("hypo-starts","hypo starts","início hipo")}</span></div>${tr}</div>`+
+    `<div class="obs" style="margin-top:.5rem">${TL(`Meeste tijd onder 3,9: <b>${String(worstLow.h).padStart(2,"0")}:00</b> (${pct0(worstLow.low)}). Meeste tijd boven 10: <b>${String(worstHigh.h).padStart(2,"0")}:00</b> (${pct0(worstHigh.high)}).`,`Most time below 3.9: <b>${String(worstLow.h).padStart(2,"0")}:00</b> (${pct0(worstLow.low)}). Most time above 10: <b>${String(worstHigh.h).padStart(2,"0")}:00</b> (${pct0(worstHigh.high)}).`,`Mais tempo abaixo de 3,9: <b>${String(worstLow.h).padStart(2,"0")}:00</b> (${pct0(worstLow.low)}). Mais tempo acima de 10: <b>${String(worstHigh.h).padStart(2,"0")}:00</b> (${pct0(worstHigh.high)}).`)}</div>`+
+    `<div class="muted" style="margin-top:.4rem">${TL(`${days} bruikbare dagen. Rood = boven de ATTD-grens (4% / 25%). Observatie, geen instelwaarde.`,`${days} usable days. Coloured = beyond ATTD limit (4% / 25%). Observation, not a setting.`,`${days} dias utilizáveis. Destacado = acima do limite ATTD (4% / 25%). Observação, não uma definição.`)}</div>`;
+}
 function initDeep(){
   document.querySelectorAll("details.deep").forEach(d=>{
     d.addEventListener("toggle", ()=>{
@@ -3625,6 +3659,8 @@ function initDeep(){
           : an==="meals" ? anMeals(glucose, treatments, q, timeline)
           : an==="stacking" ? anStacking(glucose, treatments, q)
           : an==="lunch" ? anLunch(glucose, treatments, q)
+          : an==="maand" ? anMonths(glucose, q)
+          : an==="uur" ? anHours(glucose, q)
           : "";
       } catch(e){ body.innerHTML = `<div class="muted">${TL("Analyse mislukt","Analysis failed","Análise falhou")}: ${e.message}</div>`; console.error(an, e); }
     });
