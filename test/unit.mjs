@@ -7,7 +7,7 @@ const TL=(nl,en,pt)=>nl; const t=k=>k; const DECSEP=()=>","; const esc=s=>String
 const document={documentElement:{}}; const getComputedStyle=()=>({getPropertyValue:()=>""});
 const indexedDB={open(){throw new Error("geen idb")}}; const localStorage={getItem(){return null},setItem(){}};
 `;
-const post=`;({metrics,localDayKey,todMin,fmtMin,loopBasal,applyGuardrails,guardrailStats,DAYPARTS,toMgdl,mmol,bandOf,_pMed,_pMean})`;
+const post=`;({metrics,localDayKey,todMin,fmtMin,loopBasal,smbISF,applyGuardrails,guardrailStats,DAYPARTS,toMgdl,mmol,bandOf,_pMed,_pMean})`;
 const ctx=vm.createContext({console,Intl,Date,Math,Map,Set,Promise,JSON,Object,Array,Number,String,RegExp,parseFloat,isFinite,setTimeout,navigator:{}});
 const X=vm.runInContext(pre+core+post,ctx);
 let n=0; const T=(name,f)=>{try{f();n++;console.log('OK  ',name)}catch(e){console.log('FAIL',name,'\n',e.message);process.exitCode=1}};
@@ -40,4 +40,9 @@ T('guardrail: stap >10% geeft waarschuwing',()=>{
 T('guardrail: één wijziging per dagdeel (tweede wacht)',()=>{
   const {g,q}=mk(false); const it=[item('0.80','0.84'),{key:'ic',rows:[{dpKey:'nacht',cands:[{from:'5',to:'4.8',tag:'gemeten'}],pre:[]}]}];
   const out=X.applyGuardrails(it,g,q); assert.equal(out.find(x=>x.key==='ic').rows[0].queued,true); });
+T('smbISF: te weinig vensters → alleen n',()=>{ const r=X.smbISF(series(2,()=>9),[],null,null); assert.equal(r.n,0); assert.equal(r.med,undefined); });
+T('smbISF: koolhydraatvrije SMB-vensters met daling geven mediaan',()=>{
+  const g=series(20,(ts,d,i)=>{const m=i%96; return m<12?10:(m<36?10-(m-12)*0.1:7.6)}); // elke 8 u: start 10, daalt ~2.4
+  const tr=[]; for(let d=0;d<20;d++)for(let k=0;k<3;k++) tr.push({ts:base+d*24*H+k*8*H,insulin:1,isSMB:true,carbs:0});
+  const r=X.smbISF(g,tr,null,null); assert.ok(r.n>=12,'n='+r.n); assert.ok(r.med>0,'med='+r.med); });
 console.log(`\n${n} tests geslaagd`); 

@@ -310,6 +310,37 @@ const mealName = k => { const a=_MEALN[k]; return a?TL(a[0],a[1],a[2]):k; };
 // Waargenomen ISF uit geïsoleerde correctiebolussen: hoeveel liet 1 E je glucose
 // werkelijk dalen? Streng gefilterd (geen koolhydraten, nauwelijks andere insuline,
 // verhoogde start) en uitdrukkelijk indicatief — basaaldrift en resterend eten storen.
+// Closed loop: ISF uit SMB-respons. Alleen indicatief: de loop past óók temp-basaal aan, dus dit meet de respons
+// op "extra" insuline (SMB's) in koolhydraatvrije vensters, niet een zuivere ISF. Bespreekmateriaal voor je team.
+function smbISF(glucose, treatments, timeline, q){
+  const WIN=3*3600e3, PRE=2*3600e3, MIN_BG=8, MIN_U=0.4, MIN_EV=12;
+  const carbTs=treatments.filter(t=>t.carbs>0).map(t=>t.ts).sort((a,b)=>a-b);
+  const nearCarb=(a,b)=>{ let lo=0,hi=carbTs.length; while(lo<hi){const m=(lo+hi)>>1; if(carbTs[m]<a)lo=m+1;else hi=m;} return lo<carbTs.length&&carbTs[lo]<=b; };
+  const smb=treatments.filter(t=>t.isSMB&&t.insulin>0).sort((a,b)=>a.ts-b.ts);
+  const bolus=treatments.filter(t=>t.insulin>0&&!t.isSMB&&!(t.carbs>0));
+  const T=glucose.map(g=>g.ts); const lb=ts=>{let lo=0,hi=T.length;while(lo<hi){const m=(lo+hi)>>1;if(T[m]<ts)lo=m+1;else hi=m;}return lo;};
+  const okDay=ts=>!q||!q.usableKeys||q.usableKeys.has(localDayKey(ts));
+  const ev=[]; let i=0;
+  while(i<smb.length){
+    const s0=smb[i]; i++;
+    if(!okDay(s0.ts)||nearCarb(s0.ts-PRE,s0.ts+WIN)) continue;
+    let u=s0.insulin; while(i<smb.length&&smb[i].ts<s0.ts+WIN){ u+=smb[i].insulin; i++; }
+    if(u<MIN_U) continue;
+    if(bolus.some(b=>b.ts>s0.ts-3600e3&&b.ts<s0.ts+WIN)) continue;            // geen handmatige bolus in het venster
+    const k=lb(s0.ts); if(k>=T.length||T[k]-s0.ts>10*60e3) continue;
+    const win=[]; for(let j=k;j<T.length&&T[j]<=s0.ts+WIN;j++) win.push(glucose[j]);
+    if(win.length<24) continue;
+    const bg0=win[0].bg; if(bg0<MIN_BG) continue;
+    const tail=win.slice(-3), bgEnd=tail.reduce((a,x)=>a+x.bg,0)/3;
+    const p=timeline&&profileAt(timeline,s0.ts), dia=Math.max(300,((p&&p.dia)||6)*60), frac=1-insulinModel(PEAK_MIN,dia).iob(WIN/60000);
+    if(frac<0.4) continue;
+    ev.push({ts:s0.ts, isf:(bg0-bgEnd)/(u*frac), u, isfP:(p&&p.isf)||null});
+  }
+  if(ev.length<MIN_EV) return { n:ev.length };
+  const s=ev.map(e=>e.isf).sort((a,b)=>a-b), med=s[Math.floor(s.length/2)], q1=s[Math.floor(s.length*.25)], q3=s[Math.floor(s.length*.75)];
+  const pr=ev.map(e=>e.isfP).filter(Boolean).sort((a,b)=>a-b);
+  return { n:ev.length, med, q1, q3, prof:pr.length?pr[Math.floor(pr.length/2)]:null };
+}
 function observedISF(glucose, treatments, timeline){
   const WIN=3*3600e3, CLEAN=60*60e3, MIN_EV=8, MIN_BG=8, MIN_U=0.5;
   const carbTs=treatments.filter(t=>t.carbs>0).map(t=>t.ts).sort((a,b)=>a-b);
