@@ -46,7 +46,7 @@ console.log('  Veiligheid vóór Insuline:', (safety>-1&&insulin>-1&&safety<insu
 console.log('Eten-tab → eigen view + schatter:', (eten.shown&&eten.hasSearch&&eten.cats>0)?'JA':'NEE', `(cats=${eten.cats})`);
 console.log('errors:', errors.length?errors:'geen');
 
-const ok = bar.length===4 && allIcons && tabs==='overzicht,eten,analyses,consult'
+const ok = bar.length===4 && allIcons && tabs==='overzicht,analyses,eten,consult'
   && dayFold.tag==='DETAILS' && !dayFold.open && order.first==='Maaltijden' && safety<insulin
   && eten.shown && eten.hasSearch && eten.cats>0 && !errors.length;
 console.log('\nRESULTAAT:', ok?'OK':'FOUT');

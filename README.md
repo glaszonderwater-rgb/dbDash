@@ -67,3 +67,9 @@ insteladviezen. Wat je met een patroon doet, bespreek je met je behandelteam.
 ## Structuur en tests
 - `index.html` (UI), `js/core.js` (rekenkern: eenheden, opslag, sync, metrics, maaltijd-/loop-analyse, voorstellen/vangrails). Klassieke scripts, geen modules, zodat openen via `file://` blijft werken.
 - `node test/unit.mjs` — unit-tests van de kern zonder browser. `node test/run-all.mjs` — alles (unit + browsertests); CI draait dit bij elke push (`.github/workflows/test.yml`, `CHROME_PATH` wijst naar Chromium).
+
+## IDA 2.0
+- Nieuwe naam: **IDA**. Vier tabs (Vandaag, Patronen, Eten, Team) plus een +-knop om snel te loggen.
+- `js/ida.js`: de assistent-schermen. `aapsProfile()` in `js/core.js` rekent een compleet AAPS-profiel uit (basaal per blok, ISF, KH-ratio) met vangrails: max +30% basaal per dag, omlaag bij >4% laag, ISF/KH max ±20%.
+- Tijdzone per moment uit AAPS (`utcOffset`), zodat uur-analyses kloppen als je reist.
+- Loopstatus (autosens, voorspelling) wordt 30 dagen bewaard; dagen die je als "op pen" logt tellen niet mee.

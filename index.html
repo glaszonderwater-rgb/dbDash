@@ -2,25 +2,25 @@
 <html lang="nl">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https: http://localhost:*; worker-src 'self'; manifest-src 'self'; base-uri 'none'; form-action 'none'; object-src 'none'; frame-ancestors 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https: http://localhost:*; worker-src 'self'; manifest-src 'self'; base-uri 'none'; form-action 'none'; object-src 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#FFFFFF" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#0E1216" media="(prefers-color-scheme: dark)">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>IDM</title>
+<title>IDA</title>
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
-<meta name="application-name" content="IDM">
-<meta name="apple-mobile-web-app-title" content="IDM">
+<meta name="application-name" content="IDA">
+<meta name="apple-mobile-web-app-title" content="IDA">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <style>
 /* ══════════════════════════════════════════════════════════════════════════
-   IDM — lichte herbouw. Geen Plotly: alle grafieken zijn zelfgebouwde,
+   IDA — lichte herbouw. Geen Plotly: alle grafieken zijn zelfgebouwde,
    schaalbare SVG (viewBox → passen zich vanzelf aan de breedte aan, zonder
    JavaScript-resize). Systeemletters voor maximale snelheid. Mobiel eerst.
    ══════════════════════════════════════════════════════════════════════════ */
@@ -536,7 +536,7 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:-1px;bor
   body:not(.reporting) .kpi{background:#fff}
   body:not(.reporting) section{break-inside:avoid}
   body:not(.reporting) main{padding-top:0}
-  body:not(.reporting) main::before{content:"IDM — samenvatting voor het behandelteam";display:block;font-size:1.1rem;font-weight:700;margin:0 0 .6rem}
+  body:not(.reporting) main::before{content:"IDA — samenvatting voor het behandelteam";display:block;font-size:1.1rem;font-weight:700;margin:0 0 .6rem}
 }
 
 /* ══════════════ Companion-home (v6) ══════════════ */
@@ -691,6 +691,146 @@ details.why>summary::after{content:" ›"}
 .l24leg{font-size:.68rem;margin-top:.2rem}
 .view[data-view="analyses"]>.scope{border-top:0;border-bottom:1px solid var(--line);margin-bottom:.6rem}
 .dot.warn{background:var(--warn)}
+/* ═══ IDA 2.0 — warm papier, ronde kaarten, één teal accent, amber voor "nu" ═══ */
+:root{ --bg:#F4F2EE; --surface:#FFFFFF; --surface-2:#F4F2EE; --raised:#FFFFFF; --ink:#16191D; --muted:#5E646B; --dim:#6B7177;
+  --line:#ECE7DF; --line-2:#E3DED6; --accent:#0E6B66; --accent-soft:#E3F0EE; --t-accent:#0E6B66; --radius:20px;
+  --ida-acc:#0E6B66; --ida-acc-2:#9CC9C4; --ida-mute:#E3DED6; --ida-ink:#16191D; --ida-sub:#5E646B; --ida-card:#FFFFFF; --ida-dark:#16191D; --ida-amber:#F2B455;
+  --sans:"Plus Jakarta Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; }
+@media (prefers-color-scheme:dark){ :root:not([data-theme="light"]){
+  --bg:#0D0F12; --surface:#1A1D21; --surface-2:#22262B; --raised:#22262B; --ink:#EDEFF1; --muted:#A3A9B0; --dim:#8C939A; --line:#262A30; --line-2:#30353C;
+  --accent:#7FD1C8; --accent-soft:#12302E; --t-accent:#7FD1C8; --ida-acc:#5FC0B6; --ida-acc-2:#2C5753; --ida-mute:#30353C; --ida-ink:#EDEFF1; --ida-sub:#A3A9B0; --ida-card:#1A1D21; --ida-dark:#1A1D21; } }
+:root[data-theme="dark"]{ --bg:#0D0F12; --surface:#1A1D21; --surface-2:#22262B; --raised:#22262B; --ink:#EDEFF1; --muted:#A3A9B0; --dim:#8C939A; --line:#262A30; --line-2:#30353C;
+  --accent:#7FD1C8; --accent-soft:#12302E; --t-accent:#7FD1C8; --ida-acc:#5FC0B6; --ida-acc-2:#2C5753; --ida-mute:#30353C; --ida-ink:#EDEFF1; --ida-sub:#A3A9B0; --ida-card:#1A1D21; --ida-dark:#1A1D21; }
+body{background:var(--bg);font-family:var(--sans);font-variant-numeric:tabular-nums;padding-bottom:calc(6.5rem + env(safe-area-inset-bottom,0px))}
+header{background:color-mix(in srgb,var(--bg) 92%,transparent);border-bottom:0}
+.brand .mark{color:var(--ink)} .brandtxt{font-weight:800}
+details.deep,details.fold,.card{background:var(--surface)!important;border:0!important;border-radius:20px!important}
+button.ghost{border-radius:22px}
+#btnSync{border-radius:22px;background:var(--ink);color:var(--bg)}
+/* koppen */
+.ititle{font-size:1.75rem;font-weight:800;letter-spacing:-.03em;margin:.6rem 0 .8rem}
+.ihead,.chome.ida .chead{font-size:.95rem!important;font-weight:800!important;letter-spacing:0!important;text-transform:none!important;color:var(--ink)!important;margin:1.2rem .2rem .5rem!important}
+.idate{font-size:.82rem;font-weight:600;color:var(--muted);margin:.4rem .2rem .7rem}
+/* donkere kopkaart */
+.ihero{display:flex;flex-direction:column;gap:.3rem;background:#16191D;color:#fff;border-radius:26px;padding:1.1rem 1.15rem .8rem;border:0;text-align:left;width:100%;font:inherit;
+  --ink:#FFFFFF; --muted:#9AA1A8; --dim:#8C939A; --line:rgba(255,255,255,.10); --line-2:rgba(255,255,255,.14); --inRange:#2F9E72; --carb:#B7A6F5; --accent:#7FD1C8}
+.ihero.sm{padding:1rem 1.1rem}
+.ihrow{display:flex;justify-content:space-between;align-items:flex-end}
+.ihnow{display:flex;align-items:baseline;gap:.4rem}
+.ihv{font-size:4rem;font-weight:800;letter-spacing:-.04em;line-height:.95}
+.iha{font-size:1.6rem}
+.ihpred{display:flex;flex-direction:column;align-items:flex-end;padding-bottom:.35rem}
+.ihpred span{font-size:.75rem;color:#B9BEC4} .ihpred b{font-size:1.25rem;font-weight:800}
+.ihmeta{font-size:.82rem;color:#B9BEC4}
+.ih24{margin-top:.5rem}
+.ih24 svg text{fill:#8C939A}
+.chome.ida .kpis{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:.5rem!important;border:0!important;background:transparent!important;margin-top:.7rem}
+.chome.ida .kpis .kpi{background:var(--ida-card)!important;border:0!important;border-radius:18px!important;padding:.65rem .75rem!important;box-shadow:none!important}
+.chome.ida .kpis .kpi:nth-child(n+4){display:none!important}
+.chome.ida .kpis .kpi .v{font-size:1.4rem!important;font-weight:800!important}
+.chome.ida .kpis .kpi .s{display:none}
+.chome.ida .kpis .kpi .k{font-size:.7rem;text-transform:none;letter-spacing:0;font-weight:600}
+/* assistent-kaarten en bevindingen */
+.icard,.chome.ida .f{background:var(--ida-card)!important;border-radius:20px!important;padding:.85rem .9rem!important;margin:0 0 .5rem!important;border:0!important}
+.chome.ida .f.unread::before{display:none}
+.chome.ida .ftxt{font-size:.92rem!important}
+.icrow{display:flex;gap:.65rem;align-items:flex-start}
+.icic{flex:none;width:32px;height:32px;border-radius:10px;display:flex;align-items:center;justify-content:center}
+.icic svg{width:18px;height:18px;fill:none;stroke-width:2}
+.icic.t{background:var(--accent-soft)} .icic.t svg{stroke:var(--ida-acc)}
+.icic.p{background:#F1EBFF} .icic.p svg{stroke:#6A4FD0}
+.ictxt{font-size:.92rem;line-height:1.4} .ictxt b{font-weight:700}
+.icacts{display:flex;flex-wrap:wrap;gap:.45rem;margin-top:.65rem}
+.ibtn{min-height:40px;height:auto;padding:.45rem 1rem;border:0;border-radius:20px;background:var(--surface-2);color:var(--ink);font:inherit;font-size:.82rem;font-weight:700;cursor:pointer}
+.ibtn.acc{background:var(--ida-acc);color:#fff} .ibtn.dark{background:var(--ink);color:var(--bg)}
+.ibtn.big{min-height:52px;font-size:1rem;border-radius:26px;width:100%}
+.ibtn:disabled{opacity:.4}
+.iinp{height:40px;width:90px;border-radius:12px;border:1px solid var(--line-2);background:var(--surface);color:var(--ink);padding:0 .7rem;font:inherit}
+.srl{position:absolute;left:-9999px}
+/* tegels */
+.ibento,.igrid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.6rem}
+.igrid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.5rem}
+.itile{background:var(--ida-card);border-radius:22px;padding:.85rem;display:flex;flex-direction:column;gap:.35rem;border:0;text-align:left;font:inherit;color:var(--ink)}
+.itile.wide{grid-column:1/-1}
+.itile.dark{background:#16191D;color:#fff}
+.itile.row{flex-direction:row;align-items:center;gap:.9rem}
+.itile.sm{padding:.7rem}
+.itile.tap,.ihero.tap{cursor:pointer}
+.itl{font-size:.75rem;font-weight:700;color:var(--muted)} .itile.dark .itl,.ihero .itl{color:#B9BEC4}
+.itv{display:flex;align-items:baseline;gap:.5rem;flex-wrap:wrap} .itv b{font-size:2.4rem;font-weight:800;letter-spacing:-.03em;line-height:1} .itv span{font-size:.85rem;color:#B9BEC4}
+.itn{font-size:1.8rem;font-weight:800;letter-spacing:-.03em;line-height:1}
+.itn.lo{color:#B23A35} .itn.hi{color:#8F5600}
+.its{font-size:.75rem;line-height:1.35;color:var(--muted)} .its.big{font-size:.9rem;color:var(--ink)} .itile.dark .its{color:#D7DADE}
+.ittl{font-size:.95rem;font-weight:800}
+.ibars{width:100%;height:40px}
+.ispark{width:100%;height:64px}
+.iname{font-size:1.15rem;font-weight:800} .iname.big{font-size:1.6rem;letter-spacing:-.03em}
+.igrid3.dk{margin-top:.5rem} .igrid3.dk>div{background:#23282E;border-radius:16px;padding:.6rem;display:flex;flex-direction:column;gap:.1rem}
+.igrid3.dk i{font-style:normal;font-size:.7rem;color:#B9BEC4} .igrid3.dk b{font-size:1rem;font-weight:800} .igrid3.dk em{font-style:normal;font-size:.7rem;color:#7FD1C8}
+.ihero.tap .ibtn{align-self:flex-start;margin-top:.6rem}
+.ichips{display:flex;flex-wrap:wrap;gap:.4rem;margin-top:.4rem} .ichips span{background:#23282E;border-radius:14px;padding:.4rem .7rem;font-size:.8rem} .ichips i{font-style:normal;color:#B9BEC4}
+.ilink{border:0;background:none;color:var(--t-accent);font:inherit;font-size:.85rem;font-weight:700;padding:.6rem .2rem;cursor:pointer;text-align:left}
+#etenHero{display:flex;flex-direction:column;gap:.5rem;margin-bottom:.8rem}
+#teamTop{display:flex;flex-direction:column;gap:.6rem}
+/* meter */
+.imeter{display:flex;flex-direction:column;gap:.3rem;margin:.35rem 0}
+.imrow{display:flex;justify-content:space-between;align-items:baseline;font-size:.82rem;gap:.5rem} .imrow i{font-style:normal;color:var(--muted)} .imrow b{font-weight:800}
+.imbar{position:relative;height:8px;border-radius:4px;background:var(--ida-mute)} .imbar i{position:absolute;left:0;top:0;bottom:0;border-radius:4px}
+.imbar em{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--ink)}
+/* profiel */
+.iback{width:44px;height:44px;border-radius:22px;border:0;background:var(--ida-card);display:flex;align-items:center;justify-content:center;margin:.5rem 0 .7rem;cursor:pointer}
+.iback svg{width:20px;height:20px;fill:none;stroke:var(--ink);stroke-width:2.2}
+#profBody{display:flex;flex-direction:column;gap:.6rem}
+.ibasal{width:100%;height:auto}
+.ileg{display:flex;flex-wrap:wrap;gap:.8rem;font-size:.72rem;color:var(--muted)} .ileg span{display:flex;align-items:center;gap:.3rem}
+.ileg i{width:10px;height:10px;border-radius:3px;display:inline-block} .ileg i.dash{width:14px;height:0;border-top:1.6px dashed var(--ink);border-radius:0}
+.itabs{display:flex;gap:.35rem;flex-wrap:wrap;margin-bottom:.3rem}
+.itabs button{min-height:36px;padding:0 .9rem;border:0;border-radius:18px;background:var(--surface-2);color:var(--ink);font:inherit;font-size:.8rem;font-weight:700;cursor:pointer}
+.itabs button[aria-selected="true"]{background:var(--ink);color:var(--bg)}
+.iprow{display:flex;align-items:center;gap:.7rem;padding:.6rem 0;border-top:1px solid var(--line)}
+.ipt{width:3rem;font-weight:700;font-size:.88rem} .ipv{width:3.4rem;font-size:1.25rem;font-weight:800}
+.ipw{flex:1;font-size:.72rem;color:var(--muted);line-height:1.35} .ipw em{font-style:normal}
+.ichip{min-width:3.3rem;text-align:center;font-size:.75rem;font-weight:800;border-radius:10px;padding:.25rem .3rem}
+.ichip.up{background:var(--accent-soft);color:var(--t-accent)} .ichip.dn{background:#FBEFD9;color:#8F5600} .ichip.eq{background:var(--surface-2);color:var(--muted)}
+.inote{background:#FBEFD9;color:#4D3300;border-radius:20px;padding:.8rem .95rem;font-size:.82rem;line-height:1.4}
+.iacts{display:flex;flex-direction:column;gap:.5rem;margin:.4rem 0 1rem}
+.chome.ida .watch{background:var(--ida-card);border:0!important;border-radius:20px;padding:.85rem .95rem;margin-top:.6rem}
+.chome.ida .watch::before{display:none}
+.itile.row>div{display:flex;flex-direction:column;gap:.2rem}
+.nu{background:var(--ida-card)!important;border:0!important;border-radius:22px!important;box-shadow:none!important;font-family:var(--sans)!important}
+.nu .val{font-family:var(--sans)!important;font-weight:800!important}
+.nu .age,.nu .onb{font-family:var(--sans)!important}
+/* onderbalk */
+.nav.inav{left:16px;right:16px;bottom:calc(14px + env(safe-area-inset-bottom,0px));border-radius:34px;background:#16191D!important;border:0;padding:.35rem .4rem;backdrop-filter:none;align-items:center;gap:0;max-width:560px;margin:0 auto}
+.nav.inav .tab{color:#8C939A!important;background:transparent!important;border-radius:22px;padding:.3rem 0;min-height:52px;font-size:.66rem;font-weight:700}
+.nav.inav .tab svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2}
+.nav.inav .tab.on{color:#FFFFFF!important;background:#2A2F35!important}
+.nav.inav .tab.on::before{display:none}
+.iplus{flex:none;width:56px;height:56px;min-height:56px;border-radius:28px;border:0;background:#F2B455;display:flex;align-items:center;justify-content:center;margin:0 .3rem;cursor:pointer;padding:0}
+.iplus svg{width:24px;height:24px;fill:none;stroke:#16191D;stroke-width:2.4}
+/* loggen */
+.isheet{margin:auto auto 0;width:100%;max-width:560px;border:0;border-radius:30px 30px 0 0;padding:.6rem 1.1rem calc(1.6rem + env(safe-area-inset-bottom,0px));background:var(--ida-card);color:var(--ink)}
+.isheet::backdrop{background:rgba(20,18,15,.45)}
+.ishandle{width:40px;height:5px;border-radius:3px;background:var(--line-2);margin:0 auto .6rem}
+.ishead{display:flex;justify-content:space-between;align-items:center;margin-bottom:.8rem} .ishead h2{font-size:1.45rem;font-weight:800;letter-spacing:-.03em;margin:0}
+.iclose{width:44px;height:44px;border-radius:22px;border:0;background:var(--surface-2);display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0}
+.iclose svg{width:18px;height:18px;stroke:var(--ink);stroke-width:2.4;fill:none}
+#logBody{display:flex;flex-direction:column;gap:.7rem}
+.lgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.55rem}
+.ltile{min-height:92px;border:0;border-radius:22px;background:var(--surface-2);color:var(--ink);display:flex;flex-direction:column;align-items:flex-start;justify-content:space-between;padding:.8rem;font:inherit;font-size:.85rem;font-weight:700;text-align:left;cursor:pointer;line-height:1.2}
+.ltile svg{width:24px;height:24px;fill:none;stroke:var(--ida-acc);stroke-width:2}
+.ltile.on{background:#16191D;color:#fff} .ltile.on svg{stroke:#F2B455}
+.llab{font-size:.8rem;font-weight:700;color:var(--muted)}
+.lchips{display:flex;gap:.45rem;flex-wrap:wrap}
+.lchip{min-height:40px;padding:0 1rem;border:0;border-radius:20px;background:var(--surface-2);color:var(--ink);font:inherit;font-size:.82rem;font-weight:700;cursor:pointer}
+.lchip.on{background:var(--ink);color:var(--bg)}
+/* dark-mode details voor donkere kaarten blijven donker */
+@media (prefers-color-scheme:dark){ :root:not([data-theme="light"]) .ihero,:root:not([data-theme="light"]) .itile.dark,:root:not([data-theme="light"]) .nav.inav{background:#1A1D21!important}
+  :root:not([data-theme="light"]) .ltile.on{background:#EDEFF1;color:#0D0F12} :root:not([data-theme="light"]) .icic.p{background:#2A2342} :root:not([data-theme="light"]) .inote{background:#3A2C12;color:#F6DDB0}
+  :root:not([data-theme="light"]) .ichip.dn{background:#3A2C12;color:#F2B455} :root:not([data-theme="light"]) .itn.lo{color:#FF9E97} :root:not([data-theme="light"]) .itn.hi{color:#F2B455} }
+:root[data-theme="dark"] .ihero,:root[data-theme="dark"] .itile.dark,:root[data-theme="dark"] .nav.inav{background:#1A1D21!important}
+:root[data-theme="dark"] .ltile.on{background:#EDEFF1;color:#0D0F12} :root[data-theme="dark"] .icic.p{background:#2A2342} :root[data-theme="dark"] .inote{background:#3A2C12;color:#F6DDB0}
+:root[data-theme="dark"] .ichip.dn{background:#3A2C12;color:#F2B455} :root[data-theme="dark"] .itn.lo{color:#FF9E97} :root[data-theme="dark"] .itn.hi{color:#F2B455}
 </style>
 </head>
 <body>
@@ -710,7 +850,7 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
 <header>
   <div class="wrap">
     <div class="topbar">
-      <div class="brand"><svg class="mark" viewBox="0 0 28 28" aria-hidden="true"><rect x="1" y="1" width="26" height="26" rx="7" fill="none" stroke="currentColor" stroke-width="2"/><rect x="2" y="10" width="24" height="8" fill="var(--accent)" opacity=".2"/><path d="M5 18 C9 8 12 8 14 14 S20 20 23 9" fill="none" stroke="var(--accent)" stroke-width="2.2" stroke-linecap="round"/></svg><span class="brandtxt">IDM</span></div>
+      <div class="brand"><svg class="mark" viewBox="0 0 28 28" aria-hidden="true"><rect x="1" y="1" width="26" height="26" rx="7" fill="none" stroke="currentColor" stroke-width="2"/><rect x="2" y="10" width="24" height="8" fill="var(--accent)" opacity=".2"/><path d="M5 18 C9 8 12 8 14 14 S20 20 23 9" fill="none" stroke="var(--accent)" stroke-width="2.2" stroke-linecap="round"/></svg><span class="brandtxt">IDA</span></div>
       <div class="grow"></div>
       <div class="conn" role="status" aria-live="polite"><i class="dot" id="dot" aria-hidden="true"></i><span id="connTxt">niet ingesteld</span></div>
       <button id="btnSync" data-i18n="btn.sync" disabled>Sync</button>
@@ -733,17 +873,16 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
 
   <!-- OVERZICHT — het verhaal -->
   <div class="view" data-view="overzicht">
-  <div class="chome">
-
+  <div class="chome ida">
+    <div class="idate" id="idaDate"></div>
+    <section class="ihero" id="idaHero" hidden>
+      <div class="ihrow"><div class="ihnow"><span class="ihv" id="idaVal">—</span><span class="iha" id="idaArrow"></span></div>
+        <div class="ihpred" id="idaPredBox" hidden><span>AAPS verwacht</span><b id="idaPred">—</b></div></div>
+      <div class="ihmeta" id="idaMeta"></div>
+      <div id="last24" class="ih24"></div>
+    </section>
     <div class="greet" id="homeGreet" hidden><b id="greetHi"></b><span class="sub" id="greetSub"></span></div>
-
-    <div class="hero" id="homeHero" hidden>
-      <span class="hv" id="ringVal">—</span><span class="hu">mmol/L</span>
-      <span class="harw" id="heroArrow"></span>
-      <span class="hside" id="ringMeta"></span>
-    </div>
-
-
+    <div class="hero" id="homeHero" hidden><span class="hv" id="ringVal">—</span><span class="hu">mmol/L</span><span class="harw" id="heroArrow"></span><span class="hside" id="ringMeta"></span></div>
     <div class="chead" id="epMaand"><span data-i18n="home.kpiTitle">Kerncijfers</span> <span class="sub" id="monthSub"></span></div>
     <div class="kpis" id="kpis"></div>
     <details class="mini"><summary data-i18n="home.kpiExplainSummary">Wat betekenen deze cijfers?</summary>
@@ -755,12 +894,11 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
       </div>
     </details>
     <div id="secWatch" hidden><div id="watch" style="margin-top:.6rem"></div></div>
-    <div class="chead"><span><span data-i18n="home.last24">Laatste 24 uur</span></span> <span class="sub" id="l24sub"></span></div>
-    <div id="last24"></div>
-    <div class="legend l24leg"><span><i style="background:var(--carb)"></i><span data-i18n="legend.carbs">koolhydraten</span></span><span><i style="background:var(--accent)"></i><span data-i18n="legend.bolus">bolus</span></span><span><i style="background:var(--low)"></i><span data-i18n="legend.hypo">hypo</span></span></div>
+    <span id="l24sub" hidden></span>
 
 
-    <div class="chead" id="epVandaag"><span data-i18n="home.attention">Aandacht</span> <span class="sub" id="todaySub"></span></div>
+    <div class="chead" id="epVandaag"><span data-i18n="home.attention">Wat ik zie</span> <span class="sub" id="todaySub"></span></div>
+    <div id="assist"></div>
     <div id="findToday"></div>
     <span id="epWeek" hidden><span id="weekSub"></span></span>
     <div id="findWeek"></div>
@@ -772,6 +910,9 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
 
   <!-- ANALYSES — de bibliotheek: alles bij naam, één tik -->
   <div class="view" data-view="analyses" hidden>
+  <h1 class="ititle" data-i18n="tab.analyses">Patronen</h1>
+  <div class="ibento" id="bento"></div>
+  <h2 class="ihead" data-i18n="an.all">Alle analyses</h2>
   <div class="scope" id="scope"><span><i>periode</i> <b>—</b></span></div>
     <div class="ask" id="askBox" hidden>
       <div class="askrow">
@@ -918,7 +1059,7 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
       <p>Eén HTML-bestand, geen build, werkt offline. Je data staat <b>alleen op dit apparaat</b>: metingen in IndexedDB, je adres en token in localStorage. Er gaat niets naar een server behalve <b>lees</b>verzoeken aan je eigen Nightscout (met je token: <code>?token=…</code>). Na de eerste keer werkt alles uit de lokale cache; syncen haalt alleen het nieuwe stuk op.</p>
 
       <h4 class="mh">2 · Glucose &amp; eenheden</h4>
-      <p>Nightscout bewaart glucose in mg/dL; IDM rekent alles op precies één plek om naar <b>mmol/L</b> (÷ 18,018) en toont nooit mg/dL. Streefbereik <b>3,9–10,0</b> mmol/L (internationale consensus, Battelino 2019).</p>
+      <p>Nightscout bewaart glucose in mg/dL; IDA rekent alles op precies één plek om naar <b>mmol/L</b> (÷ 18,018) en toont nooit mg/dL. Streefbereik <b>3,9–10,0</b> mmol/L (internationale consensus, Battelino 2019).</p>
 
       <h4 class="mh">3 · Kerncijfers (maand)</h4>
       <ul class="mul">
@@ -973,6 +1114,8 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
 
   <!-- ETEN — de koolhydraat-schatter als eigen, snel bereikbare bestemming -->
   <div class="view" data-view="eten" hidden>
+  <h1 class="ititle" data-i18n="tab.food">Eten</h1>
+  <div id="etenHero"></div>
   <section class="epoch" id="epEten" style="margin-left:0">
     <div class="eh"><h2 data-i18n="eten.title">Koolhydraten schatten</h2><span class="sub" data-i18n="eten.sub">kies eten + portie → gram</span></div>
     <div class="cbNote" data-i18n="eten.note">Tabelwaarden, <b>geen dosisadvies</b>.</div>
@@ -1067,10 +1210,18 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
   </div>
 
   <!-- CONSULT -->
+  <div class="view" data-view="profiel" hidden>
+  <button class="iback" id="profBack" aria-label="Terug"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>
+  <div id="profBody"></div>
+  </div>
+
   <div class="view" data-view="consult" hidden>
+  <h1 class="ititle" data-i18n="tab.consult">Team</h1>
+  <div id="teamTop"></div>
+  <h2 class="ihead" data-i18n="team.details">Details en consult</h2>
   <div class="h3" style="margin-top:.2rem">Voorstellen &amp; effect</div>
   <details class="fold" id="secProposals" hidden open>
-    <summary><span data-i18n="an.proposals">Bespreekwaarden</span> <span class="foldhint" data-i18n="an.proposalsHint">concrete getallen om met je team te bespreken</span></summary>
+    <summary><span data-i18n="an.proposals">Bespreekwaarden</span> <span class="foldhint" data-i18n="an.proposalsHint">per dagdeel</span></summary>
     <div class="foldbody"><div id="proposals"></div></div>
   </details>
   <details class="fold" id="secEffects" open>
@@ -1093,20 +1244,18 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
   <div id="report" hidden></div>
 </main>
 
-<nav id="tabbar" class="nav" hidden aria-label="Hoofdnavigatie">
-  <button class="tab on" data-tab="overzicht">
-    <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
-    <span data-i18n="tab.overview">Overzicht</span></button>
-  <button class="tab" data-tab="eten">
-    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 2v7c0 1.1.9 2 2 2a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/></svg>
-    <span data-i18n="tab.food">Eten</span></button>
-  <button class="tab" data-tab="analyses">
-    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg>
-    <span data-i18n="tab.analyses">Analyses</span></button>
-  <button class="tab" data-tab="consult">
-    <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M9 12h6"/><path d="M9 16h6"/></svg>
-    <span data-i18n="tab.consult">Consult</span><span class="cbadge" id="consultBadge" hidden></span></button>
+<nav id="tabbar" class="nav inav" hidden aria-label="Hoofdnavigatie">
+  <button class="tab on" data-tab="overzicht"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 13c3-7 6-7 9 0s6 7 9 0"/></svg><span data-i18n="tab.overview">Vandaag</span></button>
+  <button class="tab" data-tab="analyses"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="9" rx="2"/><rect x="14" y="3" width="7" height="5" rx="2"/><rect x="14" y="12" width="7" height="9" rx="2"/><rect x="3" y="16" width="7" height="5" rx="2"/></svg><span data-i18n="tab.analyses">Patronen</span></button>
+  <button class="iplus" id="btnPlus" data-i18n-al="log.open" aria-label="Loggen"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
+  <button class="tab" data-tab="eten"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3v8M5 3v5a2 2 0 0 0 4 0V3M7 11v10"/><path d="M17 3c-2 2-2 6 0 8v10"/></svg><span data-i18n="tab.food">Eten</span></button>
+  <button class="tab" data-tab="consult"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M3 20c0-3.5 2.7-6 6-6s6 2.5 6 6M15 20c0-2.5 1-4.5 3.5-4.5S22 17.5 22 20"/></svg><span data-i18n="tab.consult">Team</span><span class="cbadge" id="consultBadge" hidden></span></button>
 </nav>
+<dialog id="logSheet" class="isheet" aria-labelledby="logTitle">
+  <div class="ishandle"></div>
+  <div class="ishead"><h2 id="logTitle" data-i18n="log.title">Wat wil je vastleggen?</h2><button class="iclose" id="logClose" data-i18n-al="btn.close" aria-label="Sluiten"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+  <div id="logBody"></div>
+</dialog>
 
 
 <dialog id="cfgDlg">
@@ -1274,7 +1423,7 @@ Object.assign(I18N, {
     pt:`<div><b>No alvo (TIR)</b> — que % do tempo a sua glicose esteve entre 3,9 e 10,0. A sua métrica mais importante: quanto maior, mais estável o seu dia. Meta &gt; 70%.</div><div><b>Hipo</b> — % de tempo demasiado baixo (&lt; 3,9). Isto é segurança — mantê-lo baixo pesa mais do que uns pontos percentuais extra no alvo. Meta &lt; 4%.</div><div><b>Variabilidade (CV)</b> — quão irregulares são os seus valores. Menor = mais plano e previsível, normalmente o maior ganho. Meta ≤ 36%.</div><div><b>GMI</b> — uma estimativa da sua HbA1c a partir da glicose média. Uma indicação de longo prazo, não um valor laboratorial.</div>` },
   "home.mvsSetting":{ en:"setting", pt:"parâmetro" },
   "home.mvsMeasured":{ en:"measured · set", pt:"medido · definido" },
-  "home.attention":{ en:"Attention", pt:"Atenção" },
+  "home.attention":{ en:"What I see", pt:"O que vejo" },
   "home.more":{ en:"More", pt:"Mais" },
   "home.dayCurve":{ en:"Day curve", pt:"Curva do dia" },
   "home.dayCurveHint":{ en:"your day by the hour — food, bolus, lows", pt:"o seu dia hora a hora — comida, bólus, hipos" },
@@ -1305,7 +1454,7 @@ Object.assign(I18N, {
   "an.bandsHint":{ en:"all 5 bands + targets", pt:"as 5 faixas + metas" },
   "an.insulinBasal":{ en:"Insulin &amp; basal", pt:"Insulina e basal" },
   "an.proposals":{ en:"Discussion values", pt:"Valores para discussão" },
-  "an.proposalsHint":{ en:"concrete numbers to discuss with your team", pt:"números concretos para discutir com a sua equipa" },
+  "an.proposalsHint":{ en:"per part of the day", pt:"números concretos para discutir com a sua equipa" },
   "an.loopBasal":{ en:"Loop basal", pt:"Basal do loop" },
   "an.loopBasalHint":{ en:"what your loop really delivers vs. your profile", pt:"o que o seu loop realmente entrega vs. o seu perfil" },
   "an.daypattern":{ en:"Day pattern", pt:"Padrão diário" },
@@ -1329,6 +1478,11 @@ Object.assign(I18N, {
   "eten.title":{ en:"Estimate carbs", pt:"Estimar hidratos" },
   "eten.sub":{ en:"pick food + portion → grams", pt:"escolha alimento + porção → gramas" },
   "cfg.nevo":{ nl:"Voedingsdatabase (NEVO)", en:"Food database (NEVO)", pt:"Base de alimentos (NEVO)" },
+  "tab.overview2":{ nl:"Vandaag", en:"Today", pt:"Hoje" },
+  "an.all":{ nl:"Alle analyses", en:"All analyses", pt:"Todas as análises" },
+  "team.details":{ nl:"Details en consult", en:"Details and consult", pt:"Detalhes e consulta" },
+  "log.title":{ nl:"Wat wil je vastleggen?", en:"What do you want to log?", pt:"O que quer registar?" },
+  "log.open":{ nl:"Loggen", en:"Log", pt:"Registar" },
   "home.last24":{ nl:"Laatste 24 uur", en:"Last 24 hours", pt:"Últimas 24 horas" },
   "eten.note":{ nl:"Tabelwaarden, <b>geen dosisadvies</b>.", en:"Table values, <b>not dosing advice</b>.", pt:"Valores de tabela, <b>não é conselho de dose</b>." },
   "eten.searchPh":{ en:"search food… (e.g. banana, rice, cola)", pt:"procurar alimento… (ex. banana, arroz, cola)" },
@@ -1342,10 +1496,10 @@ Object.assign(I18N, {
   "consult.report":{ en:"📄 Build consult report", pt:"📄 Montar relatório de consulta" },
   "consult.share":{ en:"📋 Share summary", pt:"📋 Partilhar resumo" },
   // Tabbladen
-  "tab.overview":{ en:"Overview", pt:"Resumo" },
+  "tab.overview":{ en:"Today", pt:"Hoje" },
   "tab.food":{ en:"Food", pt:"Comida" },
-  "tab.analyses":{ en:"Analyses", pt:"Análises" },
-  "tab.consult":{ en:"Consult", pt:"Consulta" },
+  "tab.analyses":{ en:"Patterns", pt:"Padrões" },
+  "tab.consult":{ en:"Team", pt:"Equipa" },
   // Instellingen
   "cfg.langLabel":{ nl:"Taal", en:"Language", pt:"Idioma" },
   "cfg.themeLabel":{ en:"Theme", pt:"Tema" },
@@ -1404,7 +1558,7 @@ Object.assign(I18N, { "meth.body":{
       <p>One HTML file, no build, works offline. Your data lives <b>only on this device</b>: measurements in IndexedDB, your address and token in localStorage. Nothing goes to a server except <b>read</b> requests to your own Nightscout (with your token: <code>?token=…</code>). After the first time everything works from the local cache; syncing only fetches the new part.</p>
 
       <h4 class="mh">2 · Glucose &amp; units</h4>
-      <p>Nightscout stores glucose in mg/dL; IDM converts everything in exactly one place to <b>mmol/L</b> (÷ 18.018) and never shows mg/dL. Target range <b>3.9–10.0</b> mmol/L (international consensus, Battelino 2019).</p>
+      <p>Nightscout stores glucose in mg/dL; IDA converts everything in exactly one place to <b>mmol/L</b> (÷ 18.018) and never shows mg/dL. Target range <b>3.9–10.0</b> mmol/L (international consensus, Battelino 2019).</p>
 
       <h4 class="mh">3 · Key figures (month)</h4>
       <ul class="mul">
@@ -1476,7 +1630,7 @@ Object.assign(I18N, { "meth.body":{
       <p>Um único ficheiro HTML, sem build, funciona offline. Os seus dados existem <b>apenas neste dispositivo</b>: medições no IndexedDB, o seu endereço e token no localStorage. Nada vai para um servidor exceto pedidos de <b>leitura</b> ao seu próprio Nightscout (com o seu token: <code>?token=…</code>). Depois da primeira vez tudo funciona a partir da cache local; sincronizar só obtém a parte nova.</p>
 
       <h4 class="mh">2 · Glicose &amp; unidades</h4>
-      <p>O Nightscout guarda a glicose em mg/dL; o IDM converte tudo num único sítio para <b>mmol/L</b> (÷ 18,018) e nunca mostra mg/dL. Alvo <b>3,9–10,0</b> mmol/L (consenso internacional, Battelino 2019).</p>
+      <p>O Nightscout guarda a glicose em mg/dL; o IDA converte tudo num único sítio para <b>mmol/L</b> (÷ 18,018) e nunca mostra mg/dL. Alvo <b>3,9–10,0</b> mmol/L (consenso internacional, Battelino 2019).</p>
 
       <h4 class="mh">3 · Números-chave (mês)</h4>
       <ul class="mul">
@@ -1528,6 +1682,7 @@ Object.assign(I18N, { "meth.body":{
 
 </script>
 <script src="js/core.js"></script>
+<script src="js/ida.js"></script>
 <script>
 
 /* ── Fase 3: besluiten bij voorstellen ──────────────────────────────────────
@@ -1614,7 +1769,7 @@ async function renderEffects(){
     else if(dT<=-0.05||dB>=0.02){ out=TL("Verslechterd","Worse","Pior"); cls="dn"; }
     else if(dT>=0.05&&dB<=0.01){ out=r.dip?TL("Onduidelijk (terugval naar gemiddelde mogelijk)","Unclear (regression to the mean possible)","Pouco claro (regressão à média possível)"):TL("Verbeterd","Improved","Melhorado"); cls=r.dip?"":"up"; }
     else { out=TL("Gelijk","Unchanged","Igual"); cls=""; }
-    const rb=(cls==="dn")?`<div class="pgr block">${TL("Bespreek met je team of terugdraaien of bijstellen nodig is. De app doet dat nooit zelf.","Discuss with your team whether to roll back or adjust. The app never does this itself.","Discuta com a equipa se deve reverter ou ajustar. A app nunca o faz sozinha.")}</div>`:"";
+    const rb=(cls==="dn")?`<div class="pgr block">${TL("Overweeg terug te draaien of bij te stellen. De app doet dat nooit zelf.","Consider rolling back or adjusting. The app never does this itself.","Discuta com a equipa se deve reverter ou ajustar. A app nunca o faz sozinha.")}</div>`:"";
     const d=(x,y,f)=>`${f(x)} → <b>${f(y)}</b>`;
     return `<div class="logentry">${head}<div class="ba"><div class="verdict ${cls}">${out}</div>
       <div class="bar"><span>${TL("In bereik","In range","No alvo")}</span><span>${d(b.tir,c.tir,pct0)}</span></div>
@@ -1671,7 +1826,7 @@ function proposalsHtml(drift, oi, MR, pi, glucose, treatments, q, timeline){
   const anyChange = changed.length>0;
   const lead = anyChange ? "" :
     `<div class="pgood" style="margin-top:.6rem">${TL("Waar genoeg data is, sluiten je gemeten waarden aan bij je instellingen. Een — betekent te weinig data — geen oordeel.","Where there's enough data, your measured values match your settings. A — means too little data — no judgment.","Onde há dados suficientes, os seus valores medidos correspondem às definições. Um — significa poucos dados — sem juízo.")}</div>`;
-  const caveat = `<div class="muted" style="margin-top:.5rem;font-size:.75rem">${TL('Bespreekpunten voor je team, geen pompopdracht.','Discussion points for your team, not a pump instruction.','Pontos para discutir com a equipa, não uma instrução.')}</div>`;
+  const caveat = "";
   const detail = anyChange ? `<details class="bwdetail"><summary>${TL("Onderbouwing per dagdeel — bewijs & effect","Rationale per part of day — evidence & effect","Fundamentação por período do dia — evidência e efeito")}</summary><div class="bwbody">${changed.map(card).join("")}</div></details>` : "";
   // Waarom staat er een "—"? Concreet per hefboom, met aantallen.
   const why=[];
@@ -1679,7 +1834,7 @@ function proposalsHtml(drift, oi, MR, pi, glucose, treatments, q, timeline){
   { const sm=smbISF(glucose,treatments,timeline,q);
     if(oi && oi.n!=null && oi.n<8 && sm && sm.med!=null) why.push(TL(`Ter info: na SMB's (${sm.n} koolhydraatvrije vensters) daalde je glucose in 3 u (mediaan) ${nl1(sm.med)} mmol/L per E${sm.prof?` (profiel-ISF ${nl1(sm.prof)})`:""}. Dit is géén ISF-meting: een SMB komt meestal als je glucose al stijgt (vaak door niet-gelogd eten), waardoor de daling laag uitvalt. Daarom geen voorstel.`,`For info: after SMBs (${sm.n} carb-free windows) your glucose fell (median) ${nl1(sm.med)} mmol/L per U in 3 h${sm.prof?` (profile ISF ${nl1(sm.prof)})`:""}. This is not an ISF measurement: an SMB usually fires when glucose is already rising (often unlogged food), so the drop looks small. Hence no proposal.`,`Info: após SMB (${sm.n} janelas sem hidratos) a glicose desceu (mediana) ${nl1(sm.med)} mmol/L por U${sm.prof?` (ISF do perfil ${nl1(sm.prof)})`:""}. Não é uma medição de ISF: o SMB surge quando a glicose já sobe, por isso a descida parece pequena. Sem proposta.`)); }
   const bg0=byKey.basaal&&byKey.basaal.grid; if(bg0){ const mx=Object.entries(bg0).filter(([k,g])=>g.status==="mixed").map(([k])=>dpName(k));
-    if(mx.length) why.push(TL(`Basaal: in ${mx.join(", ")} geeft je loop minder temp-basaal dan je profiel, maar mét SMB's meer. Dat past bij niet-gelogd eten of correcties en is dus geen bewijs dat je basaal fout staat. Daarom geen voorstel; bespreek het met je team.`,`Basal: in ${mx.join(", ")} your loop gives less temp basal than your profile but more with SMBs. That fits unlogged food or corrections and is not proof your basal is wrong, so no proposal; discuss with your team.`,`Basal: em ${mx.join(", ")} o loop dá menos basal temporária que o perfil, mas mais com SMB. Não é prova de basal errada; sem proposta.`)); }
+    if(mx.length) why.push(TL(`Basaal: in ${mx.join(", ")} geeft je loop minder temp-basaal dan je profiel, maar mét SMB's meer. Dat past bij niet-gelogd eten of correcties en is dus geen bewijs dat je basaal fout staat. Daarom geen voorstel.`,`Basal: in ${mx.join(", ")} your loop gives less temp basal than your profile but more with SMBs. That fits unlogged food or corrections and is not proof your basal is wrong, so no proposal.`,`Basal: em ${mx.join(", ")} o loop dá menos basal temporária que o perfil, mas mais com SMB. Não é prova de basal errada; sem proposta.`)); }
   const icg=byKey.ic&&byKey.ic.grid; if(icg){ const low=Object.entries(icg).filter(([k,g])=>g.status==="weinig"&&g.n!=null).map(([k,g])=>`${dpName(k)} n=${g.n}`);
     if(low.length) why.push(TL(`KH-ratio: te weinig gebolusde maaltijden van ≥30 g (min. ${MEAL_MIN}) in ${low.join(", ")}.`,`Carb ratio: too few bolused meals of ≥30 g (min. ${MEAL_MIN}) in ${low.join(", ")}.`,`Rácio: poucas refeições com bólus ≥30 g (mín. ${MEAL_MIN}) em ${low.join(", ")}.`)); }
   let rule="";
@@ -1808,7 +1963,7 @@ function anHours(glucose, q){
   const tr=rows.map(r=>`<div class="warow"><span>${String(r.h).padStart(2,"0")}:00</span><span>${nl1(r.p10)}–${nl1(r.p90)}</span><span style="${r.low>0.04?"color:var(--t-low);font-weight:600":""}">${pct0(r.low)}</span><span style="${r.high>0.25?"color:var(--t-high);font-weight:600":""}">${pct0(r.high)}</span><span>${r.ep}</span></div>`).join("");
   return `<div class="watable"><div class="warow head"><span>${TL("uur","hour","hora")}</span><span>p10–p90</span><span>&lt;3,9</span><span>&gt;10</span><span>${TL("hypo-starts","hypo starts","início hipo")}</span></div>${tr}</div>`+
     `<div class="obs" style="margin-top:.5rem">${TL(`Meeste tijd onder 3,9: <b>${String(worstLow.h).padStart(2,"0")}:00</b> (${pct0(worstLow.low)}). Meeste tijd boven 10: <b>${String(worstHigh.h).padStart(2,"0")}:00</b> (${pct0(worstHigh.high)}).`,`Most time below 3.9: <b>${String(worstLow.h).padStart(2,"0")}:00</b> (${pct0(worstLow.low)}). Most time above 10: <b>${String(worstHigh.h).padStart(2,"0")}:00</b> (${pct0(worstHigh.high)}).`,`Mais tempo abaixo de 3,9: <b>${String(worstLow.h).padStart(2,"0")}:00</b> (${pct0(worstLow.low)}). Mais tempo acima de 10: <b>${String(worstHigh.h).padStart(2,"0")}:00</b> (${pct0(worstHigh.high)}).`)}</div>`+
-(worstLow.low>0.04?`<div class="obs" style="margin-top:.4rem"><b>${TL("Idee voor je team (alleen tekst)","Idea for your team (text only)","Ideia para a equipa (só texto)")}</b>: ${TL(`rond ${String(worstLow.h).padStart(2,"0")}:00 zit je boven de ATTD-grens voor laag. Bespreek of een tijdelijk hoger streefdoel of een Automation/profielschakeling in dat uur past. De app wijzigt nooit iets in AAPS of je pomp.`,`around ${String(worstLow.h).padStart(2,"0")}:00 you exceed the ATTD limit for lows. Discuss whether a temporary higher target or an Automation/profile switch fits that hour. The app never changes anything in AAPS or your pump.`,`por volta das ${String(worstLow.h).padStart(2,"0")}:00 excede o limite ATTD para hipos. Discuta um alvo temporário mais alto ou uma Automation. A app nunca altera nada no AAPS ou na bomba.`)}</div>`:"")+
+(worstLow.low>0.04?`<div class="obs" style="margin-top:.4rem"><b>${TL("Idee","Idea","Ideia para a equipa (só texto)")}</b>: ${TL(`rond ${String(worstLow.h).padStart(2,"0")}:00 zit je boven de ATTD-grens voor laag. Bespreek of een tijdelijk hoger streefdoel of een Automation/profielschakeling in dat uur past. De app wijzigt nooit iets in AAPS of je pomp.`,`around ${String(worstLow.h).padStart(2,"0")}:00 you exceed the ATTD limit for lows. Discuss whether a temporary higher target or an Automation/profile switch fits that hour. The app never changes anything in AAPS or your pump.`,`por volta das ${String(worstLow.h).padStart(2,"0")}:00 excede o limite ATTD para hipos. Discuta um alvo temporário mais alto ou uma Automation. A app nunca altera nada no AAPS ou na bomba.`)}</div>`:"")+
     `<div class="muted" style="margin-top:.4rem">${TL(`${days} bruikbare dagen. Rood = boven de ATTD-grens (4% / 25%). Observatie, geen instelwaarde.`,`${days} usable days. Coloured = beyond ATTD limit (4% / 25%). Observation, not a setting.`,`${days} dias utilizáveis. Destacado = acima do limite ATTD (4% / 25%). Observação, não uma definição.`)}</div>`;
 }
 
@@ -2035,7 +2190,7 @@ async function buildReport(){
     ? `<h2>${TL("Door de patiënt aangevinkt","Flagged by the patient","Assinalado pelo paciente")}</h2><ul class="rlist">${clist.map(c=>`<li>${esc(c.title)}</li>`).join("")}</ul>` : "";
 
   return `<div class="rtoolbar"><button class="ghost" id="btnRepPrint">🖨 ${TL("Opslaan als PDF","Save as PDF","Guardar como PDF")}</button><button class="ghost" id="btnRepClose">✕ ${TL("Sluiten","Close","Fechar")}</button></div>`+
-    `<div class="rep"><h1>${TL("Consultrapport — IDM","Consult report — IDM","Relatório de consulta — IDM")}</h1>`+
+    `<div class="rep"><h1>${TL("Consultrapport — IDA","Consult report — IDA","Relatório de consulta — IDA")}</h1>`+
     `<div class="rmeta">${TL("Periode","Period","Período")} ${fd(q.from)} – ${fd(q.to)} · ${q.usable.length}/${q.days.length} ${TL("dagen","days","dias")} · ${pct0(q.coverage)} ${TL("dekking","coverage","cobertura")} · ${TL("opgesteld","generated","gerado")} ${fd(Date.now())}</div>`+
     `<h2>${TL("Kernwaarden","Key values","Valores-chave")}</h2><table>${kern}</table>`+
     `<h2>${TL("Veiligheid","Safety","Segurança")}</h2>${veil}`+
@@ -2044,7 +2199,7 @@ async function buildReport(){
     `<h2>${TL("Bespreekpunten","Discussion points","Pontos de discussão")}</h2>${besp}`+clHtml+
     `<h2>${TL("Wijzigingen &amp; effect","Changes &amp; effect","Alterações e efeito")}</h2>${wijz}`+
     `<h2>${TL("Vragen voor het gesprek","Questions for the consult","Perguntas para a consulta")}</h2>${vragenHtml}`+
-    `<div class="rfoot">${TL("Observaties uit eigen CGM- en pompdata (Nightscout / AndroidAPS), automatisch samengevat door IDM. Geen insteladviezen; richtingen zijn hypotheses ter bespreking. Glucose in mmol/L.","Observations from your own CGM and pump data (Nightscout / AndroidAPS), automatically summarized by IDM. No setting advice; directions are hypotheses for discussion. Glucose in mmol/L.","Observações dos seus próprios dados de CGM e bomba (Nightscout / AndroidAPS), resumidos automaticamente pelo IDM. Sem conselhos de definição; as direções são hipóteses para discussão. Glicose em mmol/L.")}</div></div>`;
+    `<div class="rfoot">${TL("Observaties uit eigen CGM- en pompdata (Nightscout / AndroidAPS), automatisch samengevat door IDA. Geen insteladviezen; richtingen zijn hypotheses ter bespreking. Glucose in mmol/L.","Observations from your own CGM and pump data (Nightscout / AndroidAPS), automatically summarized by IDA. No setting advice; directions are hypotheses for discussion. Glucose in mmol/L.","Observações dos seus próprios dados de CGM e bomba (Nightscout / AndroidAPS), resumidos automaticamente pelo IDA. Sem conselhos de definição; as direções são hipóteses para discussão. Glicose em mmol/L.")}</div></div>`;
 }
 async function openReport(){
   const el=document.getElementById("report");
@@ -2064,7 +2219,7 @@ function openDlg(){ try{ if(typeof dlg.showModal==="function"){ if(!dlg.open) dl
   dlg.classList.add("fb"); dlg.setAttribute("open",""); }
 function closeDlg(){ try{ dlg.close?.(); }catch(_){} dlg.removeAttribute("open"); }
 
-let _dsRecent = [];
+let _dsRecent = [], _dsAll = [];
 async function refresh(){
   const prevCls=dot.className, prevTxt=connTxt.textContent;
   setConn("busy",TL("Berekenen…","Calculating…","A calcular…")); await new Promise(r=>setTimeout(r,30));   // eerst laten schilderen, dan zwaar rekenen
@@ -2078,13 +2233,17 @@ async function refresh(){
 async function _refresh(){
   const glucose = await loadGlucose(cfg.days);
   const treatments = glucose.length ? await loadTreatments(cfg.days) : [];
+  setTzTimeline(treatments);   // tijdzone per moment (reizen) vóór alle uur- en dag-analyses
   const timeline = glucose.length ? await loadProfiles(cfg.days) : null;
   _dsRecent = glucose.length ? await loadDeviceStatus() : [];
+  _dsAll = glucose.length ? await loadDeviceStatusRange(Math.min(cfg.days,90)) : [];
+  try{ _penKeys = penDayKeys(await DB.all("annotations")); }catch(_){ _penKeys=new Set(); }
   render(glucose, treatments, timeline);
+  try{ await renderIda(); }catch(e){ console.error(e); }
 }
 // Hertekent alles in de huidige taal (na een taalwissel), zonder opnieuw te syncen.
 function rerender(){
-  if(_ctx && _ctx.glucose) render(_ctx.glucose, _ctx.treatments, _ctx.timeline);
+  if(_ctx && _ctx.glucose){ render(_ctx.glucose, _ctx.treatments, _ctx.timeline); setTimeout(()=>{ try{ renderIda(true); }catch(_){} },120); }
   try{ renderCbCats(); renderCbResults(); renderCbPlate(); renderEtenInsight(); }catch(_){}
 }
 async function doSync(){
@@ -2094,7 +2253,7 @@ async function doSync(){
     const first=!(await DB.meta("sync.entries")) && cfg.days>14;
     if(first){ await syncAll(msg=>setConn("busy",msg), 14); setConn("ok",t("conn.updated")); await refresh();
       setConn("busy",TL("rest aanvullen…","filling in the rest…","a completar…"));
-      await DB.meta("sync.entries",null); await DB.meta("sync.treatments",null); }
+      await DB.meta("sync.entries",null); await DB.meta("sync.treatments",null); await DB.meta("sync.devicestatus",null); }
     await syncAll(msg=>setConn("busy",msg)); setConn("ok",t("conn.updated")); await refresh(); }
   catch(e){ setConn("err",t("conn.failed")); toast(TL("Sync mislukt: ","Sync failed: ","Sincronização falhou: ")+e.message); console.error(e); }
   finally { btn.disabled=false; }
@@ -2144,7 +2303,7 @@ document.getElementById("btnSave").onclick = async ()=>{
 };
 document.getElementById("btnShare").onclick = async ()=>{
   if (!_summary) return;
-  try { if (navigator.share){ await navigator.share({ title:TL("IDM-samenvatting","IDM summary","Resumo IDM"), text:_summary }); return; } }
+  try { if (navigator.share){ await navigator.share({ title:TL("IDA-samenvatting","IDA summary","Resumo IDA"), text:_summary }); return; } }
   catch(e){ if (e.name==="AbortError") return; /* gebruiker annuleerde */ }
   try { await navigator.clipboard.writeText(_summary); toast(TL("Samenvatting gekopieerd — plak het in een bericht of e-mail aan je team.","Summary copied — paste it into a message or email to your team.","Resumo copiado — cole-o numa mensagem ou e-mail para a sua equipa.")); }
   catch(_){ toast(TL("Kopiëren lukte niet. Selecteer de tekst handmatig of gebruik Print/PDF.","Copy failed. Select the text manually or use Print/PDF.","A cópia falhou. Selecione o texto manualmente ou use Imprimir/PDF.")); }
@@ -2156,7 +2315,7 @@ document.getElementById("dayNext").onclick = ()=>{ _dayIdx++; renderDay(); };
 document.getElementById("btnExport").onclick = async ()=>{
   let anns=[]; try{ anns=await DB.all("annotations"); }catch(_){}
   if(!anns.length){ toast(TL("Nog niets in je logboek om te exporteren.","Nothing in your logbook to export yet.","Ainda não há nada no diário para exportar.")); return; }
-  const data=JSON.stringify({app:"IDM",kind:"logbook",version:1,exported:new Date().toISOString(),annotations:anns},null,2);
+  const data=JSON.stringify({app:"IDA",kind:"logbook",version:1,exported:new Date().toISOString(),annotations:anns},null,2);
   const url=URL.createObjectURL(new Blob([data],{type:"application/json"}));
   const a=document.createElement("a"); a.href=url; a.download=`diametric-logboek-${new Date().toISOString().slice(0,10)}.json`;
   document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),1000);
@@ -2823,13 +2982,18 @@ applyTheme(document.documentElement.dataset.theme||"auto");
 
 // Drie lagen: Overzicht (verhaal) · Analyses (bibliotheek) · Consult
 function showTab(tab){
-  document.querySelectorAll("#tabbar .tab").forEach(b=>{ const on=b.dataset.tab===tab;
+  const navTab = tab==="profiel" ? "consult" : tab;
+  document.querySelectorAll("#tabbar .tab").forEach(b=>{ const on=b.dataset.tab===navTab;
     b.classList.toggle("on",on); if(on) b.setAttribute("aria-current","page"); else b.removeAttribute("aria-current"); });
   document.querySelectorAll(".view").forEach(v=>v.hidden = v.dataset.view!==tab);
   const nu=document.getElementById("secNow"); if(nu) nu.classList.toggle("hideOnHome", tab==="overzicht");
   window.scrollTo({top:0});
 }
 document.querySelectorAll("#tabbar .tab").forEach(b=>b.onclick=()=>showTab(b.dataset.tab));
+document.getElementById("btnPlus").onclick=()=>openLogSheet();
+document.getElementById("logClose").onclick=()=>closeLogSheet();
+document.getElementById("logSheet").addEventListener("click",e=>{ if(e.target.id==="logSheet") closeLogSheet(); });
+document.getElementById("profBack").onclick=()=>showTab("consult");
 document.getElementById("goImport").onclick=()=>{ try{closeDlg();}catch(_){} showTab("import"); }; document.getElementById("backEten").onclick=()=>showTab("eten");
 
 // De index: élke analyse bij naam, één tik — geen zoeken

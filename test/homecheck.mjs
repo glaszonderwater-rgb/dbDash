@@ -26,7 +26,7 @@ const home=await page.evaluate(()=>({
   heroArrow:document.getElementById('heroArrow').textContent.trim(),
   heroSide:document.getElementById('ringMeta').textContent.trim(),
   kpiCount:document.querySelectorAll('.chome .kpis .kpi').length,
-  aandacht:/Aandacht/i.test(document.getElementById('epVandaag').textContent),
+  aandacht:/Wat ik zie/i.test(document.getElementById('epVandaag').textContent),
   findings:document.querySelectorAll('#findToday .f, #findWeek .f').length,
   noRing:!document.getElementById('ringArc'),
   noActs:!document.getElementById('homeActs'),

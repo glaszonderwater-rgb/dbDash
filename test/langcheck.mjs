@@ -53,13 +53,13 @@ console.log('PT tabs:', ptTabs, '| hero:', pt.hero, '| kpiTitle:', pt.kpiTitle, 
 console.log('terug NL tabs:', backTabs);
 
 console.log('EN kpiSub:', en.kpiSub, '| EN findings:', en.findings.slice(0,70));
-const okNL = nlTabs==='Overzicht|Eten|Analyses|Consult' && /,/.test(nl.hero) && /streef/.test(nl.kpiSub||'');
-const okEN = enTabs==='Overview|Food|Analyses|Consult' && en.htmlLang==='en' && en.kpiTitle==='Key figures'
-  && /Attention/.test(en.attention) && /\./.test(en.hero) && !/,/.test(en.hero)   // Engels: punt-decimaal
+const okNL = nlTabs==='Vandaag|Patronen|Eten|Team' && /,/.test(nl.hero) && /streef/.test(nl.kpiSub||'');
+const okEN = enTabs==='Today|Patterns|Food|Team' && en.htmlLang==='en' && en.kpiTitle==='Key figures'
+  && /What I see/.test(en.attention) && /\./.test(en.hero) && !/,/.test(en.hero)   // Engels: punt-decimaal
   && /aim/.test(en.kpiSub||'') && !/streef|dagen|bereik/.test(en.findings);        // dynamische tekst ook vertaald
-const okPT = ptTabs==='Resumo|Comida|Análises|Consulta' && pt.htmlLang==='pt' && pt.kpiTitle==='Números-chave'
+const okPT = ptTabs==='Hoje|Padrões|Comida|Equipa' && pt.htmlLang==='pt' && pt.kpiTitle==='Números-chave'
   && /,/.test(pt.hero) && /meta/.test(pt.kpiSub||'');   // Portugees: komma-decimaal + dynamische tekst
-const okBack = backTabs==='Overzicht|Eten|Analyses|Consult';
+const okBack = backTabs==='Vandaag|Patronen|Eten|Team';
 console.log('NL ok:',okNL?'JA':'NEE','| EN ok:',okEN?'JA':'NEE','| PT ok:',okPT?'JA':'NEE','| product ok:',okFood?'JA':'NEE','| terug NL ok:',okBack?'JA':'NEE');
 console.log('errors:', errors.length?errors:'geen');
 const ok = okNL && okEN && okPT && okFood && okBack && !errors.length;

@@ -28,11 +28,28 @@ const TZ = "Europe/Amsterdam";
 const todFmt = new Intl.DateTimeFormat("en-GB", { timeZone:TZ, hour:"2-digit", minute:"2-digit", hour12:false });
 const dayFmt = new Intl.DateTimeFormat("en-CA", { timeZone:TZ, year:"numeric", month:"2-digit", day:"2-digit" });
 const _todCache = new Map(), _dayCache = new Map();
+// Tijdzone per moment: AAPS zet bij elke behandeling de UTC-afwijking (utcOffset, minuten).
+// Zo blijft "12 uur" ook 12 uur als je reist. Zonder die gegevens: Amsterdam.
+let _tzT = [], _tzO = [];
+function setTzTimeline(treatments){
+  const pts=[]; for(const t of treatments){ const o=t.raw&&t.raw.utcOffset; if(o!=null&&isFinite(+o)) pts.push([t.ts,+o]); }
+  pts.sort((a,b)=>a[0]-b[0]); const T=[],O=[];
+  for(const [ts,o] of pts){ if(!O.length||O[O.length-1]!==o){ T.push(ts); O.push(o); } }
+  _tzT=T; _tzO=O; _todCache.clear(); _dayCache.clear();
+}
+function tzOffsetAt(ts){ if(!_tzT.length) return null;
+  let lo=0,hi=_tzT.length; while(lo<hi){const m=(lo+hi)>>1; if(_tzT[m]<=ts)lo=m+1;else hi=m;}
+  return _tzO[Math.max(0,lo-1)]; }
 const todMin = ts => { let v=_todCache.get(ts); if(v!==undefined) return v;
-  const [h,m]=todFmt.format(ts).split(":"); v=(+h%24)*60 + +m; _todCache.set(ts,v); return v; };
+  const off=tzOffsetAt(ts);
+  if(off!=null){ v=Math.floor((((ts/60000+off)%1440)+1440)%1440); }
+  else { const [h,m]=todFmt.format(ts).split(":"); v=(+h%24)*60 + +m; }
+  _todCache.set(ts,v); return v; };
 const fmtMin = m => `${String(Math.floor(m/60)%24).padStart(2,"0")}:${String(Math.round(m)%60).padStart(2,"0")}`;
 function localDayKey(ts){ let v=_dayCache.get(ts); if(v!==undefined) return v;
-  v=dayFmt.format(ts); _dayCache.set(ts,v); return v; }   // en-CA → "JJJJ-MM-DD"
+  const off=tzOffsetAt(ts);
+  v = off!=null ? new Date(ts+off*60000).toISOString().slice(0,10) : dayFmt.format(ts);
+  _dayCache.set(ts,v); return v; }   // en-CA → "JJJJ-MM-DD"
 
 /* ── Nightscout (read-only, met time-out) ──────────────────────────────────── */
 const NS = {
@@ -151,14 +168,20 @@ async function syncAll(onProgress, daysOverride){
 
   // devicestatus (loop-IOB/COB voor "nu") — alleen recent nodig; minimaal opgeslagen
   try {
-    const dsRows = await NS.devicestatus(now - 2*DAY, now);
+    // Tot 30 dagen terug (gevoeligheid over tijd), daarna alleen aanvullen.
+    const dsFrom = await startFrom("devicestatus", Math.min(DAYS,30), 6*3600e3);
+    const dsRows = await NS.devicestatus(dsFrom, now, (n,at)=>say(TL("loopstatus","loop status","estado do loop"),n,at));
     const DS = dsRows.map(d=>{ const x=dsExtract(d);
-      return { _id:String(d._id), ts:parseTs(d.created_at)??parseTs(d.mills)??0, iob:x.iob, cob:x.cob }; })
-      .filter(d=>d.ts>0 && (d.iob!=null || d.cob!=null));
-    if (DS.length) await DB.putMany("devicestatus", DS);
+      return { _id:String(d._id), ts:parseTs(d.created_at)??parseTs(d.mills)??parseTs(d.date)??0, iob:x.iob, cob:x.cob, sens:x.sens, ev:x.ev, insReq:x.insReq }; })
+      .filter(d=>d.ts>0 && (d.iob!=null || d.cob!=null || d.sens!=null));
+    if (DS.length){ await DB.putMany("devicestatus", DS); await DB.meta("sync.devicestatus", Math.max(...DS.map(d=>d.ts))); }
   } catch(_){ /* devicestatus is optioneel */ }
 
   await DB.meta("sync.at", now);
+}
+async function loadDeviceStatusRange(days){
+  const rows = await DB.range("devicestatus", Date.now()-days*DAY, Date.now()+6e4);
+  rows.sort((a,b)=>a.ts-b.ts); return rows;
 }
 async function loadDeviceStatus(){
   const rows = await DB.range("devicestatus", Date.now()-6*3600e3, Date.now()+6e4);
@@ -232,7 +255,13 @@ function dsExtract(d){
   const iob = num(iobObj.iob) ?? num(d.iob&&d.iob.iob);
   const cob = num(oa.suggested&&oa.suggested.COB) ?? num(oa.enacted&&oa.enacted.COB)
     ?? num(lp.cob&&lp.cob.cob) ?? num(d.cob&&d.cob.cob);
-  return { iob, cob };
+  const sug=oa.suggested||oa.enacted||{};
+  // Gevoeligheid (autosens), voorspelde eindwaarde (mg/dL → mmol/L) en wat de loop nog wil geven.
+  const sens = num(sug.sensitivityRatio) ?? num(d.sens);
+  const evMg = num(sug.eventualBG) ?? num(d.ev);
+  const insReq = num(sug.insulinReq) ?? num(d.ins);
+  return { iob: iob ?? num(typeof d.iob==="number"?d.iob:null), cob: cob ?? num(typeof d.cob==="number"?d.cob:null),
+    sens, ev: evMg!=null ? evMg/18.0182 : null, insReq };
 }
 
 /* ── Profielen (ISF/IC/basaal per moment, alles in mmol/L) ──────────────────── */
@@ -258,13 +287,14 @@ function profileAt(timeline, ts){
   if(!store){ const doc=[...docs].reverse().find(d=>d.ts<=ts)||docs[docs.length-1];
     if(doc){ store=defaultStoreOf(doc); if(store){ dia=+store.dia||dia; units=store.units||units; } } }
   if(!store) return { basal:null, isf:null, ic:null, dia:6, source:"geen" };
-  const ld=new Date(new Date(ts).toLocaleString("en-US",{timeZone:TZ}));
-  let tod=ld.getHours()*60+ld.getMinutes();
+  let tod=todMin(ts);
   const pct=sw?(sw.percentage??100):100, shift=sw?(sw.timeshift??0)*60:0, f=pct/100;
   tod=((tod+shift)%1440+1440)%1440;
   const toM=v=>v==null?null:units.toLowerCase().startsWith("mg")?mmol(v):v;
   return { basal:lookupTimeSeries(store.basal,tod)*f, isf:toM(lookupTimeSeries(store.sens,tod))/f,
-    ic:lookupTimeSeries(store.carbratio,tod)/f, dia:Math.max(5,dia), source:sw&&sw.profileJson?"switch":"profiel" };
+    ic:lookupTimeSeries(store.carbratio,tod)/f, dia:Math.max(5,dia), source:sw&&sw.profileJson?"switch":"profiel",
+    targetLow:toM(lookupTimeSeries(store.target_low,tod)), targetHigh:toM(lookupTimeSeries(store.target_high,tod)),
+    name:(sw&&(sw.profile||sw.originalProfileName))||null };
 }
 // Het volledige actieve profiel als leesbare dagschema's (basaal E/u, ISF, KH-ratio),
 // inclusief eenheids-normalisatie en een eventueel actief percentage. Timeshift is
@@ -518,7 +548,7 @@ function fineTune(drift, oi, MR, stack, pi){
   return table+
     `<details style="margin-top:.6rem"><summary style="list-style:none;cursor:pointer;font-size:.76rem;font-weight:650;color:var(--t-accent)">${warns?TL(`wat betekent ▲ (${warns})`,`what does ▲ mean (${warns})`,`o que significa ▲ (${warns})`):TL("uitleg per regel","explanation per line","explicação por linha")} ↓</summary>`+
     `<div class="chain" style="margin-top:.5rem">${chains}</div>`+
-    `<div class="ffine" style="margin-left:0">${TL("meetwaarden, geen voorschriften · één ding tegelijk aanpassen, met je team","measured values, not prescriptions · change one thing at a time, with your team","valores medidos, não prescrições · altere uma coisa de cada vez, com a sua equipa")}</div></details>`;
+    `<div class="ffine" style="margin-left:0">${TL("meetwaarden, geen voorschriften · één ding tegelijk aanpassen","measured values, not prescriptions · change one thing at a time","valores medidos, não prescrições · altere uma coisa de cada vez, com a sua equipa")}</div></details>`;
 }
 
 /* ── Dekking ────────────────────────────────────────────────────────────── */
@@ -545,6 +575,8 @@ function quality(glucose, treatments){
     loopGaps = loopGapDays(treatments, usable.map(d=>d.day));
     if (loopGaps.size) usable = usable.filter(d=>!loopGaps.has(d.day));
   }
+  // Dagen die je zelf als "op pen" hebt gelogd: niet meetellen.
+  if (typeof _penKeys!=="undefined" && _penKeys.size){ for(const d of usable) if(_penKeys.has(d.day)) loopGaps.add(d.day); usable = usable.filter(d=>!_penKeys.has(d.day)); }
   let gaps=0; for (let i=1;i<glucose.length;i++) if (glucose[i].ts-glucose[i-1].ts>30*60e3) gaps++;
   return { days, usable, loopGaps:[...loopGaps].sort(), usableKeys:new Set(usable.map(d=>d.day)),
     coverage: days.length ? days.reduce((s,d)=>s+Math.min(d.coverage,1),0)/days.length : 0,
@@ -805,8 +837,7 @@ function watchList(glucose, q){
 function watchHtml(w){
   if(w.alerts.length===0)
     return `<div class="obs" style="margin:0">${TL("Niets dat oploopt: je hypo-tijd, tijd in bereik en variabiliteit zijn de laatste 2 weken stabiel of beter dan de 2 weken daarvoor.","Nothing rising: your low time, time in range and variability are stable or better over the last 2 weeks than the 2 weeks before.","Nada a subir: o seu tempo em hipo, tempo no alvo e variabilidade estão estáveis ou melhores nas últimas 2 semanas face às 2 anteriores.")}</div>`;
-  return w.alerts.map(x=>`<div class="watch${x.info?" info":""}"><div class="wt">${x.title}</div><div class="wd">${x.detail}</div></div>`).join("")+
-    `<div class="muted" style="margin-top:.5rem">${TL("Vergelijking: de laatste 2 weken vs de 2 weken daarvoor (alleen dagen met ≥70% dekking). Een vroeg signaal, geen alarm.","Comparison: the last 2 weeks vs the 2 weeks before (only days with ≥70% coverage). An early signal, not an alarm.","Comparação: as últimas 2 semanas vs as 2 anteriores (só dias com ≥70% cobertura). Um sinal precoce, não um alarme.")}</div>`;
+  return w.alerts.map(x=>`<div class="watch${x.info?" info":""}"><div class="wt">${x.title}</div><div class="wd">${x.detail}</div></div>`).join("");
 }
 
 // Grootste kans — veiligheid eerst
@@ -1137,7 +1168,7 @@ function render(glucose, treatments, timeline){
   const tdLine = ins.tdd!=null?TL(`Totale dagdosis: ~${nl1(ins.tdd)} E/dag (basaal/bolus ${Math.round(ins.basalPct*100)}/${Math.round(ins.bolusPct*100)}%)\n`,`Total daily dose: ~${nl1(ins.tdd)} U/day (basal/bolus ${Math.round(ins.basalPct*100)}/${Math.round(ins.bolusPct*100)}%)\n`,`Dose diária total: ~${nl1(ins.tdd)} U/dia (basal/bólus ${Math.round(ins.basalPct*100)}/${Math.round(ins.bolusPct*100)}%)\n`):``;
   const prLine = pi?TL(`Profiel: basaal ~${nl2(pi.basalDaily)} E/dag`,`Profile: basal ~${nl2(pi.basalDaily)} U/day`,`Perfil: basal ~${nl2(pi.basalDaily)} U/dia`)+(oi.obs!=null?TL(`, gemeten ISF ~${nl1(oi.obs)} mmol/L per E (meetwaarde)`,`, measured ISF ~${nl1(oi.obs)} mmol/L per U (measured)`,`, ISF medido ~${nl1(oi.obs)} mmol/L por U (medido)`):``)+`\n`:``;
   _summary =
-    TL(`IDM — samenvatting\n`,`IDM — summary\n`,`IDM — resumo\n`)+
+    TL(`IDA — samenvatting\n`,`IDA — summary\n`,`IDA — resumo\n`)+
     TL(`Periode: ${fd(q.from)} – ${fd(q.to)} (${q.usable.length}/${q.days.length} dagen, ${pct0(q.coverage)} dekking)\n\n`,`Period: ${fd(q.from)} – ${fd(q.to)} (${q.usable.length}/${q.days.length} days, ${pct0(q.coverage)} coverage)\n\n`,`Período: ${fd(q.from)} – ${fd(q.to)} (${q.usable.length}/${q.days.length} dias, ${pct0(q.coverage)} cobertura)\n\n`)+
     TL(`Tijd in bereik 3,9–10,0 : ${pct0(m.tir)}  (streef >70%) ${yn(m.tir>=0.70)}\n`,`Time in range 3.9–10.0  : ${pct0(m.tir)}  (aim >70%) ${yn(m.tir>=0.70)}\n`,`Tempo no alvo 3,9–10,0  : ${pct0(m.tir)}  (meta >70%) ${yn(m.tir>=0.70)}\n`)+
     TL(`Tijd < 3,9 (hypo)       : ${pct0(m.tbr)}  (streef <4%)  ${yn(m.tbr<0.04)}\n`,`Time < 3.9 (low)        : ${pct0(m.tbr)}  (aim <4%)  ${yn(m.tbr<0.04)}\n`,`Tempo < 3,9 (hipo)      : ${pct0(m.tbr)}  (meta <4%)  ${yn(m.tbr<0.04)}\n`)+
@@ -1249,7 +1280,7 @@ async function renderFindings(ctx){
         title:TL(`Van je <b>${done}</b> hypo's paste bij <b>${topN}</b> het vaakst: ${LBL[topCause]||topCause}.`,`Of your <b>${done}</b> lows, <b>${topN}</b> most often fit: ${LBL[topCause]||topCause}.`,`Das suas <b>${done}</b> hipos, <b>${topN}</b> encaixaram mais vezes: ${LBL[topCause]||topCause}.`),
         steps:[ TL(`Verdeling: ${breakdown}.`,`Breakdown: ${breakdown}.`,`Distribuição: ${breakdown}.`),
           insulinCauses>=Math.ceil(done/2)
-            ? TL(`Meer dan de helft draait om <b>actieve insuline die doorwerkte</b> — kijk naar bolus-timing en het stapelen van correcties, samen met je team.`,`More than half is about <b>active insulin that kept working</b> — look at bolus timing and stacking corrections, together with your team.`,`Mais de metade tem a ver com <b>insulina ativa que continuou a atuar</b> — veja o timing do bólus e a acumulação de correções, com a sua equipa.`)
+            ? TL(`Meer dan de helft draait om <b>actieve insuline die doorwerkte</b> — kijk naar bolus-timing en het stapelen van correcties.`,`More than half is about <b>active insulin that kept working</b> — look at bolus timing and stacking corrections.`,`Mais de metade tem a ver com <b>insulina ativa que continuou a atuar</b> — veja o timing do bólus e a acumulação de correções, com a sua equipa.`)
             : (tally["basaal"]>=Math.ceil(done/2)
                 ? TL(`Vooral <b>basaal-gedreven</b> lows in stille vensters — een bespreekpunt voor je basaalprofiel, geen instelopdracht.`,`Mostly <b>basal-driven</b> lows in quiet windows — a discussion point for your basal profile, not a setting instruction.`,`Sobretudo hipos <b>de origem basal</b> em janelas calmas — um ponto de discussão para o seu perfil basal, não uma instrução.`)
                 : TL(`Gemengd beeld — open een hypo hierboven voor de reconstructie per keer.`,`Mixed picture — open a low above for the per-case reconstruction.`,`Quadro misto — abra uma hipo acima para a reconstrução caso a caso.`)),
@@ -1304,7 +1335,7 @@ async function renderFindings(ctx){
     else week.push({ id:"drift", sev:"w", seenable:false, consultable:true,
         title:TL(`Nuchter ${drift.up.length?`stijg je rond <b>${joinHrs(drift.up.map(x=>x.h)).join(", ")}</b>`:""}${drift.up.length&&drift.down.length?" en ":""}${drift.down.length?`zak je rond <b>${joinHrs(drift.down.map(x=>x.h)).join(", ")}</b>`:""}.`,`When fasting you ${drift.up.length?`rise around <b>${joinHrs(drift.up.map(x=>x.h)).join(", ")}</b>`:""}${drift.up.length&&drift.down.length?" and ":""}${drift.down.length?`fall around <b>${joinHrs(drift.down.map(x=>x.h)).join(", ")}</b>`:""}.`,`Em jejum ${drift.up.length?`sobe por volta de <b>${joinHrs(drift.up.map(x=>x.h)).join(", ")}</b>`:""}${drift.up.length&&drift.down.length?" e ":""}${drift.down.length?`desce por volta de <b>${joinHrs(drift.down.map(x=>x.h)).join(", ")}</b>`:""}.`),
         steps:[TL(`Drift tot ${nl1(Math.max(drift.peakUp||0,Math.abs(drift.peakDown||0)))} mmol/L per uur in stille vensters.`,`Drift up to ${nl1(Math.max(drift.peakUp||0,Math.abs(drift.peakDown||0)))} mmol/L per hour in quiet windows.`,`Deriva até ${nl1(Math.max(drift.peakUp||0,Math.abs(drift.peakDown||0)))} mmol/L por hora em janelas calmas.`),
-          TL(`In AAPS pas je een basaalblok ~1–2 u vóór het effect aan — bespreek met je team.`,`In AAPS you adjust a basal block ~1–2 h before the effect — discuss with your team.`,`No AAPS ajusta um bloco basal ~1–2 h antes do efeito — discuta com a sua equipa.`)],
+          TL(`In AAPS pas je een basaalblok ~1–2 u vóór het effect aan.`,`In AAPS you adjust a basal block ~1–2 h before the effect.`,`No AAPS ajusta um bloco basal ~1–2 h antes do efeito — discuta com a sua equipa.`)],
         fine:TL(`n = ${drift.total.toLocaleString(LOCALE())} driftmetingen`,`n = ${drift.total.toLocaleString(LOCALE())} drift readings`,`n = ${drift.total.toLocaleString(LOCALE())} medições de deriva`) });
   }
   // Dawn-fenomeen — nuchtere ochtendstijging (referentie §4)
@@ -1312,7 +1343,7 @@ async function renderFindings(ctx){
     if(dp) week.push({ id:"dawn", sev:"n", seenable:false, consultable:true,
       title:TL(`Dawn-fenomeen: je stijgt nuchter in de vroege ochtend (rond <b>${joinHrs(dp.hours).join(", ")}</b>).`,`Dawn phenomenon: you rise when fasting in the early morning (around <b>${joinHrs(dp.hours).join(", ")}</b>).`,`Fenómeno do amanhecer: sobe em jejum de madrugada (por volta de <b>${joinHrs(dp.hours).join(", ")}</b>).`),
       steps:[TL(`Terwijl de nacht ervoor vlak bleef, loopt je glucose op met ~${nl1(dp.rise)} mmol/L per uur — het klassieke groeihormoon-patroon.`,`While the earlier night stayed flat, your glucose rises ~${nl1(dp.rise)} mmol/L per hour — the classic growth-hormone pattern.`,`Enquanto a noite anterior se manteve plana, a glicose sobe ~${nl1(dp.rise)} mmol/L por hora — o padrão clássico da hormona de crescimento.`),
-        TL(`Een iets hóger basaal in de vroege ochtend is hiervoor de gebruikelijke ingang — een bespreekpunt voor je team, geen instelopdracht.`,`A slightly higher basal in the early morning is the usual lever for this — a discussion point for your team, not a setting instruction.`,`Uma basal ligeiramente mais alta de madrugada é a alavanca habitual — um ponto de discussão para a sua equipa, não uma instrução.`)],
+        TL(`Een iets hóger basaal in de vroege ochtend is hiervoor de gebruikelijke ingang.`,`A slightly higher basal in the early morning is the usual lever for this.`,`Uma basal ligeiramente mais alta de madrugada é a alavanca habitual — um ponto de discussão para a sua equipa, não uma instrução.`)],
       fine:TL(`n = ${dp.n.toLocaleString(LOCALE())} driftmetingen in stille vensters · bij een closed loop maskeert temp-basaal dit vaak`,`n = ${dp.n.toLocaleString(LOCALE())} drift readings in quiet windows · with a closed loop temp basal often masks this`,`n = ${dp.n.toLocaleString(LOCALE())} medições de deriva em janelas calmas · num closed loop a basal temporária mascara isto muitas vezes`) }); }
   // Somogyi-rebound — nachtelijke laagte → ochtendhyper (referentie §4, omstreden)
   { const sg=somogyiPattern(glucose, q);
@@ -1761,7 +1792,7 @@ function anDagpatroon(glucose, treatments, q){
   else { const parts=[];
     if(up.length)parts.push(`stijg je rond <b>${joinHrs(up.map(s=>s.h)).join(", ")}</b> (tot ${nl1(peak(up))} mmol/L/u) — waar een iets hóger basaal in beeld komt`);
     if(down.length)parts.push(`zak je rond <b>${joinHrs(down.map(s=>s.h)).join(", ")}</b> (tot ${nl1(peak(down))} mmol/L/u) — waar een iets láger basaal hypo's kan schelen`);
-    obs=`In stille vensters ${parts.join("; en ")}. In AAPS pas je een basaalblok doorgaans 1–2 uur vóór het effect aan. Observatie, geen instelwaarde — bespreek met je behandelteam.`; }
+    obs=`In stille vensters ${parts.join("; en ")}. In AAPS pas je een basaalblok doorgaans 1–2 uur vóór het effect aan. Observatie, geen instelwaarde.`; }
   return driftSvg(stat)+`<div class="obs">${obs}</div><div class="muted" style="margin-top:.4rem">n = ${total.toLocaleString(LOCALE())} driftmetingen in schone vensters · drempel 0,3 mmol/L/u · bij een closed loop kan temp-basaal een echt profielverschil maskeren</div>`;
 }
 
@@ -2181,4 +2212,114 @@ function proposalEngine(drift, oi, MR, pi, glucose, treatments, q, timeline){
   }
 
   return applyGuardrails(items, glucose, q);
+}
+
+/* ── AAPS-profielvoorstel ────────────────────────────────────────────────────
+   Rekent een compleet profiel uit (basaal per blok, ISF, KH-ratio) dat je zo in
+   AAPS kunt overnemen. Methode:
+   • Basaal: 80% van wat de loop nuchter levert (temp-basaal + SMB, niet binnen 3 u na eten),
+     tussen 0,7× en 1,5× van nu. Uur met >4% laag: 15% omlaag. Uur met 3–4% laag: niet omhoog.
+     Daarna samengevoegd tot blokken; stap 0,05 E/u (Omnipod Dash).
+   • ISF: mediaan van (huidige ISF ÷ gemiddelde autosens) en (100 ÷ dagdosis), max −20%/+15%.
+     Blokken met >4% laag houden de huidige ISF.
+   • KH-ratio: per bestaand blok de gemeten ratio uit maaltijden (≥20 g, gecorrigeerd voor SMB,
+     temp-basaal en eindglucose). Pas aan bij ≥8 maaltijden en >10% verschil, max −20%/+20%.
+   Alleen bruikbare dagen (geen loop-uit/pen). */
+const _r05=x=>Math.round(x*20)/20, _r1=x=>Math.round(x*10)/10;
+function _hhmm(m){ return String(Math.floor(m/60)).padStart(2,"0")+":"+String(m%60).padStart(2,"0"); }
+function _hourTs(h, now){ return now + (((h*60+30 - todMin(now))%1440+1440)%1440) * 60000; }   // eerstvolgend moment: het profiel dat nu geldt
+function mealCR(glucose, treatments, timeline, q, isfEff){
+  const H=3600e3, g=glucose, T=g.map(x=>x.ts);
+  const at=ts=>{ let lo=0,hi=T.length; while(lo<hi){const m=(lo+hi)>>1; if(T[m]<ts)lo=m+1;else hi=m;}
+    for(const j of [lo,lo-1]) if(j>=0&&j<T.length&&Math.abs(T[j]-ts)<10*60e3) return g[j].bg; return null; };
+  const carbs=treatments.filter(t=>t.carbs>=20).sort((a,b)=>a.ts-b.ts), allC=treatments.filter(t=>t.carbs>0);
+  const temps=treatments.filter(t=>t.type==="Temp Basal").map(t=>{ const r=t.raw||{};
+    const d=r.durationInMilliseconds!=null?+r.durationInMilliseconds:(t.duration||0)*60000;
+    return {ts:t.ts,end:t.ts+d,abs:(r.absolute!=null?+r.absolute:(r.rate!=null?+r.rate:null)),pct:(r.percent!=null?+r.percent:null)}; }).sort((a,b)=>a.ts-b.ts);
+  const TT=temps.map(x=>x.ts);
+  const out=[];
+  for(const c of carbs){
+    if(q.usableKeys && !q.usableKeys.has(localDayKey(c.ts))) continue;
+    if(allC.some(x=>x!==c && x.ts>c.ts && x.ts<c.ts+4*H)) continue;
+    if(allC.some(x=>x.ts>c.ts-3*H && x.ts<c.ts-10*60e3 && x.carbs>=10)) continue;
+    let ins=0; for(const t of treatments){ if(t.insulin>0 && t.ts>=c.ts-30*60e3 && t.ts<=c.ts+4*H) ins+=t.insulin; }
+    if(ins<=0) continue;
+    let dT=0; for(let k=0;k<48;k++){ const ts=c.ts+k*5*60e3; const p=profileAt(timeline,ts); if(!p||p.basal==null) continue;
+      let lo=0,hi=TT.length; while(lo<hi){const m=(lo+hi)>>1; if(TT[m]<=ts)lo=m+1;else hi=m;} const i=lo-1;
+      let r=p.basal; if(i>=0&&ts<temps[i].end){ const tb=temps[i]; r=tb.abs!=null?tb.abs:p.basal*(tb.pct/100); }
+      dT+=(r-p.basal)*5/60; }
+    const b0=at(c.ts), b4=at(c.ts+4*H); if(b0==null||b4==null) continue;
+    const need=ins+dT+(b4-b0)/isfEff; if(need<=0.3) continue;
+    out.push({ ts:c.ts, min:todMin(c.ts), cr:c.carbs/need });
+  }
+  return out;
+}
+function aapsProfile(glucose, treatments, timeline, q, ds){
+  if(!timeline) return { none:"profiel" };
+  const now=q.to||Date.now(), usable=q.usableKeys;
+  const cur=h=>profileAt(timeline,_hourTs(h,now));
+  const c0=cur(0); if(!c0||c0.source==="geen"||c0.basal==null) return { none:"profiel" };
+  const lb=loopBasal(treatments,timeline,q);
+  if(!lb||!lb.hours) return { none:"loop", few:lb&&lb.few };
+  // per uur: laag/hoog op bruikbare dagen
+  const hs=Array.from({length:24},()=>({n:0,lo:0,hi:0}));
+  for(const x of glucose){ if(usable&&!usable.has(localDayKey(x.ts))) continue; const o=hs[Math.floor(todMin(x.ts)/60)%24]; o.n++; if(x.bg<3.9)o.lo++; if(x.bg>10)o.hi++; }
+  const hours=[];
+  for(let h=0;h<24;h++){
+    const p=cur(h), L=hs[h].n?hs[h].lo/hs[h].n:0, Hh=hs[h].n?hs[h].hi/hs[h].n:0, a=lb.hours[h]&&lb.hours[h].act;
+    let nv=p.basal, why="";
+    if(a!=null){ nv=Math.min(Math.max(0.8*a, p.basal*0.7), p.basal*1.5); why="lev"; }
+    if(L>0.04){ nv=Math.min(nv, p.basal*0.85); why="laag"; }
+    else if(L>0.03 && nv>p.basal){ nv=p.basal; why="laaggrens"; }
+    hours.push({h, cur:p.basal, nv, act:a, low:L, high:Hh, why});
+  }
+  // Veiligheid: totaal basaal per dag hooguit +30% in één stap (verhogingen naar rato kleiner).
+  const sumCur=hours.reduce((s,o)=>s+o.cur,0), sumNew=hours.reduce((s,o)=>s+o.nv,0);
+  if(sumNew>sumCur*1.3){ const up=hours.reduce((s,o)=>s+Math.max(0,o.nv-o.cur),0), room=sumCur*1.3-(sumNew-up), k=up>0?Math.max(0,room/up):0;
+    for(const o of hours) if(o.nv>o.cur) o.nv=o.cur+(o.nv-o.cur)*k; }
+  // samenvoegen tot blokken
+  const blocks=[]; for(const o of hours){ const b=blocks[blocks.length-1];
+    const v=_r05(o.nv);
+    if(b && Math.abs(v-b.vals.reduce((s,x)=>s+x,0)/b.vals.length)<=0.1 && (o.why==="laag")===(b.why==="laag")){ b.vals.push(v); b.hrs.push(o); }
+    else blocks.push({ from:o.h, vals:[v], hrs:[o], why:o.why }); }
+  const basal=blocks.map(b=>{ const v=Math.max(0.05,_r05(b.vals.reduce((s,x)=>s+x,0)/b.vals.length));
+    const curs=[...new Set(b.hrs.map(o=>_r05(o.cur)))], acts=b.hrs.map(o=>o.act).filter(x=>x!=null);
+    const low=Math.max(...b.hrs.map(o=>o.low)), high=Math.max(...b.hrs.map(o=>o.high));
+    return { from:_hhmm(b.from*60), now:curs, value:v, act:acts.length?[Math.min(...acts),Math.max(...acts)]:null, low, high, why:b.why }; });
+  const dayNow=hours.reduce((s,o)=>s+o.cur,0), dayNew=basal.reduce((s,b,i)=>{ const to=i+1<basal.length?hhmmToMin(basal[i+1].from)/60:24; return s+b.value*(to-hhmmToMin(b.from)/60); },0);
+  // autosens
+  const sensV=(ds||[]).filter(d=>d.sens!=null && (!usable||usable.has(localDayKey(d.ts)))).map(d=>d.sens);
+  const sensMean=sensV.length>=500?_pMean(sensV):null, sensMax=sensV.length>=500?sensV.filter(v=>v>=1.195).length/sensV.length:null;
+  // ISF
+  const ic0=insulinCarbs(treatments,timeline,q);
+  const isfNow=[]; for(let h=0;h<24;h++) isfNow.push(cur(h).isf);
+  const est=[]; const isfMed=_pMed(isfNow);
+  if(sensMean) est.push({k:"autosens",v:isfMed/sensMean});
+  if(ic0.tdd>5) est.push({k:"tdd",v:100/ic0.tdd});
+  let isfNew=est.length?_pMed(est.map(e=>e.v)):isfMed; isfNew=_r1(Math.min(Math.max(isfNew,isfMed*0.8),isfMed*1.15));
+  const isfBlocks=[]; for(let h=0;h<24;h++){ const keep=hours[h].low>0.04; const v=keep?_r1(isfNow[h]):isfNew;
+    const b=isfBlocks[isfBlocks.length-1]; if(b&&b.value===v&&_r1(b.nowv)===_r1(isfNow[h])) continue;
+    isfBlocks.push({ from:_hhmm(h*60), now:_r1(isfNow[h]), nowv:isfNow[h], value:v, why:keep?"laag":"est" }); }
+  // KH-ratio per bestaand blok
+  const icNow=[]; for(let h=0;h<24;h++) icNow.push(cur(h).ic);
+  const icB=[]; for(let h=0;h<24;h++){ const b=icB[icB.length-1]; if(b&&b.now===icNow[h]){ b.to=h+1; continue; } icB.push({from:h,to:h+1,now:icNow[h]}); }
+  const meals=mealCR(glucose,treatments,timeline,q, isfMed/(sensMean||1));
+  const ic=icB.map(b=>{ const ms=meals.filter(m=>m.min>=b.from*60&&m.min<b.to*60).map(m=>m.cr);
+    const med=ms.length?_pMed(ms):null; let v=b.now, why="weinig";
+    if(ms.length>=8){ why="gelijk"; if(Math.abs(med-b.now)/b.now>0.10){ v=_r1(Math.min(Math.max(med,b.now*0.8),b.now*1.2)); why="gemeten"; } }
+    return { from:_hhmm(b.from*60), now:_r1(b.now), value:_r1(v), measured:med, n:ms.length, why }; });
+  const maxBasal=Math.max(...basal.map(b=>b.value));
+  const changed = basal.some(b=>b.now.length!==1||Math.abs(b.now[0]-b.value)>=0.05) || isfBlocks.some(b=>Math.abs(b.now-b.value)>=0.1) || ic.some(b=>Math.abs(b.now-b.value)>=0.1);
+  return { basal, isf:isfBlocks, ic, isfEst:est, isfNow:isfMed, sensMean, sensMax, tdd:ic0.tdd, dayNow, dayNew,
+    maxIobMin:_r1(3*maxBasal), days:usable?usable.size:null, meals:meals.length, changed,
+    target:{ lo:cur(0).targetLow??null, hi:cur(0).targetHigh??null }, name:cur(0).name,
+    mealBolus:_pMed(treatments.filter(t=>t.insulin>=0.5&&!t.isSMB&&(!usable||usable.has(localDayKey(t.ts)))).map(t=>t.insulin)) };
+}
+function aapsProfileText(P){
+  const f=v=>String(v).replace(".",",");
+  const L=[TL("Profiel IDA (voor AAPS)","IDA profile (for AAPS)","Perfil IDA (para AAPS)"),"",TL("Basaal (E/u)","Basal (U/h)","Basal (U/h)")];
+  P.basal.forEach(b=>L.push(`${b.from}  ${f(b.value.toFixed(2))}`));
+  L.push("",TL("ISF (mmol/L per E)","ISF (mmol/L per U)","ISF (mmol/L por U)")); P.isf.forEach(b=>L.push(`${b.from}  ${f(b.value.toFixed(1))}`));
+  L.push("",TL("KH-ratio (g per E)","Carb ratio (g per U)","Rácio HC (g por U)")); P.ic.forEach(b=>L.push(`${b.from}  ${f(b.value.toFixed(1))}`));
+  return L.join("\n");
 }
