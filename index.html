@@ -779,6 +779,7 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
     <summary><span>Effect van doorgevoerde wijzigingen</span> <span class="foldhint">meting 14 dagen erna</span></summary>
     <div class="foldbody"><div id="effects"><div class="muted">…</div></div></div>
   </details>
+  <details class="deep" data-an="geheugen"><summary><span>Maaltijdgeheugen</span> <span class="foldhint">jouw eigen uitkomst per product</span></summary><div class="body"><div class="loading">…</div></div></details>
   <details class="deep" data-an="maand"><summary><span>Maandtrend</span> <span class="foldhint">tijd in bereik per maand</span></summary><div class="body"><div class="loading">…</div></div></details>
   <details class="deep" data-an="uur"><summary><span>Per uur</span> <span class="foldhint">spreiding, hypo's &amp; hoogtes per uur</span></summary><div class="body"><div class="loading">…</div></div></details>
   <details class="deep" data-an="loopbasal"><summary><span data-i18n="an.loopBasal">Loop-basaal</span> <span class="foldhint" data-i18n="an.loopBasalHint">wat je loop echt levert vs. je profiel</span></summary><div class="body"><div class="loading" data-i18n="loading">Openklappen om te berekenen…</div></div></details>
@@ -3757,7 +3758,34 @@ function anHours(glucose, q){
   const tr=rows.map(r=>`<div class="warow"><span>${String(r.h).padStart(2,"0")}:00</span><span>${nl1(r.p10)}–${nl1(r.p90)}</span><span style="${r.low>0.04?"color:var(--low);font-weight:600":""}">${pct0(r.low)}</span><span style="${r.high>0.25?"color:var(--high);font-weight:600":""}">${pct0(r.high)}</span><span>${r.ep}</span></div>`).join("");
   return `<div class="watable"><div class="warow head"><span>${TL("uur","hour","hora")}</span><span>p10–p90</span><span>&lt;3,9</span><span>&gt;10</span><span>${TL("hypo-starts","hypo starts","início hipo")}</span></div>${tr}</div>`+
     `<div class="obs" style="margin-top:.5rem">${TL(`Meeste tijd onder 3,9: <b>${String(worstLow.h).padStart(2,"0")}:00</b> (${pct0(worstLow.low)}). Meeste tijd boven 10: <b>${String(worstHigh.h).padStart(2,"0")}:00</b> (${pct0(worstHigh.high)}).`,`Most time below 3.9: <b>${String(worstLow.h).padStart(2,"0")}:00</b> (${pct0(worstLow.low)}). Most time above 10: <b>${String(worstHigh.h).padStart(2,"0")}:00</b> (${pct0(worstHigh.high)}).`,`Mais tempo abaixo de 3,9: <b>${String(worstLow.h).padStart(2,"0")}:00</b> (${pct0(worstLow.low)}). Mais tempo acima de 10: <b>${String(worstHigh.h).padStart(2,"0")}:00</b> (${pct0(worstHigh.high)}).`)}</div>`+
+(worstLow.low>0.04?`<div class="obs" style="margin-top:.4rem"><b>${TL("Idee voor je team (alleen tekst)","Idea for your team (text only)","Ideia para a equipa (só texto)")}</b>: ${TL(`rond ${String(worstLow.h).padStart(2,"0")}:00 zit je boven de ATTD-grens voor laag. Bespreek of een tijdelijk hoger streefdoel of een Automation/profielschakeling in dat uur past. De app wijzigt nooit iets in AAPS of je pomp.`,`around ${String(worstLow.h).padStart(2,"0")}:00 you exceed the ATTD limit for lows. Discuss whether a temporary higher target or an Automation/profile switch fits that hour. The app never changes anything in AAPS or your pump.`,`por volta das ${String(worstLow.h).padStart(2,"0")}:00 excede o limite ATTD para hipos. Discuta um alvo temporário mais alto ou uma Automation. A app nunca altera nada no AAPS ou na bomba.`)}</div>`:"")+
     `<div class="muted" style="margin-top:.4rem">${TL(`${days} bruikbare dagen. Rood = boven de ATTD-grens (4% / 25%). Observatie, geen instelwaarde.`,`${days} usable days. Coloured = beyond ATTD limit (4% / 25%). Observation, not a setting.`,`${days} dias utilizáveis. Destacado = acima do limite ATTD (4% / 25%). Observação, não uma definição.`)}</div>`;
+}
+
+/* ── Fase 5: maaltijdgeheugen ────────────────────────────────────────────────
+   Jouw eigen uitkomst per gelogd product: startwaarde, piek binnen 3 u en laagste
+   punt binnen 4 u, gegroepeerd per product (alleen maaltijden die je via de
+   koolhydraat-schatter loggde). Observatie, geen instelwaarde. */
+async function anMemory(glucose, q){
+  let anns=[]; try{ anns=await DB.all("annotations"); }catch(_){}
+  const meals=anns.filter(a=>a.type==="maaltijd" && a.items && a.items.length);
+  if(!meals.length) return `<div class="muted">${TL("Nog geen maaltijden gelogd met de koolhydraat-schatter (Eten-tab). Elke gelogde maaltijd bouwt hier jouw eigen geheugen op.","No meals logged with the carb estimator yet (Food tab). Each logged meal builds your own memory here.","Ainda sem refeições registadas com o estimador. Cada refeição registada constrói a sua memória.")}</div>`;
+  const T=glucose.map(g=>g.ts), lb=ts=>{let lo=0,hi=T.length;while(lo<hi){const m=(lo+hi)>>1;if(T[m]<ts)lo=m+1;else hi=m;}return lo;};
+  const by=new Map();
+  for(const a of meals){ if(!q.usableKeys.has(localDayKey(a.ts))) continue;
+    let s0=null,pk=null,mn=null;
+    for(let i=lb(a.ts);i<T.length&&T[i]<=a.ts+4*3600e3;i++){ const bg=glucose[i].bg;
+      if(s0==null){ if(T[i]-a.ts>15*60e3) break; s0=bg; }
+      if(T[i]<=a.ts+3*3600e3&&(pk==null||bg>pk)) pk=bg; if(T[i]>a.ts+30*60e3&&(mn==null||bg<mn)) mn=bg; }
+    if(s0==null||pk==null) continue;
+    const name=a.items.length===1?a.items[0].n:a.items.map(i=>i.n).sort().join(" + ");
+    (by.get(name)||by.set(name,[]).get(name)).push({rise:pk-s0,low:mn!=null&&mn<3.9,carbs:a.carbs}); }
+  const med=a=>{const x=[...a].sort((p,q)=>p-q);return x.length?x[Math.floor(x.length/2)]:null;};
+  const rows=[...by.entries()].filter(([,v])=>v.length>=3).map(([n,v])=>({n,k:v.length,rise:med(v.map(x=>x.rise)),low:v.filter(x=>x.low).length/v.length,carbs:med(v.filter(x=>x.carbs!=null).map(x=>x.carbs))})).sort((a,b)=>b.rise-a.rise);
+  if(!rows.length) return `<div class="muted">${TL(`Nog geen product of combinatie ≥3× gelogd (${meals.length} maaltijden totaal).`,`No product or combination logged ≥3× yet (${meals.length} meals total).`,`Nenhum produto ≥3× registado (${meals.length} refeições).`)}</div>`;
+  return `<div class="watable"><div class="warow head"><span>${TL("product","food","alimento")}</span><span>${TL("piek (med.)","peak (med.)","pico (med.)")}</span><span>${TL("laag ≤4u","low ≤4h","baixa ≤4h")}</span><span>g KH</span></div>`+
+    rows.map(r=>`<div class="warow"><span>${esc(r.n)} <span style="color:var(--dim)">· n=${r.k}</span></span><span>+${nl1(r.rise)}</span><span>${pct0(r.low)}</span><span>${r.carbs==null?"—":Math.round(r.carbs)}</span></div>`).join("")+`</div>`+
+    `<div class="muted" style="margin-top:.4rem">${TL("Hoogste piek bovenaan. Vaak een ander effect dan de tabelwaarde: gebruik dit om je eigen schatting en prebolus-timing te verfijnen. Observatie, geen instelwaarde.","Highest peak first. Often differs from the table value: use it to refine your own estimate and prebolus timing. Observation, not a setting.","Maior pico primeiro. Use para afinar a sua estimativa e o prebólus. Observação.")}</div>`;
 }
 function initDeep(){
   document.querySelectorAll("details.deep").forEach(d=>{
@@ -3772,9 +3800,11 @@ function initDeep(){
           : an==="meals" ? anMeals(glucose, treatments, q, timeline)
           : an==="stacking" ? anStacking(glucose, treatments, q)
           : an==="lunch" ? anLunch(glucose, treatments, q)
+          : an==="geheugen" ? "__async"
           : an==="maand" ? anMonths(glucose, q)
           : an==="uur" ? anHours(glucose, q)
           : "";
+        if(an==="geheugen"){ anMemory(glucose,q).then(h=>{body.innerHTML=h;}).catch(e=>{body.innerHTML=`<div class="muted">${e.message}</div>`;}); }
       } catch(e){ body.innerHTML = `<div class="muted">${TL("Analyse mislukt","Analysis failed","Análise falhou")}: ${e.message}</div>`; console.error(an, e); }
     });
   });

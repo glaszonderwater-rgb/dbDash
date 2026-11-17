@@ -56,3 +56,10 @@ insteladviezen. Wat je met een patroon doet, bespreek je met je behandelteam.
 - **Meetinterval:** bronnen die elke minuut leveren (xDrip+ met Libre) worden per 5 minuten gemiddeld, zodat alle analyses dezelfde 288 slots per dag gebruiken.
 - **Loop-gaten:** voor closed loop slaat de app dagen over waarop de loop minder dan 30% van de gewone activiteit had (telefoon of AAPS uit). Ze staan als "loop uit" in de periodebalk; uitschakelen kan in het tandwiel.
 - **Strak bereik:** naast tijd in bereik (3,9–10) toont de app 3,9–7,8 als tweede maat.
+
+## Voorstellen, vangrails en effectmeting
+- **Analyses**: maandtrend, uurtabel (spreiding, % <3,9 / >10, hypo-starts per uur), KH-schatting per dagdeel en maaltijdgeheugen (jouw eigen uitkomst per product).
+- **Vangrails** op de bespreekwaarden: laagtes eerst (geen insuline-verhogend voorstel in een dagdeel met >4% <3,9 of ≥1% <3,0), min. 14 dekkende dagen, één wijziging per dagdeel, waarschuwing bij stappen >10%.
+- **Besluiten**: accepteren / aanpassen / afwijzen. Accepteren legt een "wijziging" vast; 14 dagen later staat de meting onder *Effect van doorgevoerde wijzigingen* (verbeterd · gelijk · verslechterd · onduidelijk, met aparte veiligheidscheck <3,0).
+- De app schrijft nooit naar AAPS of je pomp. Een periodevergelijking is geen herhaling van het oref1-algoritme en bewijst geen oorzaak.
+- **Koppellink**: Instellingen → "Kopieer koppellink" zet adres+token in één keer op een ander apparaat.
