@@ -2,7 +2,7 @@
    Cachet alleen de eigen app-bestanden (schil). Verzoeken naar je Nightscout
    (cross-origin) worden NOOIT onderschept of bewaard: die gaan altijd live en
    blijven buiten deze cache. Data zelf leeft in IndexedDB, niet hier. */
-const VERSION = 'v4';
+const VERSION = 'v5';
 const CACHE = 'diametric-shell-' + VERSION;
 const SHELL = ['./', './index.html', './manifest.json', './icon.svg'];
 

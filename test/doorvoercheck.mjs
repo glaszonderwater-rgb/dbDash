@@ -19,19 +19,18 @@ await p.fill('#inUrl','https://mock.nightscout.test');await p.fill('#inTok','x')
 await p.waitForFunction(()=>!document.getElementById('secInsulin').hidden,{timeout:60000}).catch(()=>{});await p.waitForTimeout(800);
 
 
+
+p.on('dialog',d=>d.accept(new Date(Date.now()-20*864e5).toISOString().slice(0,10)));
 const r=await p.evaluate(async()=>{ const o={};
- const {glucose,q}=_ctx;
- const items=[{key:"basaal",rows:[{dpKey:"nacht",label:"nacht",meta:"",cands:[{tag:"gemeten",from:"0,9",to:"1,0"}]}],grid:{nacht:{status:"change"}}},
-  {key:"isf",rows:[{dpKey:"nacht",label:"nacht",meta:"",cands:[{tag:"gemeten",from:"2,0",to:"1,6"}]}],grid:{}}];
- applyGuardrails(items,glucose,q); o.gr=items.map(it=>it.rows[0].gr.map(x=>x.lvl+":"+x.msg.slice(0,40)));
- // besluitflow
  document.getElementById("proposals").innerHTML=`<div class="pdec" data-id="v-basaal-nacht" data-key="basaal" data-dp="nacht" data-label="nacht" data-from="0,9" data-to="1,0"></div>`;
- await decorateProposals(); o.btns=document.querySelectorAll("#proposals .pdec button").length;
+ await decorateProposals();
  document.querySelector('#proposals [data-d="accept"]').click(); await new Promise(r=>setTimeout(r,500));
- const an=await DB.all("annotations"); o.ann=an.map(a=>a.type+":"+a.id);
- o.st=document.querySelector("#proposals .pdst")?.innerText;
- // effect: wijziging 20 dagen terug -> shift
- const w=an.find(a=>a.type==="wijziging"); w.ts=Date.now()-20*864e5; await DB.putMany("annotations",[w]); await renderEffects();
- o.fx=document.getElementById("effects").innerText.replace(/\s+/g," ").slice(0,400);
+ o.s1=document.querySelector("#proposals .pdec").innerText.replace(/\s+/g," ");
+ o.fxWait=document.getElementById("effects").innerText.replace(/\s+/g," ").slice(0,160);
+ o.annA=(await DB.all("annotations")).map(a=>a.type);
+ document.querySelector('#proposals [data-d="applied"]').click(); await new Promise(r=>setTimeout(r,800));
+ o.s2=document.querySelector("#proposals .pdec").innerText.replace(/\s+/g," ");
+ o.annB=(await DB.all("annotations")).map(a=>a.type+(a.applied?"*":""));
+ o.fx=document.getElementById("effects").innerText.replace(/\s+/g," ").slice(0,200);
  return o;});
 console.log(JSON.stringify(r,null,1));console.log('errors',errs);await b.close();

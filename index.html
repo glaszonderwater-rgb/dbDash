@@ -771,11 +771,13 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
   </details>
 
   <div class="h3" data-i18n="an.insulinBasal">Insuline &amp; basaal</div>
+  <details class="fold" id="secMore"><summary><span>Meer analyses</span> <span class="foldhint">maandtrend, per uur, maaltijdgeheugen, loop-basaal, dagpatroon</span></summary><div class="foldbody">
   <details class="deep" data-an="geheugen"><summary><span>Maaltijdgeheugen</span> <span class="foldhint">jouw eigen uitkomst per product</span></summary><div class="body"><div class="loading">…</div></div></details>
   <details class="deep" data-an="maand"><summary><span>Maandtrend</span> <span class="foldhint">tijd in bereik per maand</span></summary><div class="body"><div class="loading">…</div></div></details>
   <details class="deep" data-an="uur"><summary><span>Per uur</span> <span class="foldhint">spreiding, hypo's &amp; hoogtes per uur</span></summary><div class="body"><div class="loading">…</div></div></details>
   <details class="deep" data-an="loopbasal"><summary><span data-i18n="an.loopBasal">Loop-basaal</span> <span class="foldhint" data-i18n="an.loopBasalHint">wat je loop echt levert vs. je profiel</span></summary><div class="body"><div class="loading" data-i18n="loading">Openklappen om te berekenen…</div></div></details>
   <details class="deep" data-an="dagpatroon"><summary><span data-i18n="an.daypattern">Dagpatroon</span> <span class="foldhint" data-i18n="an.daypatternHint">vaste uren waarop je wegdrijft (basaal)</span></summary><div class="body"><div class="loading" data-i18n="loading">Openklappen om te berekenen…</div></div></details>
+  </div></details>
   <details class="fold" id="secInsulin" hidden>
     <summary><span data-i18n="an.insulinCarbs">Insuline &amp; koolhydraten</span> <span class="foldhint" data-i18n="an.insulinCarbsHint">dagdosis en verhouding</span></summary>
     <div class="foldbody">
@@ -3535,16 +3537,29 @@ async function decorateProposals(){
   const mine=new Map(anns.filter(a=>a.type==="voorstel").map(a=>[a.pid+"|"+a.from+"|"+a.to,a]));
   for(const el of els){ const k=el.dataset.id+"|"+el.dataset.from+"|"+el.dataset.to, a=mine.get(k);
     const lab={accept:TL("geaccepteerd","accepted","aceite"),adjust:TL("aangepast","adjusted","ajustado"),reject:TL("afgewezen","rejected","rejeitado")};
-    el.innerHTML=a?`<span class="pdst ${a.decision}">${lab[a.decision]||a.decision}${a.adjusted?" → "+esc(a.adjusted):""} · ${new Date(a.ts).toLocaleDateString(LOCALE(),{day:"2-digit",month:"short"})}</span> <button class="ghost pdundo">${TL("ongedaan","undo","anular")}</button>`
-      :`<button class="ghost" data-d="accept">${TL("Accepteren","Accept","Aceitar")}</button><button class="ghost" data-d="adjust">${TL("Aanpassen","Adjust","Ajustar")}</button><button class="ghost" data-d="reject">${TL("Afwijzen","Reject","Rejeitar")}</button>`; }
+    const dstr=ts=>new Date(ts).toLocaleDateString(LOCALE(),{day:"2-digit",month:"short"});
+    if(!a) el.innerHTML=`<button class="ghost" data-d="accept">${TL("Accepteren","Accept","Aceitar")}</button><button class="ghost" data-d="adjust">${TL("Aanpassen","Adjust","Ajustar")}</button><button class="ghost" data-d="reject">${TL("Afwijzen","Reject","Rejeitar")}</button>`;
+    else if(a.decision==="reject") el.innerHTML=`<span class="pdst reject">${lab.reject} · ${dstr(a.ts)}</span> <button class="ghost pdundo">${TL("ongedaan","undo","anular")}</button>`;
+    else if(a.applied) el.innerHTML=`<span class="pdst accept">✔ ${TL("doorgevoerd","applied","aplicado")} ${dstr(a.applied)}${a.adjusted?" → "+esc(a.adjusted):""}</span> <button class="ghost pdundo">${TL("ongedaan","undo","anular")}</button>`;
+    else el.innerHTML=`<span class="pdst">${lab[a.decision]||a.decision}${a.adjusted?" → "+esc(a.adjusted):""} · ${TL("nog niet doorgevoerd","not applied yet","ainda não aplicado")}</span> <button data-d="applied">✔ ${TL("Doorgevoerd","Applied","Aplicado")}</button> <button class="ghost pdundo">${TL("ongedaan","undo","anular")}</button>`;
+  }
 }
 async function decideProposal(el, decision){
   let adjusted=null;
   if(decision==="adjust"){ adjusted=prompt(TL("Welke waarde spreek je af met je team?","Which value did you agree with your team?","Que valor combinou com a equipa?"), el.dataset.to.split("–")[0]); if(!adjusted) return; }
-  const now=Date.now(), id=el.dataset.id, base={ ts:now, type:"voorstel", pid:id, key:el.dataset.key, dp:el.dataset.dp, from:el.dataset.from, to:el.dataset.to, decision, adjusted, created:now };
-  const rows=[{ ...base, id:id+"|"+el.dataset.from+"|"+el.dataset.to }];
-  if(decision!=="reject"){ rows.push({ id:"w-"+rows[0].id, ts:now, type:"wijziging", created:now, ref:rows[0].id,
-    note:`${el.dataset.label}: ${el.dataset.from} → ${adjusted||el.dataset.to} (${el.dataset.key}, uit voorstel)` }); }
+  const now=Date.now(), id=el.dataset.id, rid=id+"|"+el.dataset.from+"|"+el.dataset.to;
+  let rows;
+  if(decision==="applied"){
+    const def=new Date(now-new Date().getTimezoneOffset()*60000).toISOString().slice(0,10);
+    const d=prompt(TL("Op welke datum heb je de wijziging doorgevoerd? (JJJJ-MM-DD)","On which date did you apply the change? (YYYY-MM-DD)","Em que data aplicou a alteração? (AAAA-MM-DD)"),def); if(!d) return;
+    const ts=new Date(d+"T12:00:00").getTime(); if(!isFinite(ts)||ts>now+864e5){ toast(TL("Ongeldige datum.","Invalid date.","Data inválida.")); return; }
+    let prev=null; try{ prev=(await DB.all("annotations")).find(x=>x.id===rid); }catch(_){}
+    if(!prev) return;
+    rows=[{...prev,applied:ts}, { id:"w-"+rid, ts, type:"wijziging", created:now, ref:rid,
+      note:`${el.dataset.label}: ${el.dataset.from} → ${prev.adjusted||el.dataset.to} (${el.dataset.key}, uit voorstel)` }];
+  } else {
+    rows=[{ ts:now, type:"voorstel", pid:id, key:el.dataset.key, dp:el.dataset.dp, from:el.dataset.from, to:el.dataset.to, decision, adjusted, created:now, id:rid }];
+  }
   try{ await DB.putMany("annotations",rows); }catch(e){ toast(TL("Opslaan mislukt: ","Save failed: ","Falha ao guardar: ")+e.message); return; }
   decorateProposals(); if(typeof renderLog==="function") renderLog(); if(typeof renderEffects==="function") renderEffects();
 }
@@ -3565,10 +3580,12 @@ async function renderEffects(){
   const host=document.getElementById("effects"); if(!host) return;
   let anns=[]; try{ anns=await DB.all("annotations"); }catch(_){}
   const list=anns.filter(a=>a.type==="wijziging" && a.ref).sort((a,b)=>b.ts-a.ts);
-  if(!list.length){ host.innerHTML=`<div class="muted">${TL("Nog geen doorgevoerde wijziging uit een voorstel. Accepteer een bespreekwaarde bij Bespreekwaarden en voer die samen met je team door; 14 dagen later staat hier de meting.","No applied change from a proposal yet. Accept a proposal and apply it with your team; 14 days later the measurement shows here.","Ainda nenhuma alteração aplicada. Aceite uma proposta e aplique-a com a equipa; 14 dias depois a medição aparece aqui.")}</div>`; return; }
+  const waiting=anns.filter(a=>a.type==="voorstel" && a.decision!=="reject" && !a.applied);
+  const waitHtml=waiting.length?`<div class="pgr unclear">${TL("Geaccepteerd, nog niet doorgevoerd","Accepted, not applied yet","Aceite, ainda não aplicado")}: ${waiting.map(w=>esc(w.key+" "+w.dp+" "+w.from+" → "+(w.adjusted||w.to))).join(" · ")}. ${TL("Druk bij het voorstel op ✔ Doorgevoerd als je het hebt aangepast.","Tap ✔ Applied at the proposal once you have changed it.","Toque em ✔ Aplicado na proposta depois de a alterar.")}</div>`:"";
+  if(!list.length){ host.innerHTML=waitHtml+`<div class="muted">${TL("Nog geen doorgevoerde wijziging uit een voorstel. Accepteer een bespreekwaarde, voer die samen met je team door en druk op ✔ Doorgevoerd; 14 dagen later staat hier de meting.","No applied change from a proposal yet. Accept a proposal, apply it with your team and tap ✔ Applied; 14 days later the measurement shows here.","Ainda nenhuma alteração aplicada. Aceite uma proposta e aplique-a com a equipa; 14 dias depois a medição aparece aqui.")}</div>`; return; }
   if(!_ctx){ host.innerHTML=`<div class="muted">${TL("Laad eerst je data.","Load your data first.","Carregue primeiro os dados.")}</div>`; return; }
   const {glucose,q}=_ctx, DAYSMS=864e5, now=Date.now();
-  host.innerHTML=list.map(a=>{
+  host.innerHTML=waitHtml+list.map(a=>{
     const dp=(a.ref.split("-")[2]||"").split("|")[0], part=DAYPARTS.find(d=>d.key===dp);
     const gl=part?glucose.filter(x=>{const m=todMin(x.ts);return m>=part.lo&&m<part.hi;}):glucose;
     const age=Math.floor((now-a.ts)/DAYSMS), when=new Date(a.ts).toLocaleDateString(LOCALE(),{day:"2-digit",month:"short"});
@@ -3624,9 +3641,10 @@ function proposalsHtml(drift, oi, MR, pi, glucose, treatments, q, timeline){
     if(g.status==="ok") return `<td class="bwc ok" title="${TL("gemeten sluit aan bij je instelling","measured aligns with your setting","medido alinha com a sua definição")}">✓</td>`;
     return `<td class="bwc none" title="${TL("te weinig schone data in dit dagdeel","too little clean data in this part of day","poucos dados limpos neste período")}">—</td>`; };
   const dpsShown=DAYPARTS.filter(d=>LEV.some(([k])=>cellFor(k,d.key).status!=="weinig"));
+  const LEVS=LEV.filter(([k])=>dpsShown.some(d=>cellFor(k,d.key).status!=="weinig"));
   const matrix = dpsShown.length ? `<table class="bwm">
-    <thead><tr><th>${TL("dagdeel","part of day","período")}</th>${LEV.map(([,l,u])=>`<th>${l}<span class="bwu">${u}</span></th>`).join("")}</tr></thead>
-    <tbody>${dpsShown.map(d=>`<tr><td class="bwd">${dpName(d.key)}</td>${LEV.map(([k])=>cellHtml(cellFor(k,d.key))).join("")}</tr>`).join("")}</tbody>
+    <thead><tr><th>${TL("dagdeel","part of day","período")}</th>${LEVS.map(([,l,u])=>`<th>${l}<span class="bwu">${u}</span></th>`).join("")}</tr></thead>
+    <tbody>${dpsShown.map(d=>`<tr><td class="bwd">${dpName(d.key)}</td>${LEVS.map(([k])=>cellHtml(cellFor(k,d.key))).join("")}</tr>`).join("")}</tbody>
   </table>
   <div class="bwleg"><span><b class="lok">✓</b> ${TL("gemeten sluit aan","measured aligns","medido alinha")}</span><span><b class="ldash">—</b> ${TL("te weinig data","too little data","poucos dados")}</span><span><b class="larr">→</b> ${TL("bespreekwaarde","discussion value","valor de discussão")}</span></div>` : "";
   // ISF-terugval op de hele dag (geen dagdeel apart genoeg data).
@@ -3638,7 +3656,20 @@ function proposalsHtml(drift, oi, MR, pi, glucose, treatments, q, timeline){
     `<div class="pgood" style="margin-top:.6rem">${TL("Waar genoeg data is, sluiten je gemeten waarden aan bij je instellingen. Een — betekent te weinig data — geen oordeel.","Where there's enough data, your measured values match your settings. A — means too little data — no judgment.","Onde há dados suficientes, os seus valores medidos correspondem às definições. Um — significa poucos dados — sem juízo.")}</div>`;
   const caveat = `<div class="muted" style="margin-top:.6rem">${TL('Dóórgerekend met je eigen data; <span class="prisk">rood</span> = de simulatie ziet meer laagtes. Bespreekpunten voor je team — geen instel- of pompopdracht.','Computed with your own data; <span class="prisk">red</span> = the simulation sees more lows. Discussion points for your team — not a setting or pump instruction.','Calculado com os seus próprios dados; <span class="prisk">vermelho</span> = a simulação vê mais valores baixos. Pontos de discussão para a sua equipa — não uma instrução de definição ou bomba.')}</div>`;
   const detail = anyChange ? `<details class="bwdetail"><summary>${TL("Onderbouwing per dagdeel — bewijs & effect","Rationale per part of day — evidence & effect","Fundamentação por período do dia — evidência e efeito")}</summary><div class="bwbody">${changed.map(card).join("")}</div></details>` : "";
-  return matrix + allNote + lead + caveat + detail;
+  // Waarom staat er een "—"? Concreet per hefboom, met aantallen.
+  const why=[];
+  if(oi && oi.n!=null && oi.n<8) why.push(TL(`ISF: ${oi.n} losse handmatige correcties (min. 8). Met een closed loop doet de loop de correcties zelf (SMB), dus dit is zelden meetbaar — zie de vuistregel hieronder.`,`ISF: ${oi.n} stand-alone manual corrections (min. 8). On a closed loop the loop does the corrections (SMB), so this is rarely measurable — see the rule of thumb below.`,`ISF: ${oi.n} correções manuais isoladas (mín. 8). Num loop fechado o loop corrige (SMB) — veja a regra prática abaixo.`));
+  const icg=byKey.ic&&byKey.ic.grid; if(icg){ const low=Object.entries(icg).filter(([k,g])=>g.status==="weinig"&&g.n!=null).map(([k,g])=>`${dpName(k)} n=${g.n}`);
+    if(low.length) why.push(TL(`KH-ratio: te weinig gebolusde maaltijden van ≥30 g (min. ${MEAL_MIN}) in ${low.join(", ")}.`,`Carb ratio: too few bolused meals of ≥30 g (min. ${MEAL_MIN}) in ${low.join(", ")}.`,`Rácio: poucas refeições com bólus ≥30 g (mín. ${MEAL_MIN}) em ${low.join(", ")}.`)); }
+  let rule="";
+  try{ const ins=insulinCarbs(treatments,timeline,q), isfP=pi.isf&&pi.isf.length?_pMed(pi.isf.map(b=>b.value)):null, icP=pi.ic&&pi.ic.length?_pMed(pi.ic.map(b=>b.value)):null;
+    if(ins.tdd>5){ const isfR=100/ins.tdd, icR=500/ins.tdd, dev=(x,y)=>y?Math.round((x/y-1)*100):null;
+      const line=(lab,r,pf,u)=>{ const d=pf?dev(r,pf):null; return `<div class="bar"><span>${lab}</span><span>${nl1(r)} ${u} <span class="muted">${TL("vs profiel","vs profile","vs perfil")} ${pf!=null?nl1(pf):"—"}${d!=null?` (${d>0?"+":""}${d}%)`:""}</span></span></div>`; };
+      rule=`<div class="ba" style="margin-top:.6rem"><b>${TL("Vuistregel-check ISF (TDD)","Rule-of-thumb ISF check (TDD)","Verificação ISF por regra (TDD)")}</b><div class="muted" style="font-size:.72rem;margin:.2rem 0">${TL(`Totale dagdosis ≈ ${nl1(ins.tdd)} E (basaal uit profiel + bolus + SMB). Dit is een grove schatting, géén meting van jouw lichaam.`,`Total daily dose ≈ ${nl1(ins.tdd)} U (profile basal + bolus + SMB). A rough estimate, not a measurement.`,`Dose diária total ≈ ${nl1(ins.tdd)} U. Estimativa grosseira, não uma medição.`)}</div>`+
+        line("ISF (100/TDD)",isfR,isfP,"mmol/L/"+TL("E","U","U"))+
+        `<div class="muted" style="font-size:.7rem;margin-top:.25rem">${TL("Verschilt het >25%, bespreek dan met je team of er een reden voor is. Geen advies om te wijzigen.","If it differs >25%, ask your team whether there is a reason. Not advice to change.","Se diferir >25%, discuta com a equipa. Não é um conselho para alterar.")}</div></div>`; } }catch(e){}
+  const whyHtml = why.length?`<div class="muted" style="margin-top:.5rem;font-size:.74rem"><b>—</b> ${why.join(" ")}</div>`:"";
+  return matrix + allNote + whyHtml + rule + lead + caveat + detail;
 }
 
 // ── Logboek & voor/na-vergelijker ──────────────────────────────────────────
@@ -4767,6 +4798,7 @@ function goTo(target, view){
     ? document.querySelector(`details[data-an="${target.slice(3)}"]`)
     : document.getElementById(target);
   if(!el) return;
+  for(let p=el.parentElement;p;p=p.parentElement){ if(p.tagName==="DETAILS") p.open=true; }
   if(el.tagName==="DETAILS") el.open=true;
   setTimeout(()=>el.scrollIntoView({behavior:"smooth",block:"start"}),60);
 }
