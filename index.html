@@ -602,6 +602,9 @@ details.fold>summary:focus-visible,details.deep>summary:focus-visible{outline-of
 #nvRoot progress{width:100%}#nvRoot .row{display:flex;gap:.5rem}#nvRoot .row button{width:50%}
 #nvRoot .nvwarn{background:var(--risk-bg);border:1px solid var(--risk-line);border-radius:8px;padding:.5rem;font-size:.85rem;margin-top:.4rem}
 .lnbar{display:flex;align-items:center;gap:.4rem;font-size:.75rem;color:var(--muted)}.lnbar i{display:inline-block;height:.6rem;background:var(--accent);border-radius:3px}
+.pgr{font-size:.72rem;margin:.3rem 0;padding:.3rem .5rem;border-radius:6px;background:var(--panel2,rgba(128,128,128,.12))}
+.pgr.block{border-left:3px solid var(--low)}.pgr.unclear,.pgr.queue{border-left:3px solid var(--muted)}.pgr.warn{border-left:3px solid var(--high)}
+.pdec{display:flex;gap:.4rem;flex-wrap:wrap;margin-top:.4rem;align-items:center}.pdst{font-size:.75rem;font-weight:600}
 </style>
 </head>
 <body>
@@ -771,6 +774,10 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
   <details class="fold" id="secProposals" hidden>
     <summary><span data-i18n="an.proposals">Bespreekwaarden</span> <span class="foldhint" data-i18n="an.proposalsHint">concrete getallen om met je team te bespreken</span></summary>
     <div class="foldbody"><div id="proposals"></div></div>
+  </details>
+  <details class="fold" id="secEffects">
+    <summary><span>Effect van doorgevoerde wijzigingen</span> <span class="foldhint">meting 14 dagen erna</span></summary>
+    <div class="foldbody"><div id="effects"><div class="muted">…</div></div></div>
   </details>
   <details class="deep" data-an="maand"><summary><span>Maandtrend</span> <span class="foldhint">tijd in bereik per maand</span></summary><div class="body"><div class="loading">…</div></div></details>
   <details class="deep" data-an="uur"><summary><span>Per uur</span> <span class="foldhint">spreiding, hypo's &amp; hoogtes per uur</span></summary><div class="body"><div class="loading">…</div></div></details>
@@ -2484,7 +2491,7 @@ function render(glucose, treatments, timeline){
   { const sp=document.getElementById("secProposals");
     if(!pi || !treatments.length){ if(sp) sp.hidden = true; }
     else { sp.hidden = false;
-      document.getElementById("proposals").innerHTML = proposalsHtml(drift, oi, MR, pi, glucose, treatments, q, timeline); } }
+      document.getElementById("proposals").innerHTML = proposalsHtml(drift, oi, MR, pi, glucose, treatments, q, timeline); decorateProposals(); } }
   document.getElementById("epMaand").classList.toggle("warned",
     (!watch.few && watch.alerts.length>0) || !!document.querySelector("#tune .wad"));
 
@@ -2512,7 +2519,7 @@ function render(glucose, treatments, timeline){
 
   // ── bevindingen + consultlijst (async, buiten de renderflow) ──
   renderFindings({ glucose, q, m, hy, tr, drift, oi, MR, stack, treatments, timeline });
-  renderLog(); renderAware(); renderConsult();
+  renderLog(); renderAware(); renderConsult(); renderEffects();
 }
 
 /* ── Bevindingen-engine — de app vertelt wat er toe doet ─────────────────── */
@@ -3389,6 +3396,38 @@ function isfCands(sub){
     cands.push({tag, from:nl1(P), to:nl1(C), eff, risky, dir:C>P?TL("loop spuit iets minder bij","loop corrects a bit less","o loop corrige um pouco menos"):TL("loop spuit iets meer bij","loop corrects a bit more","o loop corrige um pouco mais")}); }
   return cands.length?{cands, meta:`n=${sub.n} · IQR ${nl1(sub.q25)}–${nl1(sub.q75)}`}:null;
 }
+
+/* ── Fase 3: vangrails op voorstellen ───────────────────────────────────────
+   Laagtes eerst. Een voorstel dat meer insuline betekent wordt geblokkeerd in een
+   dagdeel met >4% <3,9 of ≥1% <3,0; <14 dekkende dagen = "onduidelijk"; één wijziging
+   per dagdeel tegelijk (basaal → KH → ISF); grote stappen (>10%) krijgen een waarschuwing. */
+const _num=x=>parseFloat(String(x).replace(",","."));
+function guardrailStats(glucose, q){
+  const g=glucose.filter(x=>q.usableKeys.has(localDayKey(x.ts))), out={};
+  const sets=[...DAYPARTS.map(d=>[d.key,d.lo,d.hi]),["alle",0,1440]];
+  for(const [k,lo,hi] of sets){ const a=g.filter(x=>{const m=todMin(x.ts);return m>=lo&&m<hi;});
+    out[k]={ n:a.length, days:new Set(a.map(x=>localDayKey(x.ts))).size,
+      tbr:a.length?a.filter(x=>x.bg<3.9).length/a.length:0, vlow:a.length?a.filter(x=>x.bg<3.0).length/a.length:0 }; }
+  return out;
+}
+function applyGuardrails(items, glucose, q){
+  const st=guardrailStats(glucose,q), ORDER={basaal:0,ic:1,isf:2}, taken=new Set();
+  const more=(key,c)=>{ const f=_num(c.from), t=_num(c.to); return key==="basaal"? t>f : t<f; };   // basaal omhoog / ISF·KH-ratio omlaag = méér insuline
+  for(const it of [...items].sort((a,b)=>(ORDER[a.key]??9)-(ORDER[b.key]??9))){
+    for(const r of it.rows||[]){ const S=st[r.dpKey]||st.alle, gl=[];
+      const raises=r.cands.some(c=>more(it.key,c));
+      if(S.days<14) gl.push({lvl:"unclear", msg:TL(`Onduidelijk: slechts ${S.days} dekkende dagen (min. 14).`,`Unclear: only ${S.days} covered days (min. 14).`,`Pouco claro: apenas ${S.days} dias cobertos (mín. 14).`)});
+      if(raises && (S.tbr>0.04 || S.vlow>=0.01)) gl.push({lvl:"block", msg:TL(`Geblokkeerd: meer insuline terwijl je in dit dagdeel al ${pct0(S.tbr)} onder 3,9 zit${S.vlow>=0.01?` en ${pct0(S.vlow)} onder 3,0`:""}. Eerst de laagtes bespreken.`,`Blocked: more insulin while you already spend ${pct0(S.tbr)} below 3.9 in this part of day${S.vlow>=0.01?` and ${pct0(S.vlow)} below 3.0`:""}. Discuss the lows first.`,`Bloqueado: mais insulina quando já passa ${pct0(S.tbr)} abaixo de 3,9 neste período. Discuta primeiro as hipos.`)});
+      const gem=r.cands.find(c=>c.tag==="gemeten")||r.cands[0];
+      if(gem){ const f=_num(gem.from), t=_num(gem.to); if(f>0 && Math.abs(t-f)/f>0.10) gl.push({lvl:"warn", msg:TL("Stap >10%: overweeg in twee stappen, of kies de behoudende waarde.","Step >10%: consider two steps, or take the conservative value.","Passo >10%: considere dois passos ou o valor conservador.")}); }
+      if(raises===false && false){}
+      if(taken.has(r.dpKey) && r.dpKey!=="alle") gl.push({lvl:"queue", msg:TL("Wacht: er loopt al een voorstel voor dit dagdeel. Eén wijziging tegelijk, dan weet je wat werkte.","Wait: another proposal for this part of day comes first. One change at a time, so you know what worked.","Aguarde: já existe outra proposta para este período. Uma alteração de cada vez.")});
+      else if(!gl.some(x=>x.lvl==="block"||x.lvl==="unclear")) taken.add(r.dpKey);
+      r.gr=gl; r.blocked=gl.some(x=>x.lvl==="block"), r.unclear=gl.some(x=>x.lvl==="unclear"), r.queued=gl.some(x=>x.lvl==="queue");
+      if(it.grid && it.grid[r.dpKey]){ const G=it.grid[r.dpKey]; if(r.blocked) G.blocked=true; else if(r.unclear) G.unclear=true; } }
+  }
+  return items;
+}
 function proposalEngine(drift, oi, MR, pi, glucose, treatments, q, timeline){
   const items=[];
   const isfRef = (oi&&oi.obs>0.5)?oi.obs : (pi.isf&&pi.isf.length?_pMed(pi.isf.map(b=>b.value)):null);
@@ -3481,7 +3520,76 @@ function proposalEngine(drift, oi, MR, pi, glucose, treatments, q, timeline){
         why:TL(`Waar je maaltijdpiek structureel te hoog is, schiet de dekking tekort — vaak juist bij het ontbijt.${timingNote}`,`Where your meal peak is structurally too high, coverage falls short — often exactly at breakfast.${timingNote}`,`Onde o seu pico de refeição está estruturalmente alto, a cobertura é insuficiente — muitas vezes precisamente ao pequeno-almoço.${timingNote}`) }); }
   }
 
-  return items;
+  return applyGuardrails(items, glucose, q);
+}
+
+/* ── Fase 3: besluiten bij voorstellen ──────────────────────────────────────
+   Besluit = annotatie type "voorstel". Accepteren legt óók een "wijziging" vast
+   (ankerpunt) zodat de voor/na-meting (fase 4) vanzelf start. De app schrijft
+   nooit naar loop of pomp: jij voert de wijziging zelf door, met je team. */
+async function decorateProposals(){
+  const host=document.getElementById("proposals"); if(!host) return;
+  const els=[...host.querySelectorAll(".pdec")]; if(!els.length) return;
+  let anns=[]; try{ anns=await DB.all("annotations"); }catch(_){}
+  const mine=new Map(anns.filter(a=>a.type==="voorstel").map(a=>[a.pid+"|"+a.from+"|"+a.to,a]));
+  for(const el of els){ const k=el.dataset.id+"|"+el.dataset.from+"|"+el.dataset.to, a=mine.get(k);
+    const lab={accept:TL("geaccepteerd","accepted","aceite"),adjust:TL("aangepast","adjusted","ajustado"),reject:TL("afgewezen","rejected","rejeitado")};
+    el.innerHTML=a?`<span class="pdst ${a.decision}">${lab[a.decision]||a.decision}${a.adjusted?" → "+esc(a.adjusted):""} · ${new Date(a.ts).toLocaleDateString(LOCALE(),{day:"2-digit",month:"short"})}</span> <button class="ghost pdundo">${TL("ongedaan","undo","anular")}</button>`
+      :`<button class="ghost" data-d="accept">${TL("Accepteren","Accept","Aceitar")}</button><button class="ghost" data-d="adjust">${TL("Aanpassen","Adjust","Ajustar")}</button><button class="ghost" data-d="reject">${TL("Afwijzen","Reject","Rejeitar")}</button>`; }
+}
+async function decideProposal(el, decision){
+  let adjusted=null;
+  if(decision==="adjust"){ adjusted=prompt(TL("Welke waarde spreek je af met je team?","Which value did you agree with your team?","Que valor combinou com a equipa?"), el.dataset.to.split("–")[0]); if(!adjusted) return; }
+  const now=Date.now(), id=el.dataset.id, base={ ts:now, type:"voorstel", pid:id, key:el.dataset.key, dp:el.dataset.dp, from:el.dataset.from, to:el.dataset.to, decision, adjusted, created:now };
+  const rows=[{ ...base, id:id+"|"+el.dataset.from+"|"+el.dataset.to }];
+  if(decision!=="reject"){ rows.push({ id:"w-"+rows[0].id, ts:now, type:"wijziging", created:now, ref:rows[0].id,
+    note:`${el.dataset.label}: ${el.dataset.from} → ${adjusted||el.dataset.to} (${el.dataset.key}, uit voorstel)` }); }
+  try{ await DB.putMany("annotations",rows); }catch(e){ toast(TL("Opslaan mislukt: ","Save failed: ","Falha ao guardar: ")+e.message); return; }
+  decorateProposals(); if(typeof renderLog==="function") renderLog(); if(typeof renderEffects==="function") renderEffects();
+}
+document.addEventListener("click", async ev=>{
+  const b=ev.target.closest("#proposals .pdec button"); if(!b) return;
+  const el=b.closest(".pdec");
+  if(b.classList.contains("pdundo")){ try{ await DB.delRow("annotations",el.dataset.id+"|"+el.dataset.from+"|"+el.dataset.to); await DB.delRow("annotations","w-"+el.dataset.id+"|"+el.dataset.from+"|"+el.dataset.to); }catch(_){} decorateProposals(); if(typeof renderLog==="function") renderLog(); if(typeof renderEffects==="function") renderEffects(); return; }
+  if(b.dataset.d) decideProposal(el,b.dataset.d);
+});
+
+/* ── Fase 4: effectmeting ───────────────────────────────────────────────────
+   Per geaccepteerd voorstel: 14 dagen vóór vs 14 dagen ná, alleen in het betrokken
+   dagdeel en alleen op bruikbare dagen. Vier uitkomsten: verbeterd · gelijk ·
+   verslechterd · onduidelijk. Veiligheid eerst: meer tijd <3,0 → bespreek terugdraaien.
+   Eerlijk: dit is een vergelijking van periodes, geen herhaling van het oref1/AAPS-
+   algoritme met andere instellingen — de loop reageert zelf mee, dus oorzaak ≠ bewezen. */
+async function renderEffects(){
+  const host=document.getElementById("effects"); if(!host) return;
+  let anns=[]; try{ anns=await DB.all("annotations"); }catch(_){}
+  const list=anns.filter(a=>a.type==="wijziging" && a.ref).sort((a,b)=>b.ts-a.ts);
+  if(!list.length){ host.innerHTML=`<div class="muted">${TL("Nog geen doorgevoerde wijziging uit een voorstel. Accepteer een bespreekwaarde bij Bespreekwaarden en voer die samen met je team door; 14 dagen later staat hier de meting.","No applied change from a proposal yet. Accept a proposal and apply it with your team; 14 days later the measurement shows here.","Ainda nenhuma alteração aplicada. Aceite uma proposta e aplique-a com a equipa; 14 dias depois a medição aparece aqui.")}</div>`; return; }
+  if(!_ctx){ host.innerHTML=`<div class="muted">${TL("Laad eerst je data.","Load your data first.","Carregue primeiro os dados.")}</div>`; return; }
+  const {glucose,q}=_ctx, DAYSMS=864e5, now=Date.now();
+  host.innerHTML=list.map(a=>{
+    const dp=(a.ref.split("-")[2]||"").split("|")[0], part=DAYPARTS.find(d=>d.key===dp);
+    const gl=part?glucose.filter(x=>{const m=todMin(x.ts);return m>=part.lo&&m<part.hi;}):glucose;
+    const age=Math.floor((now-a.ts)/DAYSMS), when=new Date(a.ts).toLocaleDateString(LOCALE(),{day:"2-digit",month:"short"});
+    const head=`<div class="leh"><span class="ic">⚙</span><span class="lt">${esc(a.note||"")}</span><span class="ld">${when}</span></div>`;
+    if(age<14) return `<div class="logentry">${head}<div class="muted">${TL(`Meting loopt: nog ${14-age} dagen nodig na de wijziging.`,`Measuring: ${14-age} more days needed after the change.`,`A medir: faltam ${14-age} dias após a alteração.`)}</div></div>`;
+    const r=beforeAfter(gl,q,a.ts,14);
+    if(!r.before.ok||!r.after.ok) return `<div class="logentry">${head}<div class="ba"><b>${TL("Onduidelijk","Unclear","Pouco claro")}</b> — ${TL("te weinig bruikbare dagen vóór of ná de wijziging (min. 3 met ≥70% dekking; loop-gatdagen tellen niet mee).","too few usable days before or after the change (min. 3 with ≥70% coverage; loop-gap days excluded).","poucos dias utilizáveis antes ou depois.")}</div></div>`;
+    const b=r.before.m, c=r.after.m, dT=c.tir-b.tir, dB=c.tbr-b.tbr, dV=c.veryLow-b.veryLow;
+    let out, cls;
+    if(dV>=0.005 && c.veryLow>=0.01){ out=TL("Verslechterd (veiligheid)","Worse (safety)","Pior (segurança)"); cls="dn"; }
+    else if(dT<=-0.05||dB>=0.02){ out=TL("Verslechterd","Worse","Pior"); cls="dn"; }
+    else if(dT>=0.05&&dB<=0.01){ out=r.dip?TL("Onduidelijk (terugval naar gemiddelde mogelijk)","Unclear (regression to the mean possible)","Pouco claro (regressão à média possível)"):TL("Verbeterd","Improved","Melhorado"); cls=r.dip?"":"up"; }
+    else { out=TL("Gelijk","Unchanged","Igual"); cls=""; }
+    const rb=(cls==="dn")?`<div class="pgr block">${TL("Bespreek met je team of terugdraaien of bijstellen nodig is. De app doet dat nooit zelf.","Discuss with your team whether to roll back or adjust. The app never does this itself.","Discuta com a equipa se deve reverter ou ajustar. A app nunca o faz sozinha.")}</div>`:"";
+    const d=(x,y,f)=>`${f(x)} → <b>${f(y)}</b>`;
+    return `<div class="logentry">${head}<div class="ba"><div class="verdict ${cls}">${out}</div>
+      <div class="bar"><span>${TL("In bereik","In range","No alvo")}</span><span>${d(b.tir,c.tir,pct0)}</span></div>
+      <div class="bar"><span>&lt;3,9</span><span>${d(b.tbr,c.tbr,pct0)}</span></div>
+      <div class="bar"><span>&lt;3,0</span><span>${d(b.veryLow,c.veryLow,pct0)}</span></div>
+      <div class="bar"><span>${TL("Gemiddeld","Mean","Média")}</span><span>${d(b.mean,c.mean,nl1)}</span></div>
+      ${rb}<div class="muted" style="font-size:.7rem;margin-top:.25rem">${TL("14 dagen vóór vs ná, alleen dit dagdeel. Periodevergelijking, geen bewijs van oorzaak: de loop past zich zelf ook aan.","14 days before vs after, this part of day only. Period comparison, not proof of cause: the loop adapts as well.","14 dias antes vs depois, só este período. Comparação, não prova de causa.")}</div></div></div>`;
+  }).join("");
 }
 function proposalsHtml(drift, oi, MR, pi, glucose, treatments, q, timeline){
   if(!timeline) return `<div class="muted">${TL("Geen profiel met basaal/ISF/KH-ratio in Nightscout gevonden — nodig om bespreekwaarden naast je instellingen te leggen.","No profile with basal/ISF/carb ratio found in Nightscout — needed to place discussion values next to your settings.","Nenhum perfil com basal/ISF/rácio de hidratos encontrado no Nightscout — necessário para colocar os valores para discussão ao lado das suas definições.")}</div>`;
@@ -3494,11 +3602,13 @@ function proposalsHtml(drift, oi, MR, pi, glucose, treatments, q, timeline){
       <div class="pcdir">${c.dir}</div>
       <div class="pceff">${c.eff}</div>
     </div>`;
-  const row=r=>`<div class="pdrow"><div class="pdlabel">${r.label}<span class="pdmeta">${r.meta}</span></div><div class="pcands">${r.cands.map(cand).join("")}</div></div>`;
+  const grHtml=r=>(r.gr||[]).map(x=>`<div class="pgr ${x.lvl}">${x.msg}</div>`).join("");
+  const row=(r,key)=>{ const id=`v-${key}-${r.dpKey}`, can=!r.blocked&&!r.unclear&&!r.queued;
+    return `<div class="pdrow"><div class="pdlabel">${r.label}<span class="pdmeta">${r.meta}</span></div>${grHtml(r)}<div class="pcands">${r.cands.map(cand).join("")}</div>${can?`<div class="pdec" data-id="${esc(id)}" data-key="${esc(key)}" data-dp="${esc(r.dpKey)}" data-label="${esc(r.label)}" data-from="${esc(r.cands[0].from)}" data-to="${esc(r.cands.map(c=>c.to).join("–"))}"></div>`:""}</div>`; };
   const card=it=>`<div class="pcard">
       <div class="pchead"><span class="pctitle">${it.title}</span><span class="pcunit">${it.unit}</span></div>
       <div class="pcwhy">${it.why}</div>
-      ${it.rows.map(row).join("")}
+      ${it.rows.map(r=>row(r,it.key)).join("")}
     </div>`;
   // ── Het ene overzicht: dagdelen × hefbomen. Drie celtoestanden zodat een lege
   // cel niet twee dingen tegelijk betekent: ✓ = gemeten sluit aan · — = te weinig
@@ -3507,6 +3617,8 @@ function proposalsHtml(drift, oi, MR, pi, glucose, treatments, q, timeline){
   const LEV=[["isf","ISF","mmol/"+TL("E","U","U")],["basaal",TL("Basaal","Basal","Basal"),TL("E/u","U/h","U/h")],["ic",TL("KH","Carb","Hidr"),"g/"+TL("E","U","U")]];
   const cellFor=(k,dpKey)=>{ const it=byKey[k]; return (it&&it.grid&&it.grid[dpKey])||{status:"weinig"}; };
   const cellHtml=g=>{
+    if(g.status==="change" && g.blocked) return `<td class="bwc chg risk" title="${TL("geblokkeerd door vangrail: eerst laagtes","blocked by guardrail: lows first","bloqueado: primeiro hipos")}">⛔ ${g.from}<span class="parr">→</span>${g.to}</td>`;
+    if(g.status==="change" && g.unclear) return `<td class="bwc none" title="${TL("onduidelijk: te weinig dekkende dagen","unclear: too few covered days","pouco claro: poucos dias")}">? ${g.from}<span class="parr">→</span>${g.to}</td>`;
     if(g.status==="change") return `<td class="bwc chg${g.risky?" risk":""}">${g.from}<span class="parr">→</span><b>${g.to}</b></td>`;
     if(g.status==="ok") return `<td class="bwc ok" title="${TL("gemeten sluit aan bij je instelling","measured aligns with your setting","medido alinha com a sua definição")}">✓</td>`;
     return `<td class="bwc none" title="${TL("te weinig schone data in dit dagdeel","too little clean data in this part of day","poucos dados limpos neste período")}">—</td>`; };
@@ -3539,6 +3651,7 @@ const ANNOT_TYPES = [
   { id:"reis",      label:"Reis / tijdzone",     icon:"✈" },
   { id:"stress",    label:"Stress",              icon:"⚡" },
   { id:"notitie",   label:"Notitie",             icon:"📝" },
+  { id:"voorstel",  label:"Voorstel-besluit",    icon:"✅", hideChip:true },
   { id:"maaltijd",  label:"Maaltijd",            icon:"🍽", hideChip:true },  // via de koolhydraat-schatter, niet als handmatige chip
 ];
 const annotType = id => ANNOT_TYPES.find(t=>t.id===id) || ANNOT_TYPES[ANNOT_TYPES.length-1];
