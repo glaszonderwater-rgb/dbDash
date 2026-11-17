@@ -605,6 +605,7 @@ details.fold>summary:focus-visible,details.deep>summary:focus-visible{outline-of
 .pgr{font-size:.72rem;margin:.3rem 0;padding:.3rem .5rem;border-radius:6px;background:var(--panel2,rgba(128,128,128,.12))}
 .pgr.block{border-left:3px solid var(--low)}.pgr.unclear,.pgr.queue{border-left:3px solid var(--muted)}.pgr.warn{border-left:3px solid var(--high)}
 .pdec{display:flex;gap:.4rem;flex-wrap:wrap;margin-top:.4rem;align-items:center}.pdst{font-size:.75rem;font-weight:600}
+button.act[data-consult],button.act[data-askconsult]{display:inline-block;width:auto;height:auto;flex-direction:row;padding:.28rem .7rem;margin-top:.3rem}
 </style>
 </head>
 <body>
@@ -1001,7 +1002,8 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
     <div class="foldbody"><div id="effects"><div class="muted">…</div></div></div>
   </details>
   <section class="epoch" id="epConsult" style="margin-left:0">
-    <div class="eh"><h2 data-i18n="consult.title">Richting je consult</h2><span class="sub" id="consultSub"></span></div>
+    <div class="h3" data-i18n="consult.title" style="margin:1.4rem .2rem .55rem">Richting je consult</div>
+    <div class="eh" style="margin-top:0"><h2 hidden></h2><span class="sub" id="consultSub"></span></div>
     <div id="consultList"></div>
     <div id="shareRow" style="margin-top:.7rem;display:flex;gap:.5rem;flex-wrap:wrap">
       <button id="btnReport" style="font-size:.8rem" data-i18n="consult.report">📄 Consultrapport samenstellen</button>
@@ -2331,7 +2333,7 @@ function render(glucose, treatments, timeline){
     `<span><i>${TL("periode","period","período")}</i> <b>${q.from?new Date(q.from).toLocaleDateString(LOCALE(),{day:"2-digit",month:"short"}):"—"} – ${q.to?new Date(q.to).toLocaleDateString(LOCALE(),{day:"2-digit",month:"short"}):"—"}</b></span>`+
     `<span class="${lowCov?"warn":""}"><i>${TL("dekking","coverage","cobertura")}</i> <b>${q.days.length?pct0(q.coverage):"—"}</b></span>`+
     `<span><i>${TL("dagen","days","dias")}</i> <b>${q.usable.length}/${q.days.length}</b></span>`+
-    (q.loopGaps.length?`<span class="warn" title="${esc(q.loopGaps.join(", "))}"><i>${TL("loop uit","loop off","loop desligado")}</i> <b>${q.loopGaps.length}</b></span>`:"");
+    (q.loopGaps.length?`<span class="warn" title="${esc(q.loopGaps.join(", "))}"><i>${TL("loop uit","loop off","loop off")}</i> <b>${q.loopGaps.length} d</b></span>`:"");
   document.getElementById("monthSub").textContent = `${q.usable.length} ${TL("dagen","days","dias")} · ${pct0(q.coverage)} ${TL("dekking","coverage","cobertura")}`;
 
   if (!g.length){
@@ -2374,8 +2376,10 @@ function render(glucose, treatments, timeline){
     const hi = hr<6?TL("Goedenacht","Good night","Boa noite"):hr<12?TL("Goedemorgen","Good morning","Bom dia"):hr<18?TL("Goedemiddag","Good afternoon","Boa tarde"):TL("Goedenavond","Good evening","Boa noite");
     const low=last.bg<3.9, high=last.bg>10;
     document.getElementById("greetHi").textContent = hi;
+    const ageMin=Math.round((Date.now()-last.ts)/60000);
     document.getElementById("greetSub").textContent =
-      low  ? TL("Je zit nu onder bereik — houd het in de gaten.","You're below range right now — keep an eye on it.","Está abaixo do alvo agora — fique atento.")
+      ageMin>20 ? TL(`Laatste meting is ${ageMin} min oud — druk op Sync voor je actuele waarde.`,`Last reading is ${ageMin} min old — tap Sync for the current value.`,`Última leitura há ${ageMin} min — toque em Sync.`)
+      : low  ? TL("Je zit nu onder bereik — houd het in de gaten.","You're below range right now — keep an eye on it.","Está abaixo do alvo agora — fique atento.")
       : high ? TL("Je zit nu boven bereik.","You're above range right now.","Está acima do alvo agora.")
       : TL("Het gaat goed — je zit nu mooi in bereik.","Looking good — you're nicely in range right now.","Está a correr bem — está bem no alvo agora.");
     document.getElementById("homeGreet").hidden=false;
@@ -3417,7 +3421,7 @@ function applyGuardrails(items, glucose, q){
   const st=guardrailStats(glucose,q), ORDER={basaal:0,ic:1,isf:2}, taken=new Set();
   const more=(key,c)=>{ const f=_num(c.from), t=_num(c.to); return key==="basaal"? t>f : t<f; };   // basaal omhoog / ISF·KH-ratio omlaag = méér insuline
   for(const it of [...items].sort((a,b)=>(ORDER[a.key]??9)-(ORDER[b.key]??9))){
-    for(const r of it.rows||[]){ const S=st[r.dpKey]||st.alle, gl=[];
+    for(const r of it.rows||[]){ const S=st[r.dpKey]||st.alle, gl=(r.pre||[]).slice();
       const raises=r.cands.some(c=>more(it.key,c));
       if(S.days<14) gl.push({lvl:"unclear", msg:TL(`Onduidelijk: slechts ${S.days} dekkende dagen (min. 14).`,`Unclear: only ${S.days} covered days (min. 14).`,`Pouco claro: apenas ${S.days} dias cobertos (mín. 14).`)});
       if(raises && (S.tbr>0.04 || S.vlow>=0.01)) gl.push({lvl:"block", msg:TL(`Geblokkeerd: meer insuline terwijl je in dit dagdeel al ${pct0(S.tbr)} onder 3,9 zit${S.vlow>=0.01?` en ${pct0(S.vlow)} onder 3,0`:""}. Eerst de laagtes bespreken.`,`Blocked: more insulin while you already spend ${pct0(S.tbr)} below 3.9 in this part of day${S.vlow>=0.01?` and ${pct0(S.vlow)} below 3.0`:""}. Discuss the lows first.`,`Bloqueado: mais insulina quando já passa ${pct0(S.tbr)} abaixo de 3,9 neste período. Discuta primeiro as hipos.`)});
@@ -3427,7 +3431,7 @@ function applyGuardrails(items, glucose, q){
       if(taken.has(r.dpKey) && r.dpKey!=="alle") gl.push({lvl:"queue", msg:TL("Wacht: er loopt al een voorstel voor dit dagdeel. Eén wijziging tegelijk, dan weet je wat werkte.","Wait: another proposal for this part of day comes first. One change at a time, so you know what worked.","Aguarde: já existe outra proposta para este período. Uma alteração de cada vez.")});
       else if(!gl.some(x=>x.lvl==="block"||x.lvl==="unclear")) taken.add(r.dpKey);
       r.gr=gl; r.blocked=gl.some(x=>x.lvl==="block"), r.unclear=gl.some(x=>x.lvl==="unclear"), r.queued=gl.some(x=>x.lvl==="queue");
-      if(it.grid && it.grid[r.dpKey]){ const G=it.grid[r.dpKey]; if(r.blocked) G.blocked=true; else if(r.unclear) G.unclear=true; } }
+      if(it.grid && it.grid[r.dpKey]){ const G=it.grid[r.dpKey]; if(r.blocked) G.blocked=true; else if(r.unclear) G.unclear=true; else if(gl.some(x=>x.carb)) G.warn=true; } }
   }
   return items;
 }
@@ -3504,6 +3508,7 @@ function proposalEngine(drift, oi, MR, pi, glucose, treatments, q, timeline){
     for(const p of parts){ const rs=MR.results.filter(r=>r.ts!=null && todMin(r.ts)>=p.lo && todMin(r.ts)<p.hi);
       if(rs.length<MEAL_MIN){ grid[p.dp]={status:"weinig", n:rs.length}; continue; }
       const rise=_pMed(rs.map(r=>r.peakRise));
+      const frM=_pMed(rs.map(r=>r.frac));
       const blk=(pi.ic||[]).find(b=>p.mid>=b.from&&p.mid<b.to)||(pi.ic||[])[0];
       if(rise==null||rise<2.5||!blk){ grid[p.dp]={status:"ok", n:rs.length}; continue; }
       const cic=blk.value, sim=mealSim({results:rs},oi,[1.0,1.05,1.10],MEAL_MIN), seen=new Set(), cands=[];
@@ -3514,7 +3519,7 @@ function proposalEngine(drift, oi, MR, pi, glucose, treatments, q, timeline){
           if(cur&&c){ eff=TL(`piek +${nl1(cur.riseMed)} → +${nl1(c.riseMed)} · eindigt laag ${pct0(cur.lowFrac)} → ${pct0(c.lowFrac)}`,`peak +${nl1(cur.riseMed)} → +${nl1(c.riseMed)} · ends low ${pct0(cur.lowFrac)} → ${pct0(c.lowFrac)}`,`pico +${nl1(cur.riseMed)} → +${nl1(c.riseMed)} · termina baixo ${pct0(cur.lowFrac)} → ${pct0(c.lowFrac)}`);
             risky = c.lowFrac>cur.lowFrac+P_RISK; } }
         cands.push({tag, from:nl1(cic), to:nl1(C), eff, risky, dir:TL("sterker (meer maaltijdinsuline)","stronger (more meal insulin)","mais forte (mais insulina de refeição)")}); }
-      if(cands.length){ rows.push({label:mealName(p.id), dpKey:p.dp, meta:TL(`n=${rs.length} maaltijden · piek +${nl1(rise)}`,`n=${rs.length} meals · peak +${nl1(rise)}`,`n=${rs.length} refeições · pico +${nl1(rise)}`), cands});
+      if(cands.length){ rows.push({label:mealName(p.id), dpKey:p.dp, meta:TL(`n=${rs.length} maaltijden · piek +${nl1(rise)}`,`n=${rs.length} meals · peak +${nl1(rise)}`,`n=${rs.length} refeições · pico +${nl1(rise)}`), cands, pre:(frM!=null&&frM>=1.25)?[{lvl:"warn", carb:1, msg:TL(`Je glucose laat ~${Math.round(frM*100)}% zien van de koolhydraten die je invoerde. Controleer eerst je invoer/schatting: een sterkere ratio compenseert onderschatting en kan hypo's geven.`,`Your glucose implies ~${Math.round(frM*100)}% of the carbs you entered. Check your estimates first: a stronger ratio compensates underestimation and can cause lows.`,`A glicose indica ~${Math.round(frM*100)}% dos hidratos introduzidos. Verifique primeiro as estimativas.`)}]:[]});
         const beh=cands.find(c=>c.tag==="behoudend"), gem=cands.find(c=>c.tag==="gemeten"), any=beh||gem;
         grid[p.dp]={status:"change", from:any.from, to:(beh&&gem&&beh.to!==gem.to)?`${beh.to}–${gem.to}`:(gem?gem.to:beh.to), risky:(beh&&beh.risky)||(gem&&gem.risky)}; }
       else grid[p.dp]={status:"ok", n:rs.length}; }
@@ -3637,6 +3642,7 @@ function proposalsHtml(drift, oi, MR, pi, glucose, treatments, q, timeline){
   const cellHtml=g=>{
     if(g.status==="change" && g.blocked) return `<td class="bwc chg risk" title="${TL("geblokkeerd door vangrail: eerst laagtes","blocked by guardrail: lows first","bloqueado: primeiro hipos")}">⛔ ${g.from}<span class="parr">→</span>${g.to}</td>`;
     if(g.status==="change" && g.unclear) return `<td class="bwc none" title="${TL("onduidelijk: te weinig dekkende dagen","unclear: too few covered days","pouco claro: poucos dias")}">? ${g.from}<span class="parr">→</span>${g.to}</td>`;
+    if(g.status==="change" && g.warn) return `<td class="bwc chg${g.risky?" risk":""}" title="${TL("let op: zie onderbouwing (waarschuwing)","note: see rationale (warning)","atenção: ver fundamentação")}">⚠ ${g.from}<span class="parr">→</span><b>${g.to}</b></td>`;
     if(g.status==="change") return `<td class="bwc chg${g.risky?" risk":""}">${g.from}<span class="parr">→</span><b>${g.to}</b></td>`;
     if(g.status==="ok") return `<td class="bwc ok" title="${TL("gemeten sluit aan bij je instelling","measured aligns with your setting","medido alinha com a sua definição")}">✓</td>`;
     return `<td class="bwc none" title="${TL("te weinig schone data in dit dagdeel","too little clean data in this part of day","poucos dados limpos neste período")}">—</td>`; };
@@ -3668,7 +3674,7 @@ function proposalsHtml(drift, oi, MR, pi, glucose, treatments, q, timeline){
       rule=`<div class="ba" style="margin-top:.6rem"><b>${TL("Vuistregel-check ISF (TDD)","Rule-of-thumb ISF check (TDD)","Verificação ISF por regra (TDD)")}</b><div class="muted" style="font-size:.72rem;margin:.2rem 0">${TL(`Totale dagdosis ≈ ${nl1(ins.tdd)} E (basaal uit profiel + bolus + SMB). Dit is een grove schatting, géén meting van jouw lichaam.`,`Total daily dose ≈ ${nl1(ins.tdd)} U (profile basal + bolus + SMB). A rough estimate, not a measurement.`,`Dose diária total ≈ ${nl1(ins.tdd)} U. Estimativa grosseira, não uma medição.`)}</div>`+
         line("ISF (100/TDD)",isfR,isfP,"mmol/L/"+TL("E","U","U"))+
         `<div class="muted" style="font-size:.7rem;margin-top:.25rem">${TL("Verschilt het >25%, bespreek dan met je team of er een reden voor is. Geen advies om te wijzigen.","If it differs >25%, ask your team whether there is a reason. Not advice to change.","Se diferir >25%, discuta com a equipa. Não é um conselho para alterar.")}</div></div>`; } }catch(e){}
-  const whyHtml = why.length?`<div class="muted" style="margin-top:.5rem;font-size:.74rem"><b>—</b> ${why.join(" ")}</div>`:"";
+  const whyHtml = why.length?`<div class="muted" style="margin-top:.5rem;font-size:.74rem"><b>${TL("Waarom ontbreekt er iets?","Why is something missing?","Porque falta algo?")}</b>${why.map(w=>`<div style="margin-top:.2rem">• ${w}</div>`).join("")}</div>`:"";
   return matrix + allNote + whyHtml + rule + lead + caveat + detail;
 }
 
