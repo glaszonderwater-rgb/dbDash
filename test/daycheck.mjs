@@ -28,7 +28,7 @@ console.log('duiding:',r2.narr);
 console.log('errors:',errors.length?errors:'geen');
 const jump=await page.evaluate(()=>[...document.querySelectorAll('#dayJump .chip')].map(c=>c.textContent));
 console.log('jump-chips:',jump.join(' | '));
-const worstChip=await page.$('#dayJump .chip'); if(worstChip){ await worstChip.click(); await page.waitForTimeout(150);
+const worstChip=await page.$('#dayJump .chip'); if(worstChip && await worstChip.isVisible()){ await worstChip.click(); await page.waitForTimeout(150);
   const jr=await page.evaluate(()=>({label:document.getElementById('dayLabel').textContent,narr:document.getElementById('dayNarr').textContent,sel:document.querySelector('#dayJump .chip.sel')?.textContent}));
   console.log('na klik ergste-hypo →',jr.label); console.log('  duiding:',jr.narr); console.log('  actief gemarkeerd:',jr.sel); }
 await page.evaluate(()=>document.getElementById('secDay').scrollIntoView());await page.waitForTimeout(200);

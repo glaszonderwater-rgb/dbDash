@@ -1041,7 +1041,7 @@ function render(glucose, treatments, timeline){
 
   const watch = watchList(glucose, q);
   if (watch.few){ document.getElementById("secWatch").hidden = true; }
-  else { document.getElementById("secWatch").hidden = false; document.getElementById("watch").innerHTML = watchHtml(watch); }
+  else { document.getElementById("secWatch").hidden = !watch.alerts.length; document.getElementById("watch").innerHTML = watchHtml(watch); }
 
   document.getElementById("secAgp").hidden = false;
   document.getElementById("agp").innerHTML = agpSvg(ag);
@@ -1161,10 +1161,11 @@ function findingCard(f, st){
   const dot = f.sev==="w"?"w":(f.pos?"g":"n");
   let html = `<div class="${cls}" data-fid="${f.id}"><div class="fh"><span class="fdot ${dot}"></span>`+
     `<span class="ftxt">${f.title}</span>${f.when?`<span class="fwhen">${f.when}</span>`:""}</div>`;
+  let more="";
   if (!seen && f.steps && f.steps.length){
-    html += `<details><summary>${TL("bewijs","evidence","evidência")}</summary><div class="chain">`+
+    more += `<div class="chain">`+
       f.steps.map((sTxt,i)=>`<div class="step"><span class="no">${i+1}</span><span>${sTxt}</span></div>`).join("")+
-      `</div>${f.fine?`<div class="ffine">${f.fine}</div>`:""}</details>`;
+      `</div>${f.fine?`<div class="ffine">${f.fine}</div>`:""}`;
   }
   const acts=[];
   if (!seen && f.dayKey) acts.push(`<button class="act" data-goday="${f.dayKey}">${TL("Bekijk de dag","View the day","Ver o dia")}</button>`);
@@ -1172,7 +1173,8 @@ function findingCard(f, st){
     ? `<button class="act done">${TL("✓ op consultlijst","✓ on consult list","✓ na lista de consulta")}</button>`
     : `<button class="act ghost" data-consult="${f.id}">${TL("→ consultlijst","→ consult list","→ lista de consulta")}</button>`); }
   if (f.seenable && !seen) acts.push(`<button class="act ghost" data-seen="${f.id}">${TL("✓ gezien","✓ seen","✓ visto")}</button>`);
-  if (acts.length) html += `<div class="acts">${acts.join("")}</div>`;
+  if (acts.length) more += `<div class="acts">${acts.join("")}</div>`;
+  if (more) html += `<details class="fmore-d"><summary aria-label="${TL("details","details","detalhes")}">${TL("details","details","detalhes")}</summary>${more}</details>`;
   return html+`</div>`;
 }
 let _fctx=null;
@@ -1622,7 +1624,7 @@ async function renderConsult(){
   if (badge){ badge.textContent=cl.length; badge.hidden=!cl.length; }
   el.innerHTML = cl.length
     ? cl.map(c=>`<div class="citem"><span>${esc(c.title)}</span><button class="del" data-cid="${esc(c.id)}" aria-label="${TL("verwijderen","delete","eliminar")}">✕</button></div>`).join("")
-    : `<div class="muted" style="padding:.2rem .1rem .4rem">${TL("Nog niets verzameld. Zet bevindingen met <b>→ consultlijst</b> hierop — ze komen automatisch in je rapport.","Nothing collected yet. Add findings with <b>→ consult list</b> here — they go into your report automatically.","Ainda nada recolhido. Adicione achados com <b>→ lista de consulta</b> aqui — entram automaticamente no seu relatório.")}</div>`;
+    : `<div class="muted" style="padding:.2rem .1rem .4rem">${TL("Nog niets op je consultlijst.","Your consult list is empty.","A lista está vazia.")}</div>`;
   el.querySelectorAll("[data-cid]").forEach(b2=>b2.onclick=async()=>{
     let l2=(await DB.meta("consultlist"))||[]; l2=l2.filter(x=>x.id!==b2.dataset.cid);
     await DB.meta("consultlist",l2); renderConsult();

@@ -623,6 +623,70 @@ button,summary,.tab,.chip,.act,.del{min-height:44px}
 #updBar button{background:var(--bg);color:var(--ink);border:0;border-radius:10px;padding:.4rem .9rem;font-weight:650}
 .act{flex-direction:row;white-space:nowrap;gap:.3rem}
 :root{--serif:var(--sans)}
+/* ═══ Strak minimalistisch (nov 2026): geen schaduwen, één letter, dunne lijnen, minder tekst ═══ */
+:root{ --bg:#FFFFFF; --surface:#FFFFFF; --surface-2:#F5F6F7; --raised:#FFFFFF;
+  --line:#ECEEF0; --line-2:#DFE2E6; --muted:#6B7480; --dim:#8A929C;
+  --serif:var(--sans); --radius:12px; --shadow:none; --shadow-sm:none; }
+@media (prefers-color-scheme:dark){ :root:not([data-theme="light"]){
+  --bg:#0E1216; --surface:#0E1216; --surface-2:#161B21; --raised:#161B21; --line:#1F262E; --line-2:#2A323C;
+  --shadow:none; --shadow-sm:none; } }
+:root[data-theme="dark"]{ --bg:#0E1216; --surface:#0E1216; --surface-2:#161B21; --raised:#161B21; --line:#1F262E; --line-2:#2A323C; --shadow:none; --shadow-sm:none; }
+body{font-size:15px}
+header{background:color-mix(in srgb,var(--bg) 92%,transparent)}
+.card,.f,details.deep,details.fold,.kpi,.chome .kpis .kpi,button.ghost{box-shadow:none!important}
+.card,details.deep,details.fold{border:1px solid var(--line);border-radius:12px}
+/* Overzicht: alleen kerncijfers, grafiek, aandacht */
+#homeGreet,#homeHero{display:none!important}
+.chome .chead{font-size:.72rem;font-weight:650;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);margin:1.3rem 0 .5rem}
+.chome .chead .sub{text-transform:none;letter-spacing:0;font-weight:500}
+.chome .kpis{grid-template-columns:repeat(3,1fr)!important;gap:0!important;border:0!important;border-radius:0!important;border-top:1px solid var(--line)!important;border-bottom:1px solid var(--line)!important;background:transparent!important}
+.chome .kpis .kpi{box-shadow:none!important}
+
+.chome .kpis .kpi{border:0!important;border-radius:0!important;background:transparent!important;padding:.7rem .2rem!important}
+.chome .kpis .kpi .k{font-size:.66rem;letter-spacing:.05em}
+.chome .kpis .kpi .v{font-size:1.5rem;font-weight:600}
+.chome .kpis .kpi .s{font-size:.68rem}
+.chome .kpis .kpi.kwide{grid-column:auto!important;flex-direction:column!important;align-items:flex-start!important;gap:.12rem!important;padding:.7rem .2rem!important}
+.chome .kpis .kpi .k svg,.chome .kpis .kpi .ok,.chome .kpis .kpi .chk{display:none}
+.chome details.mini{display:none}
+details.fold.homeday{border:0!important;padding:0!important;background:transparent!important}
+details.fold.homeday>summary{pointer-events:none;list-style:none;font-size:.72rem!important;font-weight:650;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);margin:1.3rem 0 .3rem;padding:0!important;min-height:0!important}
+details.fold.homeday>summary::-webkit-details-marker{display:none}
+details.fold.homeday>summary::after,details.fold.homeday>summary .foldhint{display:none!important}
+details.fold.homeday .foldbody{padding:0!important}
+details.fold.homeday #dayJump,details.homeday #dayNarr{display:none!important}
+details.fold.homeday .legend{font-size:.68rem}
+/* Aandachtspunten: lijst, geen kaarten */
+.f{border:0!important;border-bottom:1px solid var(--line)!important;border-radius:0!important;background:transparent!important;padding:.6rem 0 .6rem .9rem!important;margin:0!important}
+.f.unread::before{top:.75rem;bottom:.75rem;width:2px}
+.ftxt{font-size:.92rem!important;line-height:1.4!important}
+.fdot{display:none}
+.fwhen{font-family:var(--sans)!important;font-size:.7rem!important}
+.f details.fmore-d{margin:.15rem 0 0 0}
+.f details.fmore-d>summary{list-style:none;cursor:pointer;font-size:.72rem;font-weight:600;color:var(--dim)}
+.f details.fmore-d>summary::-webkit-details-marker{display:none}
+.f details.fmore-d>summary::after{content:" ›"}
+.f details.fmore-d[open]>summary::after{content:" ⌄"}
+.f .acts{margin-left:0}
+.fmore{display:block;margin-top:.5rem;font-size:.75rem;border:0;background:transparent;color:var(--t-accent);padding:.3rem 0}
+.tolink{margin-top:1rem}
+/* Minder tekst algemeen: uitleg-hints en lange toelichtingen weg */
+.foldhint{display:none}
+.obs{font-size:.84rem;line-height:1.45}
+details.deep,details.fold{padding:0!important;margin-bottom:.5rem!important;background:transparent!important}
+details.deep>summary,details.fold>summary{padding:.8rem .95rem!important;align-items:center!important;font-size:.9rem!important}
+details.deep>summary span:first-child{color:var(--ink)!important;font-size:.9rem!important;font-weight:600!important}
+details.deep>.body,details.fold>.foldbody{padding:0 .95rem .9rem!important;margin-top:0!important;border-top:0!important}
+details.deep>summary::after,details.fold>summary::after{content:"›"!important;font-size:1.1rem;transform:none}
+details.deep[open]>summary::after,details.fold[open]>summary::after{transform:rotate(90deg)!important}
+details.why>summary{cursor:pointer;list-style:none}
+details.why>summary::-webkit-details-marker{display:none}
+details.why>summary::after{content:" ›"}
+.f details.fmore-d>summary{min-height:32px;display:inline-flex;align-items:center}
+.daynav{gap:.4rem;margin-bottom:.2rem}
+.daynav button.ghost{min-height:36px;padding:.2rem .7rem;border:0;background:transparent;font-size:.9rem}
+.daylabel{font-size:.85rem}
+.isfrule{display:flex;justify-content:space-between;gap:.6rem}
 </style>
 </head>
 <body>
@@ -685,14 +749,6 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
       <span class="hside" id="ringMeta"></span>
     </div>
 
-    <div class="ask" id="askBox" hidden>
-      <div class="askrow">
-        <svg class="askic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
-        <input type="search" id="askInput" data-i18n-ph="ask.ph" placeholder="Vraag iets over je data…" autocomplete="off">
-      </div>
-      <div class="chips" id="askExamples"></div>
-      <div id="askAnswer"></div>
-    </div>
 
     <div class="chead" id="epMaand"><span data-i18n="home.kpiTitle">Kerncijfers</span> <span class="sub" id="monthSub"></span></div>
     <div class="kpis" id="kpis"></div>
@@ -705,15 +761,7 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
       </div>
     </details>
     <div id="secWatch" hidden><div id="watch" style="margin-top:.6rem"></div></div>
-
-
-    <div class="chead" id="epVandaag"><span data-i18n="home.attention">Aandacht</span> <span class="sub" id="todaySub"></span></div>
-    <div id="findToday"></div>
-    <span id="epWeek" hidden><span id="weekSub"></span></span>
-    <div id="findWeek"></div>
-
-    <div class="chead" data-i18n="home.more">Meer</div>
-    <details class="fold" id="secDay" hidden>
+    <details class="fold homeday" id="secDay" hidden open>
       <summary><span data-i18n="home.dayCurve">Dagcurve</span> <span class="foldhint" data-i18n="home.dayCurveHint">je dag per uur — eten, bolus, hypo's</span></summary>
       <div class="foldbody">
         <div class="chips" id="dayJump" style="margin-bottom:.55rem"></div>
@@ -731,21 +779,13 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
         <div class="obs" id="dayNarr"></div>
       </div>
     </details>
-    <details class="fold" id="secAware" hidden>
-      <summary><span data-i18n="aware.title">Hypo-gevoel</span> <span class="foldhint" data-i18n="aware.hint">voelde je iets? leg het vast</span></summary>
-      <div class="foldbody">
-        <div class="logform">
-          <div class="chips" id="awChips"></div>
-          <div class="logrow">
-            <input type="datetime-local" id="awTime" data-i18n-al="aware.moment" aria-label="moment">
-            <input type="text" id="awBg" inputmode="decimal" maxlength="4" data-i18n-ph="aware.measurePh" placeholder="meting (mmol, optioneel)">
-            <button class="ghost" id="awAdd" data-i18n="btn.record">Vastleggen</button>
-          </div>
-        </div>
-        <div id="awareOut"></div>
-        <div id="awareList"></div>
-      </div>
-    </details>
+
+
+    <div class="chead" id="epVandaag"><span data-i18n="home.attention">Aandacht</span> <span class="sub" id="todaySub"></span></div>
+    <div id="findToday"></div>
+    <span id="epWeek" hidden><span id="weekSub"></span></span>
+    <div id="findWeek"></div>
+
     <div class="tolink" data-goto="anaGrid" data-i18n="home.allAnalyses">Alle analyses →</div>
 
   </div>
@@ -753,6 +793,14 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
 
   <!-- ANALYSES — de bibliotheek: alles bij naam, één tik -->
   <div class="view" data-view="analyses" hidden>
+    <div class="ask" id="askBox" hidden>
+      <div class="askrow">
+        <svg class="askic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+        <input type="search" id="askInput" data-i18n-ph="ask.ph" placeholder="Vraag iets over je data…" autocomplete="off">
+      </div>
+      <div class="chips" id="askExamples"></div>
+      <div id="askAnswer"></div>
+    </div>
   <div class="h3" id="anaGrid" style="margin-top:.2rem" data-i18n="an.meals">Maaltijden</div>
   <details class="deep" data-an="meals"><summary><span data-i18n="an.mealResp">Maaltijdrespons</span> <span class="foldhint" data-i18n="an.mealRespHint">opname, piek &amp; dagdelen</span></summary><div class="body"><div class="loading" data-i18n="loading">Openklappen om te berekenen…</div></div></details>
   <details class="deep" data-an="lunch"><summary><span>Lunchtijd</span> <span class="foldhint">laat of overgeslagen lunch</span></summary><div class="body"><div class="loading" data-i18n="loading">Openklappen om te berekenen…</div></div></details>
@@ -818,6 +866,21 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
       <div class="muted" id="trendTable" style="margin-top:.5rem"></div>
     </div>
   </details>
+    <details class="fold" id="secAware" hidden>
+      <summary><span data-i18n="aware.title">Hypo-gevoel</span> <span class="foldhint" data-i18n="aware.hint">voelde je iets? leg het vast</span></summary>
+      <div class="foldbody">
+        <div class="logform">
+          <div class="chips" id="awChips"></div>
+          <div class="logrow">
+            <input type="datetime-local" id="awTime" data-i18n-al="aware.moment" aria-label="moment">
+            <input type="text" id="awBg" inputmode="decimal" maxlength="4" data-i18n-ph="aware.measurePh" placeholder="meting (mmol, optioneel)">
+            <button class="ghost" id="awAdd" data-i18n="btn.record">Vastleggen</button>
+          </div>
+        </div>
+        <div id="awareOut"></div>
+        <div id="awareList"></div>
+      </div>
+    </details>
   <details class="fold" id="secLog" hidden>
     <summary><span data-i18n="an.log">Logboek</span> <span class="foldhint" data-i18n="an.logHint">markeer een wijziging of gebeurtenis</span></summary>
     <div class="foldbody">
@@ -915,7 +978,7 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
   <div class="view" data-view="eten" hidden>
   <section class="epoch" id="epEten" style="margin-left:0">
     <div class="eh"><h2 data-i18n="eten.title">Koolhydraten schatten</h2><span class="sub" data-i18n="eten.sub">kies eten + portie → gram</span></div>
-    <div class="cbNote" data-i18n="eten.note">Gemiddelde tabelwaarden — een hulpmiddel om te leren schatten, <b>geen dosisadvies</b>. Jij blijft verantwoordelijk voor je bolus.</div>
+    <div class="cbNote" data-i18n="eten.note">Tabelwaarden, <b>geen dosisadvies</b>.</div>
     <div class="cbNote" id="nevoRow" style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap"><button type="button" class="ghost" id="nevoLoad" style="font-size:.78rem">Laad NEVO-producten uit Nightscout</button><span id="nevoStat" class="muted"></span></div>
     <div id="cbMe"></div>
     <input type="search" id="cbSearch" data-i18n-ph="eten.searchPh" placeholder="zoek eten… (bijv. banaan, rijst, cola)" autocomplete="off">
@@ -1264,7 +1327,7 @@ Object.assign(I18N, {
   // Eten
   "eten.title":{ en:"Estimate carbs", pt:"Estimar hidratos" },
   "eten.sub":{ en:"pick food + portion → grams", pt:"escolha alimento + porção → gramas" },
-  "eten.note":{ en:"Average table values — a tool to learn estimating, <b>not dosing advice</b>. You stay responsible for your bolus.", pt:"Valores médios de tabela — uma ferramenta para aprender a estimar, <b>não um conselho de dose</b>. A responsabilidade do bólus é sua." },
+  "eten.note":{ nl:"Tabelwaarden, <b>geen dosisadvies</b>.", en:"Table values, <b>not dosing advice</b>.", pt:"Valores de tabela, <b>não é conselho de dose</b>." },
   "eten.searchPh":{ en:"search food… (e.g. banana, rice, cola)", pt:"procurar alimento… (ex. banana, arroz, cola)" },
   "eten.plateHead":{ en:"On your plate", pt:"No seu prato" },
   "eten.total":{ en:"Total", pt:"Total" },
@@ -1531,7 +1594,7 @@ async function renderEffects(){
   const list=anns.filter(a=>a.type==="wijziging" && a.ref).sort((a,b)=>b.ts-a.ts);
   const waiting=anns.filter(a=>a.type==="voorstel" && a.decision!=="reject" && !a.applied);
   const waitHtml=waiting.length?`<div class="pgr unclear">${TL("Geaccepteerd, nog niet doorgevoerd","Accepted, not applied yet","Aceite, ainda não aplicado")}: ${waiting.map(w=>esc(w.key+" "+w.dp+" "+w.from+" → "+(w.adjusted||w.to))).join(" · ")}. ${TL("Druk bij het voorstel op ✔ Doorgevoerd als je het hebt aangepast.","Tap ✔ Applied at the proposal once you have changed it.","Toque em ✔ Aplicado na proposta depois de a alterar.")}</div>`:"";
-  if(!list.length){ host.innerHTML=waitHtml+`<div class="muted">${TL("Nog geen doorgevoerde wijziging uit een voorstel. Accepteer een bespreekwaarde, voer die samen met je team door en druk op ✔ Doorgevoerd; 14 dagen later staat hier de meting.","No applied change from a proposal yet. Accept a proposal, apply it with your team and tap ✔ Applied; 14 days later the measurement shows here.","Ainda nenhuma alteração aplicada. Aceite uma proposta e aplique-a com a equipa; 14 dias depois a medição aparece aqui.")}</div>`; return; }
+  if(!list.length){ host.innerHTML=waitHtml+`<div class="muted">${TL("Nog geen doorgevoerde wijzigingen.","No applied changes yet.","Ainda sem alterações aplicadas.")}</div>`; return; }
   if(!_ctx){ host.innerHTML=`<div class="muted">${TL("Laad eerst je data.","Load your data first.","Carregue primeiro os dados.")}</div>`; return; }
   const {glucose,q}=_ctx, DAYSMS=864e5, now=Date.now();
   host.innerHTML=waitHtml+list.map(a=>{
@@ -1605,7 +1668,7 @@ function proposalsHtml(drift, oi, MR, pi, glucose, treatments, q, timeline){
   const anyChange = changed.length>0;
   const lead = anyChange ? "" :
     `<div class="pgood" style="margin-top:.6rem">${TL("Waar genoeg data is, sluiten je gemeten waarden aan bij je instellingen. Een — betekent te weinig data — geen oordeel.","Where there's enough data, your measured values match your settings. A — means too little data — no judgment.","Onde há dados suficientes, os seus valores medidos correspondem às definições. Um — significa poucos dados — sem juízo.")}</div>`;
-  const caveat = `<div class="muted" style="margin-top:.6rem">${TL('Dóórgerekend met je eigen data; <span class="prisk">rood</span> = de simulatie ziet meer laagtes. Bespreekpunten voor je team — geen instel- of pompopdracht.','Computed with your own data; <span class="prisk">red</span> = the simulation sees more lows. Discussion points for your team — not a setting or pump instruction.','Calculado com os seus próprios dados; <span class="prisk">vermelho</span> = a simulação vê mais valores baixos. Pontos de discussão para a sua equipa — não uma instrução de definição ou bomba.')}</div>`;
+  const caveat = `<div class="muted" style="margin-top:.5rem;font-size:.75rem">${TL('Bespreekpunten voor je team, geen pompopdracht.','Discussion points for your team, not a pump instruction.','Pontos para discutir com a equipa, não uma instrução.')}</div>`;
   const detail = anyChange ? `<details class="bwdetail"><summary>${TL("Onderbouwing per dagdeel — bewijs & effect","Rationale per part of day — evidence & effect","Fundamentação por período do dia — evidência e efeito")}</summary><div class="bwbody">${changed.map(card).join("")}</div></details>` : "";
   // Waarom staat er een "—"? Concreet per hefboom, met aantallen.
   const why=[];
@@ -1620,10 +1683,8 @@ function proposalsHtml(drift, oi, MR, pi, glucose, treatments, q, timeline){
   try{ const ins=insulinCarbs(treatments,timeline,q), isfP=pi.isf&&pi.isf.length?_pMed(pi.isf.map(b=>b.value)):null, icP=pi.ic&&pi.ic.length?_pMed(pi.ic.map(b=>b.value)):null;
     if(ins.tdd>5){ const isfR=100/ins.tdd, icR=500/ins.tdd, dev=(x,y)=>y?Math.round((x/y-1)*100):null;
       const line=(lab,r,pf,u)=>{ const d=pf?dev(r,pf):null; return `<div class="bar"><span>${lab}</span><span>${nl1(r)} ${u} <span class="muted">${TL("vs profiel","vs profile","vs perfil")} ${pf!=null?nl1(pf):"—"}${d!=null?` (${d>0?"+":""}${d}%)`:""}</span></span></div>`; };
-      rule=`<div class="ba" style="margin-top:.6rem"><b>${TL("Vuistregel-check ISF (TDD)","Rule-of-thumb ISF check (TDD)","Verificação ISF por regra (TDD)")}</b><div class="muted" style="font-size:.75rem;margin:.2rem 0">${TL(`Totale dagdosis ≈ ${nl1(ins.tdd)} E (basaal uit profiel + bolus + SMB). Dit is een grove schatting, géén meting van jouw lichaam.`,`Total daily dose ≈ ${nl1(ins.tdd)} U (profile basal + bolus + SMB). A rough estimate, not a measurement.`,`Dose diária total ≈ ${nl1(ins.tdd)} U. Estimativa grosseira, não uma medição.`)}</div>`+
-        line("ISF (100/TDD)",isfR,isfP,"mmol/L/"+TL("E","U","U"))+
-        `<div class="muted" style="font-size:.7rem;margin-top:.25rem">${TL("Verschilt het >25%, bespreek dan met je team of er een reden voor is. Geen advies om te wijzigen.","If it differs >25%, ask your team whether there is a reason. Not advice to change.","Se diferir >25%, discuta com a equipa. Não é um conselho para alterar.")}</div></div>`; } }catch(e){}
-  const whyHtml = why.length?`<div class="muted" style="margin-top:.5rem;font-size:.75rem"><b>${TL("Waarom ontbreekt er iets?","Why is something missing?","Porque falta algo?")}</b>${why.map(w=>`<div style="margin-top:.2rem">• ${w}</div>`).join("")}</div>`:"";
+      rule=`<div class="isfrule" style="margin-top:.6rem;font-size:.82rem"><span>${TL("ISF-vuistregel (100/TDD)","ISF rule of thumb (100/TDD)","ISF regra (100/TDD)")}</span><span>${nl1(isfR)} <span class="muted">${TL("vs profiel","vs profile","vs perfil")} ${isfP!=null?nl1(isfP):"—"}${isfP?` (${dev(isfR,isfP)>0?"+":""}${dev(isfR,isfP)}%)`:""}</span></span></div>`; } }catch(e){}
+  const whyHtml = why.length?`<details class="why muted" style="margin-top:.5rem;font-size:.75rem"><summary><b>${TL("Waarom ontbreekt er iets?","Why is something missing?","Porque falta algo?")}</b></summary>${why.map(w=>`<div style="margin-top:.2rem">• ${w}</div>`).join("")}</details>`:"";
   return matrix + allNote + whyHtml + rule + lead + caveat + detail;
 }
 
@@ -2002,7 +2063,12 @@ function closeDlg(){ try{ dlg.close?.(); }catch(_){} dlg.removeAttribute("open")
 
 let _dsRecent = [];
 async function refresh(){
+  const prevCls=dot.className, prevTxt=connTxt.textContent;
   setConn("busy",TL("Berekenen…","Calculating…","A calcular…")); await new Promise(r=>setTimeout(r,30));   // eerst laten schilderen, dan zwaar rekenen
+  try { return await _refresh(); }
+  finally { if(connTxt.textContent===TL("Berekenen…","Calculating…","A calcular…")){ dot.className=prevCls; connTxt.textContent=prevTxt; } }
+}
+async function _refresh(){
   const glucose = await loadGlucose(cfg.days);
   const treatments = glucose.length ? await loadTreatments(cfg.days) : [];
   const timeline = glucose.length ? await loadProfiles(cfg.days) : null;
@@ -2587,25 +2653,25 @@ function etenInsightHtml(MR){
   const rows=[];
   // 1) piektiming → prebolus-timing
   if(tpk!=null){
-    const speed = t50==null?"" : t50>60?TL(" — vrij traag, past bij grote of vette maaltijden"," — fairly slow, fits large or fatty meals"," — bastante lento, compatível com refeições grandes ou gordas") : t50<35?TL(" — snel, dan telt prebolus-timing zwaar mee"," — fast, then prebolus timing matters a lot"," — rápido, então o timing do prebólus pesa muito") : "";
-    rows.push(`<div class="cbMeRow"><span class="cbMeK">${TL("Piek","Peak","Pico")}</span><span>${TL(`mediaan <b>~${tpk} min</b> na het eten${speed}.`,`median <b>~${tpk} min</b> after eating${speed}.`,`mediana <b>~${tpk} min</b> após comer${speed}.`)}</span></div>`);
+    const speed = "";
+    rows.push(`<div class="cbMeRow"><span class="cbMeK">${TL("Piek","Peak","Pico")}</span><span><b>~${tpk} min</b></span></div>`);
   }
   // 2) prebolus-moment (alleen als er handmatige-bolus-timing is)
   if(off!=null){
-    const txt = off<-5 ? TL(`je bolust mediaan <b>~${Math.round(-off)} min vóór</b> het eten`,`you bolus a median of <b>~${Math.round(-off)} min before</b> eating`,`bolusa uma mediana de <b>~${Math.round(-off)} min antes</b> de comer`)
-              : off>5  ? TL(`je bolust mediaan <b>~${Math.round(off)} min ná</b> het eten — eerder bolussen dempt de piek zónder meer insuline`,`you bolus a median of <b>~${Math.round(off)} min after</b> eating — bolusing earlier dampens the peak without more insulin`,`bolusa uma mediana de <b>~${Math.round(off)} min após</b> comer — bolusar mais cedo reduz o pico sem mais insulina`)
-              : TL(`je bolust <b>rond</b> het eetmoment — een paar minuten eerder dempt de piek vaak nog`,`you bolus <b>around</b> the eating moment — a few minutes earlier often still dampens the peak`,`bolusa <b>por volta</b> do momento de comer — uns minutos antes ainda reduz muitas vezes o pico`);
-    rows.push(`<div class="cbMeRow"><span class="cbMeK">Timing</span><span>${txt}. <span style="color:var(--dim)">(n=${nOff})</span></span></div>`);
+    const txt = off<-5 ? TL(`<b>~${Math.round(-off)} min vóór</b> eten`,`<b>~${Math.round(-off)} min before</b> eating`,`<b>~${Math.round(-off)} min antes</b>`)
+              : off>5  ? TL(`<b>~${Math.round(off)} min ná</b> eten`,`<b>~${Math.round(off)} min after</b> eating`,`<b>~${Math.round(off)} min depois</b>`)
+              : TL(`<b>rond</b> het eten`,`<b>around</b> eating`,`<b>perto</b> da refeição`);
+    rows.push(`<div class="cbMeRow"><span class="cbMeK">Bolus</span><span>${txt}</span></div>`);
   }
   // 3) koolhydraat-kalibratie
   if(pct!=null){
-    const cal = pct>=85&&pct<=115 ? TL(`je schatting sluit goed aan bij wat je glucose laat zien`,`your estimate matches what your glucose shows well`,`a sua estimativa corresponde bem ao que a glicose mostra`)
-              : pct<85 ? TL(`je ziet <b>minder</b> terug dan ingevoerd — mogelijk tel je wat hoog, of dekt je insuline ruim`,`you see <b>less</b> back than entered — you may count a bit high, or insulin covers generously`,`vê <b>menos</b> do que introduziu — pode contar um pouco a mais, ou a insulina cobre com folga`)
-              : TL(`je ziet <b>meer</b> terug dan ingevoerd — mogelijk onderschat je de koolhydraten`,`you see <b>more</b> back than entered — you may be underestimating the carbs`,`vê <b>mais</b> do que introduziu — pode estar a subestimar os hidratos`);
-    rows.push(`<div class="cbMeRow"><span class="cbMeK">${TL("Koolhydraten","Carbs","Hidratos")}</span><span>${TL(`je ziet mediaan <b>~${pct}%</b> terug: ${cal}.`,`you see a median of <b>~${pct}%</b> back: ${cal}.`,`vê uma mediana de <b>~${pct}%</b> de volta: ${cal}.`)}</span></div>`);
+    const cal = pct>=85&&pct<=115 ? TL(`klopt`,`matches`,`correto`)
+              : pct<85 ? TL(`minder dan ingevoerd`,`less than entered`,`menos que introduzido`)
+              : TL(`meer dan ingevoerd, mogelijk onderschat`,`more than entered, maybe underestimated`,`mais que introduzido`);
+    rows.push(`<div class="cbMeRow"><span class="cbMeK">${TL("Koolhydraten","Carbs","Hidratos")}</span><span><b>~${pct}%</b> · ${cal}</span></div>`);
   }
   if(!rows.length) return "";
-  return `<div class="cbMe"><div class="cbMeH">${TL("Zo reageert jóuw lijf","How your body responds","Como o seu corpo responde")} <span class="cbMeN">${TL(`n=${n} maaltijden · geen dosisadvies`,`n=${n} meals · no dosing advice`,`n=${n} refeições · sem conselho de dose`)}</span></div>${rows.join("")}</div>`;
+  return `<div class="cbMe"><div class="cbMeH">${TL("Jouw maaltijden","Your meals","As suas refeições")} <span class="cbMeN">n=${n}</span></span></div>${rows.join("")}</div>`;
 }
 function renderEtenInsight(){
   const el=document.getElementById("cbMe"); if(!el) return;
@@ -2622,7 +2688,7 @@ function renderCbCats(){
 function renderCbResults(){
   const el=document.getElementById("cbResults"); if(!el) return;
   const q=(document.getElementById("cbSearch").value||"").trim().toLowerCase();
-  if(!q && !_cbCat){ el.innerHTML=`<div class="cbNone">${TL("Zoek een product hierboven, of kies een categorie om te bladeren.","Search for a product above, or pick a category to browse.","Procure um produto acima, ou escolha uma categoria para navegar.")}</div>`; return; }
+  if(!q && !_cbCat){ el.innerHTML=`<div class="cbNone">${TL("Zoek of kies een categorie.","Search for a product above, or pick a category to browse.","Procure um produto acima, ou escolha uma categoria para navegar.")}</div>`; return; }
   let list=CARB_DB.filter(f=>(!_cbCat||f.k===_cbCat)&&(!q||foodMatch(f.n,q)));
   if(q) list=list.sort((a,b)=>{const ia=foodName(a.n).toLowerCase().indexOf(q),ib=foodName(b.n).toLowerCase().indexOf(q);return (ia<0?99:ia)-(ib<0?99:ib);});
   list=list.slice(0,40);

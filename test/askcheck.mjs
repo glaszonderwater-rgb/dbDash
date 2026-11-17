@@ -18,7 +18,7 @@ await page.click('#btnSave');
 await page.waitForFunction(()=>!document.getElementById('tabbar').hidden,{timeout:40000}).catch(()=>{});
 await page.waitForTimeout(400);
 
-async function ask(q){ await page.fill('#askInput',q); await page.press('#askInput','Enter'); await page.waitForTimeout(250);
+async function ask(q){ await page.evaluate(()=>showTab('analyses')); await page.fill('#askInput',q); await page.press('#askInput','Enter'); await page.waitForTimeout(250);
   return page.evaluate(()=>document.getElementById('askAnswer').textContent.replace(/\s+/g,' ').trim()); }
 
 const boxShown=await page.evaluate(()=>!document.getElementById('askBox').hidden);
@@ -30,6 +30,7 @@ const isf=await ask("Klopt mijn correctiefactor?");
 const unknown=await ask("zxcvb qwerty");
 const unkChips=await page.evaluate(()=>document.querySelectorAll('#askAnswer .askFollow .chip, #askAnswer .chips .chip').length);
 // vervolgvraag-chip klikbaar
+await page.evaluate(()=>showTab('analyses'));
 await page.fill('#askInput','Hoe is mijn tijd in bereik?'); await page.press('#askInput','Enter'); await page.waitForTimeout(200);
 const followChips=await page.evaluate(()=>document.querySelectorAll('#askAnswer .askFollow .chip').length);
 // Engels

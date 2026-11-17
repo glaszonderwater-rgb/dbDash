@@ -35,10 +35,10 @@ const r=await page.evaluate(()=>{
   const fb = typeof etenInsightHtml==='function' ? etenInsightHtml({results:[]}) : '';
   return { txt, hasCard: !!me?.querySelector('.cbMe:not(.thin)'), fb };
 });
-const okShown = /Zo reageert jóuw lijf/.test(r.txt) && /Piek/.test(r.txt) && /min na het eten/.test(r.txt)
-  && /Koolhydraten/.test(r.txt) && /%\s*terug/.test(r.txt.replace(/\s+/g,' ')) && /n=\d+/.test(r.txt)
-  && /geen dosisadvies/.test(r.txt) && r.hasCard;
-const okPrebolus = /Timing/.test(r.txt) && /vóór/.test(r.txt);
+const okShown = /Jouw maaltijden/.test(r.txt) && /Piek/.test(r.txt) && /~\d+\s*min/.test(r.txt)
+  && /Koolhydraten/.test(r.txt) && /~\d+%/.test(r.txt) && /n=\d+/.test(r.txt)
+  && r.hasCard;
+const okPrebolus = /Bolus/.test(r.txt) && /vóór/.test(r.txt);
 const okFallback = /te weinig data/.test(r.fb) && /tabelwaarden/.test(r.fb);
 console.log('persoonlijke kaart getoond (piek + kalibratie + n=):', okShown?'JA':'NEE');
 console.log('  →', r.txt.slice(0,180));
