@@ -3,7 +3,7 @@ import http from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { dirname, join, normalize } from 'node:path';
-const EXE='/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
+const EXE=(process.env.CHROME_PATH||'/opt/pw-browsers/chromium-1194/chrome-linux/chrome');
 const ROOT=dirname(dirname(fileURLToPath(import.meta.url))); // /workspace/dbdash
 const TYPES={'.html':'text/html; charset=utf-8','.json':'application/json','.js':'application/javascript','.svg':'image/svg+xml'};
 

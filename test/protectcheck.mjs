@@ -1,5 +1,5 @@
 import { chromium } from 'playwright-core';
-const b=await chromium.launch({executablePath:'/opt/pw-browsers/chromium-1194/chrome-linux/chrome'});
+const b=await chromium.launch({executablePath:(process.env.CHROME_PATH||'/opt/pw-browsers/chromium-1194/chrome-linux/chrome')});
 const p=await b.newPage();const errs=[];p.on('pageerror',e=>errs.push(e.message));
 await p.route('https://mock.nightscout.test/**',r=>r.fulfill({status:200,contentType:'application/json',body:'[]'}));
 await p.goto(''+new URL('../index.html',import.meta.url).href+'');

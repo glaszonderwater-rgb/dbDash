@@ -1,5 +1,5 @@
 import { chromium } from 'playwright-core';
-const EXE='/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
+const EXE=(process.env.CHROME_PATH||'/opt/pw-browsers/chromium-1194/chrome-linux/chrome');
 const FILE = new URL('../index.html', import.meta.url).href;
 const MG=18.0182,DAY=864e5,STEP=5*60e3,NDAYS=40,now=Date.now();
 const _s=new Date(now-NDAYS*DAY);_s.setHours(0,0,0,0);const start=_s.getTime();

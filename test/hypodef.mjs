@@ -1,5 +1,5 @@
 import { chromium } from 'playwright-core';
-const EXE='/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
+const EXE=(process.env.CHROME_PATH||'/opt/pw-browsers/chromium-1194/chrome-linux/chrome');
 const browser=await chromium.launch({executablePath:EXE});
 const page=await browser.newPage();
 await page.goto(new URL('../index.html', import.meta.url).href,{waitUntil:'load'});

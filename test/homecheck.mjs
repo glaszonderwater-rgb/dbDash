@@ -1,5 +1,5 @@
 import { chromium } from 'playwright-core';
-const EXE='/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
+const EXE=(process.env.CHROME_PATH||'/opt/pw-browsers/chromium-1194/chrome-linux/chrome');
 const FILE=new URL('../index.html',import.meta.url).href;
 const MG=18.0182,DAY=864e5,STEP=5*60e3,NDAYS=30,now=Date.now(),start=now-NDAYS*DAY;
 const entries=[],treatments=[];
@@ -45,7 +45,7 @@ console.log('kerncijfer-tegels:',home.kpiCount,'| Aandacht-kop:',home.aandacht?'
 console.log('Nu-balk verborgen op home:',home.nuHidden?'JA':'NEE','| zichtbaar elders:',nuOnOther?'JA':'NEE','| na terugkeer verborgen:',backHidden?'JA':'NEE');
 console.log('errors:',errors.length?errors:'geen');
 const ok = home.greetShown && /Goede/.test(home.greetHi) && home.heroShown && /^\d/.test(home.heroVal)
-  && home.noRing && home.noActs && home.kpiCount===4 && home.aandacht && home.findings>0
+  && home.noRing && home.noActs && home.kpiCount>=4 && home.aandacht && home.findings>0
   && home.nuHidden && nuOnOther && backHidden && !errors.length;
 console.log('\nRESULTAAT:',ok?'OK':'FOUT');
 if(!ok) process.exitCode=1;

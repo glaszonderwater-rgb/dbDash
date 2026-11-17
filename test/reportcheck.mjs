@@ -1,5 +1,5 @@
 import { chromium } from 'playwright-core';
-const EXE='/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
+const EXE=(process.env.CHROME_PATH||'/opt/pw-browsers/chromium-1194/chrome-linux/chrome');
 const FILE = new URL('../index.html', import.meta.url).href;
 const MG=18.0182,DAY=864e5,STEP=5*60e3,NDAYS=40,now=Date.now(),start=now-NDAYS*DAY;
 function model(peak,dia){const td=Math.max(300,dia),tp=peak,tau=tp*(1-tp/td)/(1-2*tp/td),a=2*tau/td,S=1/(1-a+(1+a)*Math.exp(-td/tau));return {iob(t){if(t<=0)return 1;if(t>=td)return 0;return 1-S*(1-a)*((t*t/(tau*td*(1-a))-t/tau-1)*Math.exp(-t/tau)+1);}};}

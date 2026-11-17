@@ -1,5 +1,5 @@
 import { chromium } from 'playwright-core';
-const EXE='/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
+const EXE=(process.env.CHROME_PATH||'/opt/pw-browsers/chromium-1194/chrome-linux/chrome');
 const FILE = new URL('../index.html', import.meta.url).href;
 const MG=18.0182,DAY=864e5,STEP=5*60e3,now=Date.now(),start=now-30*DAY;
 const entries=[];for(let t=start;t<now;t+=STEP){const d=new Date(t),h=d.getUTCHours();let bg=6.5;if(h===3)bg=3.5;entries.push({_id:'e'+t,date:t,dateString:d.toISOString(),sgv:Math.round(bg*MG),type:'sgv',direction:'Flat'});}
