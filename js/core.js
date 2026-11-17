@@ -1343,7 +1343,7 @@ async function renderFindings(ctx){
   const paint=(el,list)=>{ el.innerHTML=list.map(f2=>findingCard(f2,{seen:fs[f2.id]&&fs[f2.id].seen,onList:onList(f2.id)})).join(""); };
   paint(document.getElementById("findToday"), today);
   paint(document.getElementById("findWeek"), week);
-  limitFindings(3);
+  limitFindings(2);
   const warned=list=>list.some(f2=>f2.sev==="w" && !(fs[f2.id]&&fs[f2.id].seen));
   document.getElementById("epVandaag").classList.toggle("warned", warned(today));
   document.getElementById("epWeek").classList.toggle("warned", warned(week));
