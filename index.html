@@ -1839,7 +1839,8 @@ function proposalsHtml(drift, oi, MR, pi, glucose, treatments, q, timeline){
     if(low.length) why.push(TL(`KH-ratio: te weinig gebolusde maaltijden van ≥30 g (min. ${MEAL_MIN}) in ${low.join(", ")}.`,`Carb ratio: too few bolused meals of ≥30 g (min. ${MEAL_MIN}) in ${low.join(", ")}.`,`Rácio: poucas refeições com bólus ≥30 g (mín. ${MEAL_MIN}) em ${low.join(", ")}.`)); }
   let rule="";
   try{ const ins=insulinCarbs(treatments,timeline,q), isfP=pi.isf&&pi.isf.length?_pMed(pi.isf.map(b=>b.value)):null, icP=pi.ic&&pi.ic.length?_pMed(pi.ic.map(b=>b.value)):null;
-    if(ins.tdd>5){ const isfR=100/ins.tdd, icR=500/ins.tdd, dev=(x,y)=>y?Math.round((x/y-1)*100):null;
+    const tddX=deliveredTDD(treatments,timeline,q)||ins.tdd;
+    if(tddX>5){ const isfR=100/tddX, icR=500/tddX, dev=(x,y)=>y?Math.round((x/y-1)*100):null;
       const line=(lab,r,pf,u)=>{ const d=pf?dev(r,pf):null; return `<div class="bar"><span>${lab}</span><span>${nl1(r)} ${u} <span class="muted">${TL("vs profiel","vs profile","vs perfil")} ${pf!=null?nl1(pf):"—"}${d!=null?` (${d>0?"+":""}${d}%)`:""}</span></span></div>`; };
       rule=`<div class="isfrule" style="margin-top:.6rem;font-size:.82rem"><span>${TL("ISF-vuistregel (100/TDD)","ISF rule of thumb (100/TDD)","ISF regra (100/TDD)")}</span><span>${nl1(isfR)} <span class="muted">${TL("vs profiel","vs profile","vs perfil")} ${isfP!=null?nl1(isfP):"—"}${isfP?` (${dev(isfR,isfP)>0?"+":""}${dev(isfR,isfP)}%)`:""}</span></span></div>`; } }catch(e){}
   const whyHtml = why.length?`<details class="why muted" style="margin-top:.5rem;font-size:.75rem"><summary><b>${TL("Waarom ontbreekt er iets?","Why is something missing?","Porque falta algo?")}</b></summary>${why.map(w=>`<div style="margin-top:.2rem">• ${w}</div>`).join("")}</details>`:"";
@@ -1956,7 +1957,7 @@ function anHours(glucose, q){
   // hypo-episodes: ≥15 min aaneengesloten <3,9; start-uur
   const starts=Array(24).fill(0); let run=null;
   for(let i=0;i<g.length;i++){ const x=g[i], ok=i>0&&x.ts-g[i-1].ts<=20*60e3;
-    if(x.bg<3.9){ if(!run||!ok) run={t0:x.ts,cnt:false}; if(!run.cnt&&x.ts-run.t0>=15*60e3){ run.cnt=true; starts[Math.floor(todMin(run.t0)/60)%24]++; } } else run=null; }
+    if(x.bg<LO_T){ if(!run||!ok) run={t0:x.ts,cnt:false}; if(!run.cnt&&x.ts-run.t0>=15*60e3){ run.cnt=true; starts[Math.floor(todMin(run.t0)/60)%24]++; } } else run=null; }
   const pc=(a,p)=>{const s=[...a].sort((x,y)=>x-y);return s.length?s[Math.min(s.length-1,Math.floor(p*s.length))]:null;};
   const rows=H.map((a,h)=>({h,n:a.length,p10:pc(a,.1),p50:pc(a,.5),p90:pc(a,.9),low:a.filter(v=>v<3.9).length/(a.length||1),high:a.filter(v=>v>10).length/(a.length||1),ep:starts[h]}));
   const worstLow=[...rows].sort((a,b)=>b.low-a.low)[0], worstHigh=[...rows].sort((a,b)=>b.high-a.high)[0];

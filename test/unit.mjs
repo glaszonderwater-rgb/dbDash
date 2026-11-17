@@ -7,7 +7,7 @@ const TL=(nl,en,pt)=>nl; const t=k=>k; const DECSEP=()=>","; const esc=s=>String
 const document={documentElement:{}}; const getComputedStyle=()=>({getPropertyValue:()=>""});
 const indexedDB={open(){throw new Error("geen idb")}}; const localStorage={getItem(){return null},setItem(){}};
 `;
-const post=`;({metrics,localDayKey,todMin,fmtMin,loopBasal,smbISF,_segment,applyGuardrails,guardrailStats,DAYPARTS,toMgdl,mmol,bandOf,_pMed,_pMean})`;
+const post=`;({metrics,localDayKey,todMin,fmtMin,loopBasal,smbISF,_segment,applyGuardrails,LO_T,HI_T,VLO_T,guardrailStats,DAYPARTS,toMgdl,mmol,bandOf,_pMed,_pMean})`;
 const ctx=vm.createContext({console,Intl,Date,Math,Map,Set,Promise,JSON,Object,Array,Number,String,RegExp,parseFloat,isFinite,setTimeout,navigator:{}});
 const X=vm.runInContext(pre+core+post,ctx);
 let n=0; const T=(name,f)=>{try{f();n++;console.log('OK  ',name)}catch(e){console.log('FAIL',name,'\n',e.message);process.exitCode=1}};
@@ -50,4 +50,7 @@ T('_segment: kiest blokgrenzen waar de waarde echt verandert, min. 2 uur',()=>{
   const s=X._segment(v,2,0.015,8); assert.equal(JSON.stringify(s.map(x=>x[0])),"[0,6,11]"); assert.ok(s.every(([a,b])=>b-a>=2)); });
 T('_segment: losse uitschieter van 1 uur geeft geen eigen blok',()=>{
   const v=Array(24).fill(1.0); v[10]=1.3; const s=X._segment(v,2,0.015,8); assert.ok(s.every(([a,b])=>b-a>=2)); });
+T('grenzen: 70 en 180 mg/dL tellen als in bereik, 69 en 181 niet; 54 is niet <3,0',()=>{
+  const g=[70,180,69,181,54,53].map((mg,i)=>({ts:base+i*3e5,bg:mg/18.0182})); const m=X.metrics(g);
+  assert.ok(Math.abs(m.tir-2/6)<1e-9,'tir='+m.tir); assert.ok(Math.abs(m.tbr-3/6)<1e-9,'tbr='+m.tbr); assert.ok(Math.abs(m.veryLow-1/6)<1e-9,'vl='+m.veryLow); assert.ok(Math.abs(m.tar-1/6)<1e-9); });
 console.log(`\n${n} tests geslaagd`); 

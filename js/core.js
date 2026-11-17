@@ -3,13 +3,16 @@
 /* ── Eenheden + banden ──────────────────────────────────────────────────────
    Nightscout slaat glucose ALTIJD op in mg/dL. Conversie op precies één plek. */
 const MGDL = 18.0182, DAY = 864e5;
+// Grenzen zoals de internationale consensus ze in mg/dL definieert (70, 180, 54, 250, 140).
+// In mmol/L vergelijken met 3,9/10 zou 70 mg/dL (3,885) als "laag" tellen; dit klopt wel.
+const LO_T = 70/MGDL, HI_T = 180/MGDL, VLO_T = 54/MGDL, VHI_T = 250/MGDL, TT_T = 140/MGDL;
 const mmol = v => v / MGDL, toMgdl = v => v * MGDL;
 const BANDS = [
-  { id:"veryLow",  lo:-Infinity, hi:3.0,      label:"< 3,0",       css:"--veryLow"  },
-  { id:"low",      lo:3.0,       hi:3.9,      label:"3,0 – 3,9",   css:"--low"      },
-  { id:"inRange",  lo:3.9,       hi:10.0,     label:"3,9 – 10,0",  css:"--inRange"  },
-  { id:"high",     lo:10.0,      hi:13.9,     label:"10,0 – 13,9", css:"--high"     },
-  { id:"veryHigh", lo:13.9,      hi:Infinity, label:"> 13,9",      css:"--veryHigh" },
+  { id:"veryLow",  lo:-Infinity, hi:VLO_T,      label:"< 3,0",       css:"--veryLow"  },
+  { id:"low",      lo:VLO_T,     hi:LO_T,      label:"3,0 – 3,9",   css:"--low"      },
+  { id:"inRange",  lo:LO_T,      hi:HI_T+1e-9,     label:"3,9 – 10,0",  css:"--inRange"  },
+  { id:"high",     lo:HI_T+1e-9, hi:VHI_T+1e-9,     label:"10,0 – 13,9", css:"--high"     },
+  { id:"veryHigh", lo:VHI_T+1e-9,      hi:Infinity, label:"> 13,9",      css:"--veryHigh" },
 ];
 const bandOf = bg => BANDS.find(b => bg >= b.lo && bg < b.hi) || BANDS[4];
 // Bandgrens-label met locale-decimaal (herberekend bij taalwissel).
@@ -589,7 +592,7 @@ function metrics(g){
   for (const x of g) counts[bandOf(x.bg).id]++;
   const share = id => counts[id]/g.length;
   const mean = g.reduce((s,x)=>s+x.bg,0)/g.length;
-  const titr = g.filter(x=>x.bg>=3.9 && x.bg<=7.8).length/g.length;
+  const titr = g.filter(x=>x.bg>=LO_T && x.bg<=TT_T).length/g.length;
   const sd = Math.sqrt(g.reduce((s,x)=>s+(x.bg-mean)**2,0)/g.length);
   return { n:g.length, mean, titr, cv:sd/mean, gmi:3.31+0.02392*toMgdl(mean),
     tir:share("inRange"), tbr:share("low")+share("veryLow"), veryLow:share("veryLow"),
@@ -615,7 +618,7 @@ function hypoStats(g){
   // zodat we in-/uitgangssnelheid kunnen beoordelen (sensordruk-patroon).
   const runs=[]; let cur=null;
   for (let i=0;i<g.length;i++){ const x=g[i];
-    if (x.bg>=3.9) continue;
+    if (x.bg>=LO_T) continue;
     if (cur && x.ts-cur.end<=45*60e3){ cur.end=x.ts; cur.endIdx=i; cur.min=Math.min(cur.min,x.bg); }
     else { cur={start:x.ts,end:x.ts,min:x.bg,startIdx:i,endIdx:i}; runs.push(cur); } }
   const parts = new Array(4).fill(0);   // nacht 0-6, ochtend 6-12, middag 12-18, avond 18-24
@@ -632,7 +635,7 @@ function hypoStats(g){
     if (e.dur<15){ dips++; continue; }                     // korte dip — geen consensus-episode
     eps.push(e);
     parts[Math.floor(todMin(e.start)/360)%4]++;
-    if (e.min<3.0) level2++;
+    if (e.min<VLO_T) level2++;
     if (todMin(e.start)<360) nocturnal++; }
   return { episodes:eps.length, eps, dips, allLows:runs, parts, label, level2, nocturnal, suspect,
     worst: parts.some(x=>x>0) ? label[parts.indexOf(Math.max(...parts))] : null };
@@ -727,7 +730,7 @@ function explainSpike(r){
 function hypoStacking(glucose, treatments, q){
   const CASE=3*3600e3, TOL=20*60e3, MIN_EP=6, DAYMS=864e5;
   const g=glucose.filter(x=>q.usableKeys.has(localDayKey(x.ts)));
-  const below=g.filter(x=>x.bg<3.9);
+  const below=g.filter(x=>x.bg<LO_T);
   const epsAll=[]; for(const p of below){ const l=epsAll[epsAll.length-1]; if(l&&p.ts-l.end<=45*60e3)l.end=p.ts; else epsAll.push({start:p.ts,end:p.ts}); }
   const episodes=[]; for(const e of epsAll){ if(episodes.length&&e.start-episodes[episodes.length-1].start<CASE)continue; if(e.start-g[0].ts<CASE)continue; episodes.push(e); }
   if(episodes.length<MIN_EP) return { few:episodes.length };
@@ -848,8 +851,8 @@ function opportunity(m, ag, hy, trend){
     if (l.tbr-f.tbr>=0.02 && l.tbr>=0.03)
       return { risk:true, msg:TL(`<b>Let op — hypo's nemen toe.</b> Je tijd onder 3,9 liep op van ${pct0(f.tbr)} naar ${pct0(l.tbr)} over de weken. Dit is nu je belangrijkste aandachtspunt.`,`<b>Note — lows are increasing.</b> Your time below 3.9 rose from ${pct0(f.tbr)} to ${pct0(l.tbr)} over the weeks. This is now your main point of attention.`,`<b>Atenção — as hipos aumentam.</b> O seu tempo abaixo de 3,9 subiu de ${pct0(f.tbr)} para ${pct0(l.tbr)} ao longo das semanas. Este é agora o seu ponto de atenção principal.`) };
   }
-  const highWin = joinBins(ag.filter(x=>x.p50>=10).map(x=>x.b));
-  const lowWin  = joinBins(ag.filter(x=>x.p10<3.9).map(x=>x.b));
+  const highWin = joinBins(ag.filter(x=>x.p50>HI_T).map(x=>x.b));
+  const lowWin  = joinBins(ag.filter(x=>x.p10<LO_T).map(x=>x.b));
   if (m.veryLow>=0.01 || m.tbr>=0.04)
     return { risk:true, msg:TL(`<b>Hypo-veiligheid.</b> Je zit ${pct0(m.tbr)} van de tijd onder 3,9 (streef &lt;4%)${lowWin.length?`, vooral rond <b>${lowWin.join(", ")}</b>`:""}. Dit is je belangrijkste aandachtspunt.`,`<b>Low safety.</b> You're below 3.9 ${pct0(m.tbr)} of the time (aim &lt;4%)${lowWin.length?`, mostly around <b>${lowWin.join(", ")}</b>`:""}. This is your main point of attention.`,`<b>Segurança de hipo.</b> Está abaixo de 3,9 ${pct0(m.tbr)} do tempo (meta &lt;4%)${lowWin.length?`, sobretudo por volta de <b>${lowWin.join(", ")}</b>`:""}. Este é o seu ponto de atenção principal.`) };
   if (m.cv>0.36)
@@ -905,7 +908,7 @@ function dayChartSvg(readings, events, win){
   const band=`<rect x="${PL}" y="${Y(10).toFixed(1)}" width="${W-PL}" height="${(Y(3.9)-Y(10)).toFixed(1)}" fill="var(--inRange)" opacity=".08"/>`;
   const pts=readings.map(r=>({x:X(pos(r.ts)),y:Y(r.bg),bg:r.bg}));
   let d=""; pts.forEach((p,i)=>{ d+=(i?"L":"M")+p.x.toFixed(1)+" "+p.y.toFixed(1); });
-  let red=""; for(let i=1;i<pts.length;i++){ if(readings[i].bg<3.9 || readings[i-1].bg<3.9)
+  let red=""; for(let i=1;i<pts.length;i++){ if(readings[i].bg<LO_T || readings[i-1].bg<LO_T)
     red+=`<line x1="${pts[i-1].x.toFixed(1)}" y1="${pts[i-1].y.toFixed(1)}" x2="${pts[i].x.toFixed(1)}" y2="${pts[i].y.toFixed(1)}" stroke="var(--low)" stroke-width="2.5" vector-effect="non-scaling-stroke"/>`; }
   let mk=""; for(const e of events){ const x=X(pos(e.ts));
     if(e.carbs>0){ mk+=`<circle cx="${x.toFixed(1)}" cy="${PT}" r="3" fill="var(--carb)"/>`;
@@ -921,12 +924,12 @@ function renderLast24(){
   const rd=g.filter(x=>x.ts>=from&&x.ts<=to), ev=(_ctx.treatments||[]).filter(t=>t.ts>=from&&t.ts<=to);
   host.innerHTML=dayChartSvg(rd,ev,{from,to});
   const sub=document.getElementById("l24sub");
-  if(sub){ const n=rd.length; sub.textContent = n>=3 ? TL(`${pct0(rd.filter(x=>x.bg>=3.9&&x.bg<10).length/n)} in bereik`,`${pct0(rd.filter(x=>x.bg>=3.9&&x.bg<10).length/n)} in range`,`${pct0(rd.filter(x=>x.bg>=3.9&&x.bg<10).length/n)} no alvo`) : ""; }
+  if(sub){ const n=rd.length; sub.textContent = n>=3 ? TL(`${pct0(rd.filter(x=>x.bg>=LO_T&&x.bg<=HI_T).length/n)} in bereik`,`${pct0(rd.filter(x=>x.bg>=LO_T&&x.bg<=HI_T).length/n)} in range`,`${pct0(rd.filter(x=>x.bg>=LO_T&&x.bg<=HI_T).length/n)} no alvo`) : ""; }
 }
 function dayNarrative(readings, events){
   const n=readings.length; let inR=0,maxB=-Infinity,maxT=0,minB=Infinity,minT=0;
-  for(const r of readings){ if(r.bg>=3.9&&r.bg<10)inR++; if(r.bg>maxB){maxB=r.bg;maxT=r.ts;} if(r.bg<minB){minB=r.bg;minT=r.ts;} }
-  const below=readings.filter(r=>r.bg<3.9); let eps=0,last=-1e15;
+  for(const r of readings){ if(r.bg>=LO_T&&r.bg<=HI_T)inR++; if(r.bg>maxB){maxB=r.bg;maxT=r.ts;} if(r.bg<minB){minB=r.bg;minT=r.ts;} }
+  const below=readings.filter(r=>r.bg<LO_T); let eps=0,last=-1e15;
   for(const r of below){ if(r.ts-last>45*60e3)eps++; last=r.ts; }
   const carbs=events.filter(e=>e.carbs>0).reduce((s,e)=>s+e.carbs,0);
   const bolus=events.filter(e=>e.insulin>0).reduce((s,e)=>s+e.insulin,0);
@@ -1013,12 +1016,12 @@ function render(glucose, treatments, timeline){
   const dayStats=new Map();
   for(const x of glucose){ const k=localDayKey(x.ts); let s=dayStats.get(k);
     if(!s){ s={min:Infinity,max:-Infinity,inr:0,n:0}; dayStats.set(k,s); }
-    s.n++; if(x.bg<s.min)s.min=x.bg; if(x.bg>s.max)s.max=x.bg; if(x.bg>=3.9&&x.bg<10)s.inr++; }
+    s.n++; if(x.bg<s.min)s.min=x.bg; if(x.bg>s.max)s.max=x.bg; if(x.bg>=LO_T&&x.bg<=HI_T)s.inr++; }
   _dayKeys = [...dayStats.keys()].sort();
   let worst=null, high=null, best=null;
   for(const [k,s2] of dayStats){ if(s2.n<50) continue;
-    if(s2.min<3.9 && (!worst||s2.min<worst.v)) worst={k,v:s2.min};
-    if(s2.max>10 && (!high ||s2.max>high.v )) high ={k,v:s2.max};
+    if(s2.min<LO_T && (!worst||s2.min<worst.v)) worst={k,v:s2.min};
+    if(s2.max>HI_T && (!high ||s2.max>high.v )) high ={k,v:s2.max};
     const tir=s2.inr/s2.n; if(!best||tir>best.v) best={k,v:tir}; }
   _notable = {worst,high,best};
   _dayIdx = _dayKeys.length-1;
@@ -1032,7 +1035,7 @@ function render(glucose, treatments, timeline){
   // ── Companion-home: begroeting, status-ring, snelacties ──
   { const hr=new Date().getHours();
     const hi = hr<6?TL("Goedenacht","Good night","Boa noite"):hr<12?TL("Goedemorgen","Good morning","Bom dia"):hr<18?TL("Goedemiddag","Good afternoon","Boa tarde"):TL("Goedenavond","Good evening","Boa noite");
-    const low=last.bg<3.9, high=last.bg>10;
+    const low=last.bg<LO_T, high=last.bg>HI_T;
     document.getElementById("greetHi").textContent = hi;
     const ageMin=Math.round((Date.now()-last.ts)/60000);
     document.getElementById("greetSub").textContent =
@@ -1092,8 +1095,8 @@ function render(glucose, treatments, timeline){
 
   document.getElementById("secAgp").hidden = false;
   document.getElementById("agp").innerHTML = agpSvg(ag);
-  const highWin = joinBins(ag.filter(x=>x.p50>=10).map(x=>x.b));
-  const lowWin  = joinBins(ag.filter(x=>x.p10<3.9).map(x=>x.b));
+  const highWin = joinBins(ag.filter(x=>x.p50>HI_T).map(x=>x.b));
+  const lowWin  = joinBins(ag.filter(x=>x.p10<LO_T).map(x=>x.b));
   const parts=[];
   if (highWin.length) parts.push(TL(`ligt je mediaan boven 10 rond <b>${highWin.join(", ")}</b>`,`your median is above 10 around <b>${highWin.join(", ")}</b>`,`a sua mediana está acima de 10 por volta de <b>${highWin.join(", ")}</b>`));
   if (lowWin.length)  parts.push(TL(`zakt de onderste band onder 3,9 rond <b>${lowWin.join(", ")}</b>`,`the lower band drops below 3.9 around <b>${lowWin.join(", ")}</b>`,`a faixa inferior desce abaixo de 3,9 por volta de <b>${lowWin.join(", ")}</b>`));
@@ -1376,7 +1379,7 @@ async function renderFindings(ctx){
   if (week.length===0){
     const to=q.to||Date.now(), wk=glucose.filter(x=>x.ts>to-7*DAY);
     if (wk.length>=100){
-      const inR=wk.filter(x=>x.bg>=3.9&&x.bg<=10).length/wk.length, lo=wk.filter(x=>x.bg<3.9).length/wk.length;
+      const inR=wk.filter(x=>x.bg>=LO_T&&x.bg<=HI_T).length/wk.length, lo=wk.filter(x=>x.bg<LO_T).length/wk.length;
       week.push({ id:"week-sum", sev:"n", seenable:false,
         title:TL(`Deze week <b>${pct0(inR)}</b> in bereik${lo>=0.005?`, ${pct0(lo)} onder 3,9`:", nauwelijks hypo's"}.`,`This week <b>${pct0(inR)}</b> in range${lo>=0.005?`, ${pct0(lo)} below 3.9`:", hardly any lows"}.`,`Esta semana <b>${pct0(inR)}</b> no alvo${lo>=0.005?`, ${pct0(lo)} abaixo de 3,9`:", quase sem hipos"}.`),
         steps:[TL(`Nog geen uitgesproken week-patroon om apart te melden.`,`No pronounced weekly pattern to report separately yet.`,`Ainda sem um padrão semanal marcado para relatar à parte.`),
@@ -1758,9 +1761,9 @@ function somogyiPattern(glucose, q){
   for(const x of g){ const k=localDayKey(x.ts); (byDay.get(k)||byDay.set(k,[]).get(k)).push(x); }
   let nights=0, rebounds=0;
   for(const [,arr] of byDay){
-    if(!arr.some(x=>todMin(x.ts)<360 && x.bg<3.9)) continue;      // nachtelijke laagte (00–06)
+    if(!arr.some(x=>todMin(x.ts)<360 && x.bg<LO_T)) continue;      // nachtelijke laagte (00–06)
     nights++;
-    if(arr.some(x=>{const m=todMin(x.ts); return m>=360 && m<600 && x.bg>10;})) rebounds++;  // ochtendhyper (06–10)
+    if(arr.some(x=>{const m=todMin(x.ts); return m>=360 && m<600 && x.bg>HI_T;})) rebounds++;  // ochtendhyper (06–10)
   }
   if(nights<3 || rebounds<3 || rebounds/nights<0.5) return null;
   return { nights, rebounds, frac:rebounds/nights };
@@ -1775,7 +1778,7 @@ function exerciseLatePattern(glucose, q, anns){
   if(!g.length) return null;
   const inWin=ts=>sport.some(s=>ts>=s+4*3600e3 && ts<=s+12*3600e3);
   let wLow=0,wN=0,bLow=0,bN=0;
-  for(const x of g){ if(inWin(x.ts)){ wN++; if(x.bg<3.9)wLow++; } else { bN++; if(x.bg<3.9)bLow++; } }
+  for(const x of g){ if(inWin(x.ts)){ wN++; if(x.bg<LO_T)wLow++; } else { bN++; if(x.bg<LO_T)bLow++; } }
   if(wN<40) return null;
   const wRate=wLow/wN, bRate=bLow/Math.max(1,bN);
   if(wRate < bRate+0.02) return null;                // duidelijk verhoogd
@@ -1823,7 +1826,7 @@ function loopBasal(treatments, timeline, q){
     if(!okDay(t)||nearMeal(t)) continue;
     const prof=profileAt(timeline,t); if(!prof||prof.basal==null||prof.source==="geen") continue;
     const pr=prof.basal; let ar=pr; const i=lastTemp(t);
-    if(i>=0 && t<temps[i].end){ const tb=temps[i]; ar = tb.abs!=null ? tb.abs : pr*(tb.pct/100); }
+    if(i>=0 && t<temps[i].end){ const tb=temps[i]; ar = tb.abs!=null ? tb.abs : Math.max(0,pr*(1+tb.pct/100)); }   // Nightscout: percent = verandering (−50 = halve basaal)
     const h=Math.floor(todMin(t)/60)%24; hp[h].a+=ar; hp[h].p+=pr; hp[h].n++;
   }
   // SMB's tellen mee als geleverde insuline: een loop die minder temp-basaal maar meer SMB geeft, levert netto evenveel.
@@ -2014,7 +2017,7 @@ function nightSim(glucose, treatments, q, timeline, oi, MULT=[0.9,0.95,1.0,1.05,
       for(let i=0;i<seg.length;i++){
         if(i>0){ const dtMin=(seg[i].ts-seg[i-1].ts)/60000; if(dtMin>0&&dtMin<=20) adj += -isf*(m-1)*basal*(dtMin/60); }
         const cf=seg[i].bg+adj; if(cf<minbg)minbg=cf; endbg=cf; }
-      ends.push(endbg); if(minbg<3.9)lows++; }
+      ends.push(endbg); if(minbg<LO_T)lows++; }
     return { m, endMed:med(ends), lowNights:lows, nights:ends.length }; });
   return { nights:nights.length, res, src:useObs?`gemeten ISF ~${oi.obs.toFixed(1)}`:"profiel-ISF" };
 }
@@ -2033,7 +2036,7 @@ function mealSim(MR, oi, MULT=[0.9,0.95,1.0,1.05,1.1], minN=MEAL_MIN){
       for(const p of r.win){ let extra=0;
         for(const b of r.wB){ if(b.isSMB)continue; const dm=(p.ts-b.ts)/60000; if(dm<=0||dm>=r.dia)continue; extra += b.insulin*(k-1)*(1-mdl.iob(dm)); }
         const cf=p.bg - (useObs?oi.obs:r.isf)*extra; if(cf>peak)peak=cf; if(cf<minb)minb=cf; }
-      rises.push(peak-r.bg0); if(minb<3.9)lows++; }
+      rises.push(peak-r.bg0); if(minb<LO_T)lows++; }
     return { k, riseMed:med(rises), lowFrac:lows/rs.length, n:rs.length }; });
   return { n:rs.length, res, src:useObs?`gemeten ISF ~${oi.obs.toFixed(1)}`:"profiel-ISF" };
 }
@@ -2092,7 +2095,7 @@ function guardrailStats(glucose, q){
   const sets=[...DAYPARTS.map(d=>[d.key,d.lo,d.hi]),["alle",0,1440]];
   for(const [k,lo,hi] of sets){ const a=g.filter(x=>{const m=todMin(x.ts);return m>=lo&&m<hi;});
     out[k]={ n:a.length, days:new Set(a.map(x=>localDayKey(x.ts))).size,
-      tbr:a.length?a.filter(x=>x.bg<3.9).length/a.length:0, vlow:a.length?a.filter(x=>x.bg<3.0).length/a.length:0 }; }
+      tbr:a.length?a.filter(x=>x.bg<LO_T).length/a.length:0, vlow:a.length?a.filter(x=>x.bg<VLO_T).length/a.length:0 }; }
   return out;
 }
 function applyGuardrails(items, glucose, q){
@@ -2240,6 +2243,23 @@ function _segment(v, minLen, lambda, maxB){
   const out=[]; let i=n; while(k>0){ const j=from[k][i]; out.unshift([j,i]); i=j; k--; }
   return out;
 }
+// Echte totale dagdosis: geleverde basaal (temp-basaal, anders profiel) + alle bolussen en SMB's,
+// mediaan over bruikbare dagen. (Profielbasaal optellen overschat of onderschat bij een loop.)
+function deliveredTDD(treatments, timeline, q){
+  if(!timeline||!q.usableKeys||!q.usableKeys.size) return null;
+  const temps=treatments.filter(t=>t.type==="Temp Basal").map(t=>{ const r=t.raw||{}; const d=r.durationInMilliseconds!=null?+r.durationInMilliseconds:(t.duration||0)*60000;
+    return {ts:t.ts,end:t.ts+d,abs:(r.absolute!=null?+r.absolute:(r.rate!=null?+r.rate:null)),pct:(r.percent!=null?+r.percent:null)}; }).sort((a,b)=>a.ts-b.ts);
+  if(temps.length<50) return null;
+  const TT=temps.map(x=>x.ts), per=new Map();
+  for(const t of treatments){ if(t.insulin>0){ const k=localDayKey(t.ts); if(q.usableKeys.has(k)) per.set(k,(per.get(k)||0)+t.insulin); } }
+  const from=q.from||temps[0].ts, to=q.to||Date.now(), STEP=5*60e3;
+  for(let ts=from; ts<to; ts+=STEP){ const k=localDayKey(ts); if(!q.usableKeys.has(k)) continue;
+    const p=profileAt(timeline,ts); if(!p||p.basal==null) continue;
+    let lo=0,hi=TT.length; while(lo<hi){const m=(lo+hi)>>1; if(TT[m]<=ts)lo=m+1;else hi=m;} const i=lo-1;
+    let r=p.basal; if(i>=0&&ts<temps[i].end){ const tb=temps[i]; r=tb.abs!=null?tb.abs:Math.max(0,p.basal*(1+tb.pct/100)); }
+    per.set(k,(per.get(k)||0)+r*STEP/3600e3); }
+  const v=[...per.values()].filter(x=>x>5); return v.length>=7?_pMed(v):null;
+}
 function mealCR(glucose, treatments, timeline, q, isfEff){
   const H=3600e3, g=glucose, T=g.map(x=>x.ts);
   const at=ts=>{ let lo=0,hi=T.length; while(lo<hi){const m=(lo+hi)>>1; if(T[m]<ts)lo=m+1;else hi=m;}
@@ -2254,12 +2274,17 @@ function mealCR(glucose, treatments, timeline, q, isfEff){
     if(q.usableKeys && !q.usableKeys.has(localDayKey(c.ts))) continue;
     if(allC.some(x=>x!==c && x.ts>c.ts && x.ts<c.ts+4*H)) continue;
     if(allC.some(x=>x.ts>c.ts-3*H && x.ts<c.ts-10*60e3 && x.carbs>=10)) continue;
-    let ins=0; for(const t of treatments){ if(t.insulin>0 && t.ts>=c.ts-30*60e3 && t.ts<=c.ts+4*H) ins+=t.insulin; }
-    if(ins<=0) continue;
+    // Alleen het deel van elke dosis dat binnen deze 4 uur werkt (insulinecurve): een bolus/SMB vlak
+    // vóór of tijdens de maaltijd werkt na 4 uur nog na, en insuline van vóór de maaltijd werkt hier nog mee.
+    const p0=profileAt(timeline,c.ts), M=insulinModel(PEAK_MIN, Math.max(300,((p0&&p0.dia)||5)*60)), W=4*60;
+    const acted=(ts)=>{ const d=(c.ts-ts)/60000; return M.iob(Math.max(0,d)) - M.iob(d+W); };
+    let ins=0, own=0; for(const t of treatments){ if(!(t.insulin>0) || t.ts<c.ts-M.td*60000 || t.ts>c.ts+4*H) continue;
+      ins+=t.insulin*acted(t.ts); if(t.ts>=c.ts-30*60e3) own+=t.insulin; }
+    if(own<=0) continue;
     let dT=0; for(let k=0;k<48;k++){ const ts=c.ts+k*5*60e3; const p=profileAt(timeline,ts); if(!p||p.basal==null) continue;
       let lo=0,hi=TT.length; while(lo<hi){const m=(lo+hi)>>1; if(TT[m]<=ts)lo=m+1;else hi=m;} const i=lo-1;
-      let r=p.basal; if(i>=0&&ts<temps[i].end){ const tb=temps[i]; r=tb.abs!=null?tb.abs:p.basal*(tb.pct/100); }
-      dT+=(r-p.basal)*5/60; }
+      let r=p.basal; if(i>=0&&ts<temps[i].end){ const tb=temps[i]; r=tb.abs!=null?tb.abs:Math.max(0,p.basal*(1+tb.pct/100)); }
+      dT+=(r-p.basal)*5/60*acted(ts); }
     const b0=at(c.ts), b4=at(c.ts+4*H); if(b0==null||b4==null) continue;
     const need=ins+dT+(b4-b0)/isfEff; if(need<=0.3) continue;
     out.push({ ts:c.ts, min:todMin(c.ts), cr:c.carbs/need });
@@ -2275,7 +2300,7 @@ function aapsProfile(glucose, treatments, timeline, q, ds){
   if(!lb||!lb.hours) return { none:"loop", few:lb&&lb.few };
   // per uur: laag/hoog op bruikbare dagen
   const hs=Array.from({length:24},()=>({n:0,lo:0,hi:0}));
-  for(const x of glucose){ if(usable&&!usable.has(localDayKey(x.ts))) continue; const o=hs[Math.floor(todMin(x.ts)/60)%24]; o.n++; if(x.bg<3.9)o.lo++; if(x.bg>10)o.hi++; }
+  for(const x of glucose){ if(usable&&!usable.has(localDayKey(x.ts))) continue; const o=hs[Math.floor(todMin(x.ts)/60)%24]; o.n++; if(x.bg<LO_T)o.lo++; if(x.bg>HI_T)o.hi++; }
   const hours=[];
   for(let h=0;h<24;h++){
     const p=cur(h), L=hs[h].n?hs[h].lo/hs[h].n:0, Hh=hs[h].n?hs[h].hi/hs[h].n:0, a=lb.hours[h]&&lb.hours[h].act;
@@ -2303,13 +2328,17 @@ function aapsProfile(glucose, treatments, timeline, q, ds){
   const dayNow=hours.reduce((s,o)=>s+o.cur,0), dayNew=basal.reduce((s,b,i)=>{ const to=i+1<basal.length?hhmmToMin(basal[i+1].from)/60:24; return s+b.value*(to-hhmmToMin(b.from)/60); },0);
   // autosens
   const sensV=(ds||[]).filter(d=>d.sens!=null && (!usable||usable.has(localDayKey(d.ts)))).map(d=>d.sens);
-  const sensMean=sensV.length>=500?_pMean(sensV):null, sensMax=sensV.length>=500?sensV.filter(v=>v>=1.195).length/sensV.length:null;
+  // "Op het maximum": de hoogste waarde die autosens bij jou haalt (AAPS-standaard 1,2; instelbaar).
+  const sTop=sensV.length?Math.max(...sensV.slice(-50000)):null;
+  const sensMean=sensV.length>=500?_pMean(sensV):null, sensMax=(sensV.length>=500&&sTop>=1.1)?sensV.filter(v=>v>=sTop-0.005).length/sensV.length:(sensV.length>=500?0:null);
   // ISF
   const ic0=insulinCarbs(treatments,timeline,q);
   const isfNow=[]; for(let h=0;h<24;h++) isfNow.push(cur(h).isf);
   const est=[]; const isfMed=_pMed(isfNow);
   if(sensMean) est.push({k:"autosens",v:isfMed/sensMean});
-  if(ic0.tdd>5) est.push({k:"tdd",v:100/ic0.tdd});
+  const tddD=deliveredTDD(treatments,timeline,q);
+  const tddUse=tddD||ic0.tdd;
+  if(tddUse>5) est.push({k:"tdd",v:100/tddUse});
   let isfNew=est.length?_pMed(est.map(e=>e.v)):isfMed; isfNew=_r1(Math.min(Math.max(isfNew,isfMed*0.8),isfMed*1.15));
   // ISF per uur: waar je vaak laag zit blijft de huidige waarde; blokken van minstens 3 uur.
   const isfT=isfNow.map((v,h)=>hours[h].low>0.04?v:isfNew);
@@ -2339,7 +2368,7 @@ function aapsProfile(glucose, treatments, timeline, q, ds){
     // (gemeten in de 4 uur na de maaltijden van dit blok)
     let pn=0,ph=0,pl=0; const GT=glucose.map(x=>x.ts);
     for(const m of meals.filter(m=>m.min>=f*60&&m.min<t*60)){ let lo=0,hi=GT.length; while(lo<hi){const k=(lo+hi)>>1; if(GT[k]<m.ts)lo=k+1;else hi=k;}
-      for(let j=lo;j<GT.length&&GT[j]<=m.ts+4*3600e3;j++){ pn++; if(glucose[j].bg>10)ph++; if(glucose[j].bg<3.9)pl++; } }
+      for(let j=lo;j<GT.length&&GT[j]<=m.ts+4*3600e3;j++){ pn++; if(glucose[j].bg>HI_T)ph++; if(glucose[j].bg<LO_T)pl++; } }
     const hiF=pn?ph/pn:0, loF=pn?pl/pn:0;
     if(v>nowB && hiF>0.30){ v=nowB; why="hoog"; } else if(v<nowB && loF>0.04){ v=nowB; why="laag"; }
     if(why==="gemeten"){ ic.push({ from:_hhmm(f*60), to:t, now:_r1(nowB), nowAll:[...new Set(icNow.slice(f,t).map(_r1))], value:_r1(v), measured:med, n:ms.length, why }); continue; }
@@ -2350,7 +2379,7 @@ function aapsProfile(glucose, treatments, timeline, q, ds){
   for(let i=ic.length-1;i>0;i--){ if(ic[i].value===ic[i-1].value && ic[i].now===ic[i-1].now){ ic[i-1].to=ic[i].to; ic.splice(i,1); } }
   const maxBasal=Math.max(...basal.map(b=>b.value));
   const changed = basal.some(b=>b.now.length!==1||Math.abs(b.now[0]-b.value)>=0.05) || isfBlocks.some(b=>Math.abs(b.now-b.value)>=0.1) || ic.some(b=>Math.abs(b.now-b.value)>=0.1);
-  return { basal, isf:isfBlocks, ic, isfEst:est, isfNow:isfMed, sensMean, sensMax, tdd:ic0.tdd, dayNow, dayNew,
+  return { basal, isf:isfBlocks, ic, isfEst:est, isfNow:isfMed, sensMean, sensMax, tdd:tddUse, dayNow, dayNew,
     maxIobMin:_r1(3*maxBasal), days:usable?usable.size:null, meals:meals.length, changed,
     target:{ lo:cur(0).targetLow??null, hi:cur(0).targetHigh??null }, name:cur(0).name,
     mfrac, mealBolus:_pMed(treatments.filter(t=>t.insulin>=0.5&&!t.isSMB&&(!usable||usable.has(localDayKey(t.ts)))).map(t=>t.insulin)) };

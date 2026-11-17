@@ -17,7 +17,7 @@ async function renderIda(keep){
 }
 
 /* ── Vandaag ─────────────────────────────────────────────────────────────── */
-function _heroColor(bg){ return bg<3.9 ? "#FF9E97" : bg>10 ? "#F2B455" : "#7FD1C8"; }
+function _heroColor(bg){ return bg<LO_T ? "#FF9E97" : bg>HI_T ? "#F2B455" : "#7FD1C8"; }
 function unloggedRise(glucose, treatments){
   const end=glucose[glucose.length-1].ts, from=end-24*3600e3;
   const g=glucose.filter(x=>x.ts>=from), carbs=treatments.filter(t=>t.carbs>0&&t.ts>=from-3600e3).map(t=>t.ts);
@@ -86,7 +86,7 @@ function _idaIcon(k){
 /* ── Patronen: tegels ────────────────────────────────────────────────────── */
 function _hourStats(c){
   const hs=Array.from({length:24},()=>({n:0,lo:0,hi:0}));
-  for(const x of c.glucose){ if(!c.q.usableKeys.has(localDayKey(x.ts))) continue; const o=hs[Math.floor(todMin(x.ts)/60)%24]; o.n++; if(x.bg<3.9)o.lo++; if(x.bg>10)o.hi++; }
+  for(const x of c.glucose){ if(!c.q.usableKeys.has(localDayKey(x.ts))) continue; const o=hs[Math.floor(todMin(x.ts)/60)%24]; o.n++; if(x.bg<LO_T)o.lo++; if(x.bg>HI_T)o.hi++; }
   return hs.map(o=>({lo:o.n?o.lo/o.n:0, hi:o.n?o.hi/o.n:0}));
 }
 function _worstWindow(vals, w){ let best={s:0,v:-1}; for(let s=0;s<24;s++){ let v=0; for(let k=0;k<w;k++) v+=vals[(s+k)%24]; if(v>best.v) best={s,v}; } return best.s; }
@@ -101,7 +101,7 @@ function _eventDays(c, re, stepH, nSteps){
   const st=Array.from({length:nSteps},()=>({n:0,in:0}));
   for(const x of c.glucose){ if(!c.q.usableKeys.has(localDayKey(x.ts))) continue;
     let lo=0,hi=ev.length; while(lo<hi){const m=(lo+hi)>>1; if(ev[m]<=x.ts)lo=m+1;else hi=m;} if(lo===0) continue;
-    const k=Math.floor((x.ts-ev[lo-1])/(stepH*3600e3)); if(k>=nSteps) continue; st[k].n++; if(x.bg>=3.9&&x.bg<=10) st[k].in++; }
+    const k=Math.floor((x.ts-ev[lo-1])/(stepH*3600e3)); if(k>=nSteps) continue; st[k].n++; if(x.bg>=LO_T&&x.bg<=HI_T) st[k].in++; }
   if(st.some(s=>s.n<500)) return null;
   return st.map(s=>s.in/s.n);
 }
@@ -175,10 +175,10 @@ function _periodStats(c, from, to, win){
   const g=c.glucose.filter(x=>x.ts>=from&&x.ts<to&&c.q.usableKeys.has(localDayKey(x.ts)));
   const inW=(x,s,w)=>{ const h=Math.floor(todMin(x.ts)/60); return ((h-s+24)%24)<w; };
   const gl=g.filter(x=>inW(x,win.lo,3)), gh=g.filter(x=>inW(x,win.hi,4));
-  const ds=_dsAll.filter(d=>d.ts>=from&&d.ts<to&&d.sens!=null);
+  const ds=_dsAll.filter(d=>d.ts>=from&&d.ts<to&&d.sens!=null), top=ds.length?Math.max(...ds.map(d=>d.sens)):0;
   return { days:new Set(g.map(x=>localDayKey(x.ts))).size,
-    low: gl.length?gl.filter(x=>x.bg<3.9).length/gl.length:null, high: gh.length?gh.filter(x=>x.bg>10).length/gh.length:null,
-    smax: ds.length?ds.filter(d=>d.sens>=1.195).length/ds.length:null, vlow: g.length?g.filter(x=>x.bg<3.0).length/g.length:null };
+    low: gl.length?gl.filter(x=>x.bg<LO_T).length/gl.length:null, high: gh.length?gh.filter(x=>x.bg>HI_T).length/gh.length:null,
+    smax: (ds.length&&top>=1.1)?ds.filter(d=>d.sens>=top-0.005).length/ds.length:(ds.length?0:null), vlow: g.length?g.filter(x=>x.bg<VLO_T).length/g.length:null };
 }
 function idaTeam(c){
   const host=_idaEl("teamTop"); if(!host) return;
