@@ -4,15 +4,15 @@
 <meta charset="utf-8">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https: http://localhost:*; worker-src 'self'; manifest-src 'self'; base-uri 'none'; form-action 'none'; object-src 'none'; frame-ancestors 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#F3F4F1" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#141A22" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#FFFFFF" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0E1216" media="(prefers-color-scheme: dark)">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <title>IDM</title>
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
-<link rel="apple-touch-icon" href="icon.svg">
+<link rel="apple-touch-icon" href="icon-180.png">
 <meta name="application-name" content="IDM">
 <meta name="apple-mobile-web-app-title" content="IDM">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -687,6 +687,7 @@ details.why>summary::after{content:" ›"}
 .daynav button.ghost{min-height:36px;padding:.2rem .7rem;border:0;background:transparent;font-size:.9rem}
 .daylabel{font-size:.85rem}
 .isfrule{display:flex;justify-content:space-between;gap:.6rem}
+.brand .mark{width:26px;height:26px;color:var(--ink)} .brandtxt{font-weight:650;font-size:1.15rem;letter-spacing:-.02em}
 </style>
 </head>
 <body>
@@ -706,16 +707,7 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
 <header>
   <div class="wrap">
     <div class="topbar">
-      <div class="brand"><svg class="brandmark" viewBox="0 0 262 130" role="img" aria-label="IDM">
-        <defs>
-          <linearGradient id="idmbl" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6EB4EE"/><stop offset="1" stop-color="#3A82C6"/></linearGradient>
-          <linearGradient id="idmdrop" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#EAF4FD"/><stop offset="1" stop-color="#9CCBF0"/></linearGradient>
-        </defs>
-        <rect x="14" y="20" width="24" height="90" rx="12" fill="url(#idmbl)"/>
-        <path fill="url(#idmbl)" fill-rule="evenodd" d="M64,20 H96 A45,45 0 0 1 96,110 H64 Z M82,42 H96 A23,23 0 0 1 96,88 H82 Z"/>
-        <path fill="url(#idmdrop)" d="M103,48 C114,62 114,74 103,82 C92,74 92,62 103,48 Z"/>
-        <path fill="url(#idmbl)" d="M160,110 V20 H182 L205,66 L228,20 H250 V110 H229 V58 L212,92 H198 L181,58 V110 Z"/>
-      </svg></div>
+      <div class="brand"><svg class="mark" viewBox="0 0 28 28" aria-hidden="true"><rect x="1" y="1" width="26" height="26" rx="7" fill="none" stroke="currentColor" stroke-width="2"/><rect x="2" y="10" width="24" height="8" fill="var(--accent)" opacity=".2"/><path d="M5 18 C9 8 12 8 14 14 S20 20 23 9" fill="none" stroke="var(--accent)" stroke-width="2.2" stroke-linecap="round"/></svg><span class="brandtxt">IDM</span></div>
       <div class="grow"></div>
       <div class="conn" role="status" aria-live="polite"><i class="dot" id="dot" aria-hidden="true"></i><span id="connTxt">niet ingesteld</span></div>
       <button id="btnSync" data-i18n="btn.sync" disabled>Sync</button>

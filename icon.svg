@@ -1,15 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="IDM">
-  <!-- Full-bleed achtergrond: veilig als 'maskable' (OS maskeert de randen) -->
-  <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#5AA9E6"/>
-      <stop offset="1" stop-color="#245FA0"/>
-    </linearGradient>
-  </defs>
-  <rect width="512" height="512" fill="url(#bg)"/>
-  <!-- D met uitgespaarde binnenruimte (evenodd), binnen de veilige zone -->
-  <path fill="#FFFFFF" fill-rule="evenodd"
-    d="M150,150 H270 A115,115 0 0 1 270,380 H150 Z M212,205 H270 A60,60 0 0 1 270,325 H212 Z"/>
-  <!-- druppel in de D -->
-  <path fill="#2A6FB0" d="M250,215 C293,265 293,300 250,325 C207,300 207,265 250,215 Z"/>
+  <!-- Wit, full-bleed (veilig als 'maskable'); curve door de bereikband, binnen de veilige zone -->
+  <rect width="512" height="512" fill="#FFFFFF"/>
+  <rect x="0" y="206" width="512" height="100" fill="#2E7BD6" opacity=".15"/>
+  <path d="M120 316 C170 160 205 160 256 256 S345 360 392 186" fill="none" stroke="#2E7BD6" stroke-width="34" stroke-linecap="round"/>
 </svg>
