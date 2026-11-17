@@ -73,3 +73,4 @@ insteladviezen. Wat je met een patroon doet, bespreek je met je behandelteam.
 - `js/ida.js`: de assistent-schermen. `aapsProfile()` in `js/core.js` rekent een compleet AAPS-profiel uit (basaal per blok, ISF, KH-ratio) met vangrails: max +30% basaal per dag, omlaag bij >4% laag, ISF/KH max ±20%.
 - Tijdzone per moment uit AAPS (`utcOffset`), zodat uur-analyses kloppen als je reist.
 - Loopstatus (autosens, voorspelling) wordt 30 dagen bewaard; dagen die je als "op pen" logt tellen niet mee.
+- `js/ida2.js`: experiment (avondbolus), loop-limieten en max IOB, hypo-analyse (stapeling, overbehandeling), rijcheck, GRI, reizen, alcohol/ziek/stress, sporttip, voorraad en paklijst, ziek-kaart, logboek naar Nightscout (opt-in, alleen notities), back-up, CSV, rapport-sectie, automatisch synchroniseren.

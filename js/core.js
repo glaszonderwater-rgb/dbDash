@@ -914,7 +914,9 @@ function dayChartSvg(readings, events, win){
     if(e.carbs>0){ mk+=`<circle cx="${x.toFixed(1)}" cy="${PT}" r="3" fill="var(--carb)"/>`;
       if(e.carbs>=10) mk+=`<text x="${x.toFixed(1)}" y="${(PT+12)}" font-size="8" fill="var(--muted)" text-anchor="middle">${Math.round(e.carbs)}g</text>`; }
     if(e.insulin>0 && !e.isSMB) mk+=`<line x1="${x.toFixed(1)}" y1="${H-PB}" x2="${x.toFixed(1)}" y2="${H-PB-9}" stroke="var(--accent)" stroke-width="2"/>`; }
-  return `<svg class="chart" viewBox="0 0 ${W} ${H}">${band}${ax}<path d="${d}" fill="none" stroke="var(--ink)" stroke-width="1.5" vector-effect="non-scaling-stroke"/>${red}${mk}</svg>`;
+  let pl=""; if(win&&win.pred){ const p=win.pred, x0=X(pos(p.ts)), y0=Y(p.bg), x1=Math.min(W-2,X(pos(p.ts+45*60e3))), y1=Y(Math.max(lo,Math.min(hi,p.ev)));
+    pl=`<path d="M${x0.toFixed(1)} ${y0.toFixed(1)}L${x1.toFixed(1)} ${y1.toFixed(1)}" fill="none" stroke="#F2B455" stroke-width="2" stroke-dasharray="3 4" vector-effect="non-scaling-stroke"/><circle cx="${x0.toFixed(1)}" cy="${y0.toFixed(1)}" r="3.5" fill="#F2B455"/>`; }
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}">${band}${ax}${pl}<path d="${d}" fill="none" stroke="var(--ink)" stroke-width="1.5" vector-effect="non-scaling-stroke"/>${red}${mk}</svg>`;
 }
 // Overzicht: doorlopend venster van de laatste 24 uur (eindigt bij de laatste meting).
 function renderLast24(){
@@ -922,7 +924,11 @@ function renderLast24(){
   const g=_ctx.glucose; if(!g.length){ host.innerHTML=""; return; }
   const to=Math.max(g[g.length-1].ts, Date.now()-5*60e3), from=to-24*36e5;
   const rd=g.filter(x=>x.ts>=from&&x.ts<=to), ev=(_ctx.treatments||[]).filter(t=>t.ts>=from&&t.ts<=to);
-  host.innerHTML=dayChartSvg(rd,ev,{from,to});
+  // Voorspelling van AAPS (eindwaarde) als stippellijn na de laatste meting
+  let pred=null; try{ const last=g[g.length-1]; const d=[..._dsRecent].reverse().find(x=>x.ev!=null&&Math.abs(x.ts-last.ts)<20*60e3);
+    if(d && Date.now()-last.ts<60*60e3) pred={ts:last.ts, bg:last.bg, ev:d.ev}; }catch(_){}
+  const to2 = pred ? Math.max(to, pred.ts+45*60e3) : to;
+  host.innerHTML=dayChartSvg(rd,ev,{from:to2-24*36e5,to:to2,pred});
   const sub=document.getElementById("l24sub");
   if(sub){ const n=rd.length; sub.textContent = n>=3 ? TL(`${pct0(rd.filter(x=>x.bg>=LO_T&&x.bg<=HI_T).length/n)} in bereik`,`${pct0(rd.filter(x=>x.bg>=LO_T&&x.bg<=HI_T).length/n)} in range`,`${pct0(rd.filter(x=>x.bg>=LO_T&&x.bg<=HI_T).length/n)} no alvo`) : ""; }
 }
@@ -2364,7 +2370,11 @@ function aapsProfile(glucose, treatments, timeline, q, ds){
   // grens daar waar je ratio echt verschilt. Te weinig maaltijden: huidige waarde blijft.
   const icNow=[]; for(let h=0;h<24;h++) icNow.push(cur(h).ic);
   const meals=mealCR(glucose,treatments,timeline,q, isfMed/(sensMean||1));
-  let mfrac=null; try{ const MR=mealResults(glucose,treatments,timeline); if(MR&&MR.results&&MR.results.length>=MEAL_MIN) mfrac=MR.mfrac; }catch(_){}
+  // Telt je je koolhydraten goed? Liefst over de laatste 30 dagen (dan zie je verbetering snel), anders alles.
+  let mfrac=null, mfracDays=null;
+  try{ const t30=now-30*DAY, MR30=mealResults(glucose.filter(x=>x.ts>=t30-6*3600e3),treatments.filter(t=>t.ts>=t30-6*3600e3),timeline);
+    if(MR30&&MR30.results&&MR30.results.length>=MEAL_MIN){ mfrac=MR30.mfrac; mfracDays=30; }
+    else { const MR=mealResults(glucose,treatments,timeline); if(MR&&MR.results&&MR.results.length>=MEAL_MIN){ mfrac=MR.mfrac; mfracDays=usable?usable.size:null; } } }catch(_){}
   const lg=meals.map(m=>({h:m.min/60, l:Math.log(m.cr), cr:m.cr}));
   const sse=a=>{ if(!a.length) return 0; const m=a.reduce((s,x)=>s+x.l,0)/a.length; return a.reduce((s,x)=>s+(x.l-m)**2,0); };
   let bestSplit=[0,24], bestCost=sse(lg)+0.6;
@@ -2376,9 +2386,9 @@ function aapsProfile(glucose, treatments, timeline, q, ds){
     const ms=meals.filter(m=>m.min>=f*60&&m.min<t*60).map(m=>m.cr), nowB=_pMed(icNow.slice(f,t));
     const med=ms.length?_pMed(ms):null; let v=nowB, why="weinig";
     if(ms.length>=8){ why="gelijk"; if(Math.abs(med-nowB)/nowB>0.10){ v=Math.min(Math.max(med,nowB*0.8),nowB*1.2); why="gemeten"; } }
-    // Zie je na het eten duidelijk meer stijging dan je ingevoerde koolhydraten verklaren (≥125%),
+    // Zie je na het eten duidelijk meer stijging dan je ingevoerde koolhydraten verklaren (meer dan 115%),
     // dan ligt het waarschijnlijk aan het tellen, niet aan de ratio: niet sterker maken.
-    if(v<nowB && mfrac!=null && mfrac>=1.25){ v=nowB; why="tellen"; }
+    if(v<nowB && mfrac!=null && mfrac>1.15){ v=nowB; why="tellen"; }
     // Vangrail: geen zwakkere ratio waar je na het eten vaak hoog zit, geen sterkere waar je vaak laag zit.
     // (gemeten in de 4 uur na de maaltijden van dit blok)
     let pn=0,ph=0,pl=0; const GT=glucose.map(x=>x.ts);
@@ -2397,7 +2407,7 @@ function aapsProfile(glucose, treatments, timeline, q, ds){
   return { basal, isf:isfBlocks, ic, isfEst:est, isfNow:isfMed, sensMean, sensMax, tdd:tddUse, dayNow, dayNew,
     maxIobMin:_r1(3*maxBasal), days:usable?usable.size:null, meals:meals.length, changed,
     target:{ lo:cur(0).targetLow??null, hi:cur(0).targetHigh??null }, name:cur(0).name,
-    mfrac, mealBolus:_pMed(treatments.filter(t=>t.insulin>=0.5&&!t.isSMB&&(!usable||usable.has(localDayKey(t.ts)))).map(t=>t.insulin)) };
+    mfrac, mfracDays, mealBolus:_pMed(treatments.filter(t=>t.insulin>=0.5&&!t.isSMB&&(!usable||usable.has(localDayKey(t.ts)))).map(t=>t.insulin)) };
 }
 function aapsProfileText(P){
   const f=v=>String(v).replace(".",",");

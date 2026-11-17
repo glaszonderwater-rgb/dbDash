@@ -50,7 +50,7 @@ const okEx = ex && ex.events>=3 && ex.wRate>ex.bRate;
 console.log('sport-nawerking-detector:', okEx?'JA':'NEE', ex?`(wRate=${(ex.wRate*100).toFixed(0)}% vs ${(ex.bRate*100).toFixed(0)}%)`:'(null)');
 
 // 4) Dawn-bevinding vertaalt mee
-await page.evaluate(()=>setLang('en')); await page.waitForTimeout(200);
+await page.evaluate(()=>setLang('en')); await page.waitForFunction(()=>/Dawn phenomenon/.test(document.getElementById('findWeek').textContent),{timeout:8000}).catch(()=>{});
 const weekEN=await page.evaluate(()=>document.getElementById('findWeek').textContent);
 const okEN = /Dawn phenomenon/.test(weekEN) && !/vroege ochtend/.test(weekEN);
 console.log('dawn vertaalt (EN):', okEN?'JA':'NEE');

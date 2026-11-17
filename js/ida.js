@@ -14,6 +14,7 @@ async function renderIda(keep){
   if(!keep || !_idaAnns.length){ try{ _idaAnns = await DB.all("annotations"); }catch(_){ _idaAnns=[]; } }
   if(!keep || !_P){ try{ _P = aapsProfile(c.glucose, c.treatments, c.timeline, c.q, _dsAll); }catch(e){ console.error(e); _P=null; } }
   for(const f of [idaVandaag, idaPatronen, idaEten, idaTeam, idaProfiel]){ try{ f(c); }catch(e){ console.error(e); } }
+  try{ if(typeof idaExtras==="function") idaExtras(c); }catch(e){ console.error(e); }
 }
 
 /* ── Vandaag ─────────────────────────────────────────────────────────────── */
@@ -156,13 +157,14 @@ function idaEten(c){
   let MR=null; try{ MR=mealResults(c.glucose,c.treatments,c.timeline); }catch(_){}
   const n=MR&&MR.results?MR.results.length:0;
   if(!MR || n<MEAL_MIN || MR.mfrac==null){ host.innerHTML=""; return; }
-  const pct=Math.round(MR.mfrac*100), tpk=MR.mtpk!=null?Math.round(MR.mtpk):null, off=MR.moffset;
+  const use30=_P&&_P.mfrac!=null&&_P.mfracDays===30;
+  const pct=Math.round((use30?_P.mfrac:MR.mfrac)*100), tpk=MR.mtpk!=null?Math.round(MR.mtpk):null, off=MR.moffset;
   const offTxt = off==null?null : off<-5?TL(`${Math.round(-off)} min vóór het eten`,`${Math.round(-off)} min before eating`,`${Math.round(-off)} min antes`) : off>5?TL(`${Math.round(off)} min na het eten`,`${Math.round(off)} min after eating`,`${Math.round(off)} min depois`) : TL("bij het eten","at the meal","à refeição");
   const lead = pct>=115 ? TL("Na het eten stijg je alsof je meer at","After meals you rise as if you ate more","Depois de comer sobe como se comesse mais")
              : pct<=85 ? TL("Na het eten stijg je minder dan je invoert","After meals you rise less than you enter","Depois de comer sobe menos do que regista")
              : TL("Je koolhydraten kloppen goed","Your carbs match well","Os hidratos batem certo");
-  let html=`<section class="ihero sm"><span class="itl">${lead}</span><div class="itv"><b style="color:#F2B455">${pct}%</b><span>${TL("van de koolhydraten die je invoert","of the carbs you enter","dos hidratos que regista")}</span></div>
-    <div class="ichips">${tpk!=null?`<span><i>${TL("piek na","peak after","pico após")}</i> <b>${tpk} min</b></span>`:""}${offTxt?`<span><i>${TL("bolus","bolus","bólus")}</i> <b>${offTxt}</b></span>`:""}<span><b>${n}</b> <i>${TL("maaltijden","meals","refeições")}</i></span></div>${pct>=125?`<span class="its" style="color:#D7DADE;margin-top:.4rem">${TL("Waarschijnlijk tel je te weinig koolhydraten. Daarom past IDA je KH-ratio niet aan: weeg een paar maaltijden af of gebruik de schatter hieronder.","You probably under-count carbs, so IDA doesn't change your carb ratio: weigh a few meals or use the estimator below.","Provavelmente subestima os hidratos; por isso o IDA não altera o rácio.")}</span>`:""}</section>`;
+  let html=`<section class="ihero sm"><span class="itl">${lead}</span><div class="itv"><b style="color:#F2B455">${pct}%</b><span>${TL("van de koolhydraten die je invoert","of the carbs you enter","dos hidratos que regista")}${use30?TL(" (laatste 30 dagen)"," (last 30 days)"," (últimos 30 dias)"):""}</span></div>
+    <div class="ichips">${tpk!=null?`<span><i>${TL("piek na","peak after","pico após")}</i> <b>${tpk} min</b></span>`:""}${offTxt?`<span><i>${TL("bolus","bolus","bólus")}</i> <b>${offTxt}</b></span>`:""}<span><b>${n}</b> <i>${TL("maaltijden","meals","refeições")}</i></span></div>${pct>115?`<span class="its" style="color:#D7DADE;margin-top:.4rem">${TL("Waarschijnlijk tel je te weinig koolhydraten. Daarom past IDA je KH-ratio niet aan: weeg een paar maaltijden af of gebruik de schatter hieronder.","You probably under-count carbs, so IDA doesn't change your carb ratio: weigh a few meals or use the estimator below.","Provavelmente subestima os hidratos; por isso o IDA não altera o rácio.")}</span>`:""}</section>`;
   if(_P && _P.ic && _P.ic.length){
     html+=`<h2 class="ihead">${TL("Gemeten KH-ratio (g per E)","Measured carb ratio (g per U)","Rácio medido (g por U)")}</h2><div class="igrid3">`+
       _P.ic.map(b=>`<div class="itile sm"><span class="itl">${TL("vanaf","from","desde")} ${b.from}</span><b class="itn">${b.measured!=null?_idaN(b.measured):"—"}</b><span class="its">${TL(`nu ${_idaN(b.now)} · ${b.n} maaltijden`,`now ${_idaN(b.now)} · ${b.n} meals`,`agora ${_idaN(b.now)} · ${b.n} refeições`)}</span></div>`).join("")+`</div>`;
@@ -258,8 +260,9 @@ function idaProfiel(c){
   if(_profTab==="ic") rows=P.ic.map(b=>`<div class="iprow"><span class="ipt">${b.from}</span><span class="ipv">${_idaN(b.value)}</span><span class="ipw">${TL("was","was","era")} ${_idaN(b.now)}<br><em>${b.why==="gemeten"?TL(`gemeten ${_idaN(b.measured)} (${b.n} maaltijden)`,`measured ${_idaN(b.measured)} (${b.n} meals)`,`medido ${_idaN(b.measured)}`):b.why==="gelijk"?TL(`gemeten ${_idaN(b.measured)}: klopt`,`measured ${_idaN(b.measured)}: matches`,`medido: certo`):b.why==="tellen"?TL(`gemeten ${_idaN(b.measured)}, maar je telt waarschijnlijk te weinig koolhydraten`,`measured ${_idaN(b.measured)}, but you probably under-count carbs`,`medido ${_idaN(b.measured)}, mas provavelmente subestima os hidratos`):b.why==="hoog"?TL(`gemeten ${_idaN(b.measured)}, maar je zit hierna vaak hoog`,`measured ${_idaN(b.measured)}, but you're often high afterwards`,`medido ${_idaN(b.measured)}, mas fica alto depois`):b.why==="laag"?TL(`gemeten ${_idaN(b.measured)}, maar je zit hier vaak laag`,`measured ${_idaN(b.measured)}, but you're often low here`,`medido ${_idaN(b.measured)}, mas baixa aqui`):TL(`te weinig maaltijden (${b.n})`,`too few meals (${b.n})`,`poucas refeições (${b.n})`)}</em></span>${chip(b.value-b.now,1)}</div>`).join("");
   if(_profTab==="target") rows=`<div class="iprow"><span class="ipt">00:00</span><span class="ipv">${P.target.lo!=null?_idaN(P.target.lo)+"–"+_idaN(P.target.hi):"—"}</span><span class="ipw"><em>${TL("ongewijzigd","unchanged","inalterado")}</em></span><span class="ichip eq">${TL("gelijk","same","igual")}</span></div>`;
   html+=`<section class="itile wide"><div class="itabs" role="tablist">${tabs.map(([k,l])=>`<button role="tab" aria-selected="${k===_profTab}" data-ptab="${k}">${l}</button>`).join("")}</div>${rows}</section>`;
-  const iobMin=_idaN(P.maxIobMin+(P.mealBolus||0));
-  html+=`<section class="inote">${TL(`Je <b>max IOB</b> is niet zichtbaar in je data. Zet die op minstens ${iobMin} E (3× je hoogste basaal plus je gemiddelde maaltijdbolus).`,`Your <b>max IOB</b> isn't visible in your data. Set it to at least ${iobMin} U (3× your highest basal plus your average meal bolus).`,`O seu <b>max IOB</b> não é visível. Defina pelo menos ${iobMin} U.`)}</section>
+  const MA=(typeof maxIobAdvice==="function")?maxIobAdvice(c):null, iobMin=_idaN(MA?MA.v:P.maxIobMin+(P.mealBolus||0));
+  const why=MA?MA.why:TL("3× je hoogste basaal plus je gemiddelde maaltijdbolus","3× your highest basal plus your average meal bolus","3× o basal mais alto mais o bólus médio");
+  html+=`<section class="inote">${TL(`<b>Max IOB</b> (AAPS → SMB-instellingen): zet die op minstens ${iobMin} E, omdat ${why}.`,`<b>Max IOB</b> (AAPS → SMB settings): set it to at least ${iobMin} U, because ${why}.`,`<b>Max IOB</b>: pelo menos ${iobMin} U (${why}).`)}</section>
     <button class="ibtn" id="profExplain" style="align-self:flex-start">${TL("Leg dit profiel uit","Explain this profile","Explicar este perfil")}</button>
     <div class="iacts"><button class="ibtn big acc" id="profCopy">${TL("Kopieer voor AAPS","Copy for AAPS","Copiar para AAPS")}</button><button class="ibtn big" id="profAct">${TL("Ik heb het profiel geactiveerd","I've activated the profile","Ativei o perfil")}</button></div>`;
   host.innerHTML=html;
@@ -294,6 +297,7 @@ function renderLogSheet(){
   _idaEl("logBody").innerHTML=`<div class="lgrid">${_LOGT_().map(([k,l,ic])=>`<button class="ltile${_qlSel===k?" on":""}" data-lt="${k}"><svg viewBox="0 0 24 24" aria-hidden="true">${ic}</svg>${l}</button>`).join("")}</div>
     <span class="llab">${TL("Wanneer","When","Quando")}</span><div class="lchips">${[[0,TL("Nu","Now","Agora")],[30,TL("30 min geleden","30 min ago","há 30 min")],[120,TL("2 uur geleden","2 h ago","há 2 h")]].map(([v,l])=>`<button class="lchip${_qlWhen===v?" on":""}" data-lw="${v}">${l}</button>`).join("")}</div>
     ${showDur?`<span class="llab">${TL("Hoe lang","How long","Quanto tempo")}</span><div class="lchips">${durs.map(([v,l])=>`<button class="lchip${_qlDur===v?" on":""}" data-ld="${v}">${l}</button>`).join("")}</div>`:""}
+    ${_qlSel==="sport"?(()=>{ const S=(typeof sportTT==="function"&&_ctx)?sportTT(_ctx):null; return `<span class="its big">${S?TL(`Tip: zet ongeveer een uur vóór het sporten een tijdelijke streefwaarde van ${_idaN(S.v)} voor ${Math.round(S.dur)} min${S.lowFrac>0.2?" (of iets hoger: je kwam daarna nog vaak laag)":""}.`,`Tip: about an hour before exercise, set a temporary target of ${_idaN(S.v)} for ${Math.round(S.dur)} min${S.lowFrac>0.2?" (or a bit higher: you still went low often)":""}.`,`Dica: cerca de uma hora antes, alvo temporário de ${_idaN(S.v)} durante ${Math.round(S.dur)} min.`):TL("Tip: zet ongeveer een uur vóór het sporten een tijdelijke streefwaarde in AAPS.","Tip: set a temporary target in AAPS about an hour before exercise.","Dica: alvo temporário uma hora antes.")}</span>`; })():""}
     <button class="ibtn big acc" id="logSave" ${_qlSel?"":"disabled"}>${TL("Opslaan","Save","Guardar")}</button>`;
   const b=_idaEl("logBody");
   b.querySelectorAll("[data-lt]").forEach(x=>x.onclick=()=>{ _qlSel=x.dataset.lt; renderLogSheet(); });
@@ -308,6 +312,7 @@ async function saveQuickLog(){
     note: _qlSel==="pen" ? TL(`${_qlDur} dag(en) op pen`,`${_qlDur} day(s) on pen`,`${_qlDur} dia(s) em caneta`) : _qlSel==="correctie" ? "" : `${_qlDur} min`,
     days: _qlSel==="pen" ? _qlDur : undefined, dur: _qlSel!=="pen" ? _qlDur : undefined };
   try{ await DB.putMany("annotations",[an]); }catch(e){ toast(TL("Opslaan mislukt.","Save failed.","Falha ao guardar.")); return; }
+  try{ if(typeof nsWriteNote==="function") await nsWriteNote(an); }catch(e){ toast(TL("Opgeslagen in IDA, maar niet in Nightscout: ","Saved in IDA, not in Nightscout: ","Guardado no IDA, não no Nightscout: ")+e.message); }
   closeLogSheet(); toast(TL(`${lab} vastgelegd.`,`${lab} saved.`,`${lab} guardado.`));
   try{ renderLog(); }catch(_){}
   if(_qlSel==="pen"){ try{ await refresh(); }catch(_){} }
@@ -340,7 +345,7 @@ function _profileFacts(P){
     ". Each basal block starts 1 hour before the need because basal takes ~1 h to act. Daily basal "+f(P.dayNow)+" -> "+f(P.dayNew)+" U (max +30% per step).\n"+
     "ISF blocks: "+P.isf.map(b=>`${b.from}: ${b.value} (was ${b.now})`).join("; ")+". ISF estimates: "+P.isfEst.map(e=>`${e.k} ${e.v.toFixed(2)}`).join(", ")+".\n"+
     "Carb ratio blocks: "+P.ic.map(b=>`${b.from}: ${b.value} (was ${b.now}; measured ${b.measured!=null?b.measured.toFixed(2):"?"} over ${b.n} meals; status ${b.why})`).join("; ")+
-    ". Carb ratio is not changed when glucose rises clearly more than entered carbs explain (seen "+(P.mfrac?Math.round(P.mfrac*100)+"%":"?")+"), because that points to under-counting carbs.\n"+
+    ". Carb ratio is not made stronger when glucose rises more than 115% of what entered carbs explain (seen "+(P.mfrac?Math.round(P.mfrac*100)+"%":"?")+"), because that points to under-counting carbs.\n"+
     "Autosens at its maximum "+(P.sensMax!=null?Math.round(P.sensMax*100)+"% of the time":"unknown")+"; mean autosens "+(P.sensMean?P.sensMean.toFixed(2):"?")+". Total daily dose "+(P.tdd?P.tdd.toFixed(1):"?")+" U.";
 }
 function openAI(title, extra, first){
@@ -399,7 +404,7 @@ function weekReview(c){
   let focus;
   if(A.tbr>0.04||A.vlow>0.01) focus=TL("Minder laagtes: kijk bij Patronen wanneer ze vallen.","Fewer lows: check Patterns for when they happen.","Menos baixas.");
   else if(_P&&_P.changed&&!_idaActivation()) focus=TL("Zet je nieuwe profiel in AAPS en tik op 'Ik heb het profiel geactiveerd'.","Set your new profile in AAPS and tap 'I've activated the profile'.","Ative o novo perfil.");
-  else if(_P&&_P.mfrac>=1.25) focus=TL("Tel je koolhydraten nauwkeuriger: weeg deze week een paar maaltijden af.","Count carbs more precisely: weigh a few meals this week.","Conte os hidratos com mais rigor.");
+  else if(_P&&_P.mfrac>1.15) focus=TL("Tel je koolhydraten nauwkeuriger: weeg deze week een paar maaltijden af.","Count carbs more precisely: weigh a few meals this week.","Conte os hidratos com mais rigor.");
   else if(A.tar>0.25) focus=TL("Minder hoog: kijk bij Patronen in welke uren je het vaakst boven 10 zit.","Fewer highs: check Patterns for your high hours.","Menos altas.");
   else focus=TL("Zo doorgaan; log sport en ziek zijn met de +-knop.","Keep going; log exercise and illness with the + button.","Continue assim.");
   return { A, B, better, worse, focus };

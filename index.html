@@ -806,6 +806,12 @@ button.ghost{border-radius:22px}
 .aiform{display:flex;gap:.5rem} .iinp.wide{flex:1;width:auto;height:44px}
 .iask{border:0;background:none;color:var(--t-accent);font:inherit;font-size:.78rem;font-weight:700;padding:.4rem 0 0;cursor:pointer;min-height:32px}
 .aiweek{background:var(--surface-2);border-radius:16px;padding:.7rem .8rem;font-size:.86rem;line-height:1.45;margin-top:.3rem}
+.idrivebtn{align-self:flex-start;display:flex;align-items:center;gap:.4rem;margin-top:.5rem;min-height:40px;padding:0 .9rem;border:0;border-radius:20px;background:#2A2F35;color:#fff;font:inherit;font-size:.8rem;font-weight:700;cursor:pointer}
+.idrivebtn svg{width:18px;height:18px;fill:none;stroke:#F2B455;stroke-width:2}
+.idrive{border:2px solid;border-radius:20px;padding:.9rem;display:flex;flex-direction:column;gap:.4rem;margin-bottom:.6rem}
+.idrive .itv span{color:var(--muted)}
+.ilist{margin:.5rem 0 0 1.1rem;padding:0;font-size:.85rem;line-height:1.45} .ilist li{margin:.15rem 0}
+.ism{font-size:.8rem;font-weight:700;color:var(--muted);letter-spacing:0}
 /* onderbalk */
 .nav.inav{left:16px;right:16px;bottom:calc(14px + env(safe-area-inset-bottom,0px));border-radius:34px;background:#16191D!important;border:0;padding:.35rem .4rem;backdrop-filter:none;align-items:center;gap:0;max-width:560px;margin:0 auto}
 .nav.inav .tab{color:#8C939A!important;background:transparent!important;border-radius:22px;padding:.3rem 0;min-height:52px;font-size:.66rem;font-weight:700}
@@ -1333,6 +1339,11 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
   <input id="inAiModel" type="text" placeholder="claude-sonnet-5-5" autocomplete="off" spellcheck="false">
   <label for="inAiKey" data-i18n="cfg.aiKeyL">Sleutel (API-key)</label>
   <input id="inAiKey" type="password" placeholder="sk-ant-… (API-sleutel)" autocomplete="off" spellcheck="false">
+  <label style="margin-top:1.1rem" data-i18n="cfg.nsWriteL">Logboek naar Nightscout (optioneel)</label>
+  <div class="hint" data-i18n="cfg.nsWriteHint">Zet je logs (sport, ziek, rijden…) ook als notitie in Nightscout, zodat ze in AAPS staan en bewaard blijven als je van telefoon wisselt. Hiervoor is een token met schrijfrechten nodig. IDA schrijft alleen notities, nooit instellingen of insuline.</div>
+  <label class="aitog"><input type="checkbox" id="inNsWrite"> <span data-i18n="cfg.nsWriteOn">Logs ook naar Nightscout sturen</span></label>
+  <label for="inNsWriteTok" data-i18n="cfg.nsWriteTok">Token met schrijfrechten</label>
+  <input id="inNsWriteTok" type="password" autocomplete="off" spellcheck="false" placeholder="careportal-…">
   <label class="aitog" style="margin-top:.8rem"><input type="checkbox" id="inProtect"> <span>Token en sleutel met wachtwoord beveiligen</span></label>
   <input id="inPass" type="password" placeholder="wachtwoord (nodig bij elke keer opslaan)" autocomplete="new-password" hidden>
   <div class="hint">Aanrader op GitHub Pages: andere pagina's op dezelfde herkomst kunnen anders je token lezen. Vergeet je het wachtwoord, dan vul je het token opnieuw in.</div>
@@ -1345,17 +1356,17 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
 const CFG_KEY = "dbdash.cfg";
 const cfg = Object.assign({ url:"", token:"", days:30, peak:75, lang:"", aiOn:false, aiUrl:"", aiModel:"", aiKey:"" },
   JSON.parse(localStorage.getItem(CFG_KEY) || "{}"));
-const saveCfg = () => { const out=Object.assign({},cfg); if(cfg.protected){ delete out.token; delete out.aiKey; } localStorage.setItem(CFG_KEY, JSON.stringify(out)); };
+const saveCfg = () => { const out=Object.assign({},cfg); if(cfg.protected){ delete out.token; delete out.aiKey; delete out.nsWriteToken; } localStorage.setItem(CFG_KEY, JSON.stringify(out)); };
 /* Optioneel wachtwoord: token en AI-sleutel staan dan versleuteld (AES-GCM, PBKDF2) in de opslag en pas na ontgrendelen in het geheugen.
    Zo kan een andere pagina op dezelfde GitHub Pages-herkomst ze niet zomaar lezen. */
 const _B64=b=>btoa(String.fromCharCode(...new Uint8Array(b))), _UB64=x=>Uint8Array.from(atob(x),c=>c.charCodeAt(0));
 async function _pkey(pass,salt){ const km=await crypto.subtle.importKey("raw",new TextEncoder().encode(pass),"PBKDF2",false,["deriveKey"]);
   return crypto.subtle.deriveKey({name:"PBKDF2",salt,iterations:250000,hash:"SHA-256"},km,{name:"AES-GCM",length:256},false,["encrypt","decrypt"]); }
 async function encryptSecrets(pass){ const salt=crypto.getRandomValues(new Uint8Array(16)), iv=crypto.getRandomValues(new Uint8Array(12));
-  const ct=await crypto.subtle.encrypt({name:"AES-GCM",iv},await _pkey(pass,salt),new TextEncoder().encode(JSON.stringify({token:cfg.token||"",aiKey:cfg.aiKey||""})));
+  const ct=await crypto.subtle.encrypt({name:"AES-GCM",iv},await _pkey(pass,salt),new TextEncoder().encode(JSON.stringify({token:cfg.token||"",aiKey:cfg.aiKey||"",nsWriteToken:cfg.nsWriteToken||""})));
   cfg.enc={salt:_B64(salt),iv:_B64(iv),ct:_B64(ct)}; cfg.protected=true; }
 async function decryptSecrets(pass){ const pt=await crypto.subtle.decrypt({name:"AES-GCM",iv:_UB64(cfg.enc.iv)},await _pkey(pass,_UB64(cfg.enc.salt)),_UB64(cfg.enc.ct));
-  const o=JSON.parse(new TextDecoder().decode(pt)); cfg.token=o.token||""; cfg.aiKey=o.aiKey||""; }
+  const o=JSON.parse(new TextDecoder().decode(pt)); cfg.token=o.token||""; cfg.aiKey=o.aiKey||""; cfg.nsWriteToken=o.nsWriteToken||""; }
 function ensureUnlocked(){ return new Promise(res=>{
   if(!cfg.protected||cfg.token||!cfg.enc) return res(true);
   const d=document.createElement("dialog"); d.id="unlockDlg";
@@ -1502,6 +1513,10 @@ Object.assign(I18N, {
   "cfg.aiUrlL":{ nl:"Adres van de AI-dienst", en:"AI service address", pt:"Endereço do serviço de IA" },
   "cfg.aiModelL":{ nl:"Model", en:"Model", pt:"Modelo" },
   "cfg.aiKeyL":{ nl:"Sleutel (API-key)", en:"Key (API key)", pt:"Chave (API key)" },
+  "cfg.nsWriteL":{ nl:"Logboek naar Nightscout (optioneel)", en:"Logbook to Nightscout (optional)", pt:"Diário para o Nightscout (opcional)" },
+  "cfg.nsWriteHint":{ nl:"Zet je logs (sport, ziek, rijden…) ook als notitie in Nightscout, zodat ze in AAPS staan en bewaard blijven als je van telefoon wisselt. Hiervoor is een token met schrijfrechten nodig. IDA schrijft alleen notities, nooit instellingen of insuline.", en:"Also save your logs (exercise, illness, driving…) as notes in Nightscout, so they show in AAPS and survive a phone change. Needs a token with write access. IDA only writes notes, never settings or insulin.", pt:"Guarde também os registos como notas no Nightscout. Precisa de um token com escrita. O IDA só escreve notas, nunca definições ou insulina." },
+  "cfg.nsWriteOn":{ nl:"Logs ook naar Nightscout sturen", en:"Also send logs to Nightscout", pt:"Enviar registos também para o Nightscout" },
+  "cfg.nsWriteTok":{ nl:"Token met schrijfrechten", en:"Token with write access", pt:"Token com escrita" },
   "ai.label":{ nl:"Je vraag", en:"Your question", pt:"A sua pergunta" },
   "ai.ph":{ nl:"Stel een vraag…", en:"Ask a question…", pt:"Faça uma pergunta…" },
   "ai.send":{ nl:"Vraag", en:"Ask", pt:"Perguntar" },
@@ -1707,6 +1722,7 @@ Object.assign(I18N, { "meth.body":{
 </script>
 <script src="js/core.js"></script>
 <script src="js/ida.js"></script>
+<script src="js/ida2.js"></script>
 <script>
 
 /* ── Fase 3: besluiten bij voorstellen ──────────────────────────────────────
@@ -2224,6 +2240,7 @@ async function buildReport(){
     `<h2>${TL("Bespreekpunten","Discussion points","Pontos de discussão")}</h2>${besp}`+clHtml+
     `<h2>${TL("Wijzigingen &amp; effect","Changes &amp; effect","Alterações e efeito")}</h2>${wijz}`+
     `<h2>${TL("Vragen voor het gesprek","Questions for the consult","Perguntas para a consulta")}</h2>${vragenHtml}`+
+    (typeof idaReportHtml==="function"?idaReportHtml():"")+
     `<div class="rfoot">${TL("Observaties uit eigen CGM- en pompdata (Nightscout / AndroidAPS), automatisch samengevat door IDA. Geen insteladviezen; richtingen zijn hypotheses ter bespreking. Glucose in mmol/L.","Observations from your own CGM and pump data (Nightscout / AndroidAPS), automatically summarized by IDA. No setting advice; directions are hypotheses for discussion. Glucose in mmol/L.","Observações dos seus próprios dados de CGM e bomba (Nightscout / AndroidAPS), resumidos automaticamente pelo IDA. Sem conselhos de definição; as direções são hipóteses para discussão. Glicose em mmol/L.")}</div></div>`;
 }
 async function openReport(){
@@ -2289,6 +2306,7 @@ document.getElementById("btnCfg").onclick = ()=>{
   document.getElementById("inDays").value=cfg.days; document.getElementById("inLoopGap").checked=cfg.loopgap!==false; document.getElementById("inInsulin").value=String(cfg.peak||75);
   document.getElementById("inLang").value=LANG;
   document.getElementById("inAiOn").checked=!!cfg.aiOn;
+  document.getElementById("inNsWrite").checked=!!cfg.nsWrite; document.getElementById("inNsWriteTok").value=cfg.nsWriteToken||"";
   document.getElementById("inAiUrl").value=cfg.aiUrl||""; document.getElementById("inAiModel").value=cfg.aiModel||""; document.getElementById("inAiKey").value=cfg.aiKey||"";
   document.getElementById("cfgErr").hidden=true; openDlg(); };
 document.getElementById("inLang").onchange=e=>setLang(e.target.value);   // direct effect, geen "Bewaren" nodig
@@ -2318,6 +2336,7 @@ document.getElementById("btnSave").onclick = async ()=>{
   cfg.aiOn=document.getElementById("inAiOn").checked;
   cfg.aiUrl=document.getElementById("inAiUrl").value.trim().replace(/\/+$/,"");
   cfg.aiModel=document.getElementById("inAiModel").value.trim();
+  cfg.nsWrite=document.getElementById("inNsWrite").checked; cfg.nsWriteToken=document.getElementById("inNsWriteTok").value.trim();
   cfg.aiKey=document.getElementById("inAiKey").value.trim();
   const prot=document.getElementById("inProtect").checked, pw=document.getElementById("inPass").value;
   if(prot){ if(!pw){ err.textContent=TL("Vul een wachtwoord in om te beveiligen.","Enter a password to protect.","Introduza uma palavra-passe."); err.hidden=false; return; } await encryptSecrets(pw); }
@@ -3480,6 +3499,10 @@ snapshotI18n(); applyStaticI18n();   // NL vastleggen, daarna vaste teksten in d
   if (!cfg.url){ setConn("",t("conn.unset")); openDlg(); }
   else { setConn("ok",t("conn.set")); document.getElementById("btnSync").disabled=false; }
   try { await refresh(); } catch(e){ console.error(e); }
+  // Automatisch synchroniseren: bij openen, elke 5 minuten en als je terugkomt in de app.
+  setTimeout(()=>{ try{ autoSync(); }catch(_){} }, 1500);
+  setInterval(()=>{ try{ autoSync(); }catch(_){} }, 5*60e3);
+  document.addEventListener("visibilitychange",()=>{ if(!document.hidden){ try{ autoSync(); }catch(_){} } });
 })();
 
 /* PWA: registreer de offline-schil. Alleen op http(s) — vanaf file:// of zonder
