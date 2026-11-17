@@ -1026,6 +1026,7 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
   <input id="inUrl" type="url" placeholder="https://jouw-site.nightscout.example" autocomplete="off" spellcheck="false">
   <label for="inTok" data-i18n="cfg.token">Token</label>
   <input id="inTok" type="text" placeholder="dashboard-0123456789abcdef" autocomplete="off" spellcheck="false">
+  <div class="hint"><button type="button" id="btnLink" class="ghost">🔗 Kopieer koppellink voor een ander apparaat</button> <span id="linkMsg" class="muted"></span></div>
   <div class="hint" data-i18n="cfg.tokenHint">Maak in Nightscout via Admin Tools een subject met alleen de rol
     <b>readable</b>. Gebruik nooit je API_SECRET.</div>
   <label for="inDays" data-i18n="cfg.history">Historie ophalen (dagen)</label>
@@ -1082,6 +1083,16 @@ const CFG_KEY = "dbdash.cfg";
 const cfg = Object.assign({ url:"", token:"", days:30, peak:75, lang:"", aiOn:false, aiUrl:"", aiModel:"", aiKey:"" },
   JSON.parse(localStorage.getItem(CFG_KEY) || "{}"));
 const saveCfg = () => localStorage.setItem(CFG_KEY, JSON.stringify(cfg));
+/* Koppellink: open de app één keer via  …/index.html#setup=<base64>  en adres+token
+   worden bewaard; de hash verdwijnt direct uit de adresbalk/geschiedenis. */
+(function applySetupLink(){
+  try{
+    const m=/[#&]setup=([^&]+)/.exec(location.hash); if(!m) return;
+    const o=JSON.parse(decodeURIComponent(escape(atob(decodeURIComponent(m[1])))));
+    if(o && /^https:\/\//.test(o.url||"")){ cfg.url=String(o.url).replace(/\/+$/,""); cfg.token=String(o.token||""); saveCfg(); }
+    history.replaceState(null,"",location.pathname+location.search);
+  }catch(e){ console.warn("setup-link",e); }
+})();
 
 /* ── Talen (nl · en · pt) ────────────────────────────────────────────────────
    Alles is lokaal: de vertaling zit in één woordenboek (I18N). t(sleutel,params)
@@ -3853,6 +3864,15 @@ document.getElementById("btnCfg").onclick = ()=>{
   document.getElementById("cfgErr").hidden=true; openDlg(); };
 document.getElementById("inLang").onchange=e=>setLang(e.target.value);   // direct effect, geen "Bewaren" nodig
 document.getElementById("btnClose").onclick = closeDlg;
+document.getElementById("btnLink").onclick = async ()=>{
+  const u=document.getElementById("inUrl").value.trim().replace(/\/+$/,""), tk=document.getElementById("inTok").value.trim();
+  const msg=document.getElementById("linkMsg");
+  if(!/^https:\/\//.test(u)){ msg.textContent="Vul eerst het adres in."; return; }
+  const b64=btoa(unescape(encodeURIComponent(JSON.stringify({url:u,token:tk}))));
+  const link=location.origin+location.pathname+"#setup="+encodeURIComponent(b64);
+  try{ await navigator.clipboard.writeText(link); msg.textContent="Gekopieerd — alleen naar jezelf sturen (bevat je token)."; }
+  catch(_){ prompt("Koppellink (alleen voor jezelf):",link); }
+};
 document.getElementById("btnSave").onclick = async ()=>{
   const err=document.getElementById("cfgErr");
   const url=document.getElementById("inUrl").value.trim().replace(/\/+$/,"");
