@@ -54,7 +54,7 @@ function idaVandaag(c){
     if(icCh) parts.push(TL(`KH-ratio ${_idaN(icCh.value)} vanaf ${icCh.from}`,`carb ratio ${_idaN(icCh.value)} from ${icCh.from}`,`rácio ${_idaN(icCh.value)} a partir das ${icCh.from}`));
     const sub = parts.length ? parts.join(", ").replace(/^./,m=>m.toUpperCase())+"." : (up?TL("Meer basaal.","More basal.","Mais basal."):"");
     cards.push(`<article class="icard"><div class="icrow"><span class="icic t">${_idaIcon("trend")}</span><span class="ictxt"><b>${msg}</b> ${sub}</span></div>
-      <div class="icacts"><button class="ibtn acc" data-ida="profiel">${TL("Bekijk profiel","View profile","Ver perfil")}</button></div></article>`);
+      <div class="icacts"><button class="ibtn acc" data-ida="profiel">${TL("Bekijk profiel","View profile","Ver perfil")}</button><button class="ibtn" data-idaask="profiel">${TL("Leg uit","Explain","Explicar")}</button></div></article>`);
   }
   const r=unloggedRise(g, c.treatments);
   if(r && !_idaAnns.some(x=>x.id==="rise-"+r.t0)){
@@ -62,7 +62,11 @@ function idaVandaag(c){
     cards.push(`<article class="icard" id="riseCard"><div class="icrow"><span class="icic p">${_idaIcon("food")}</span><span class="ictxt"><b>${TL("Heb je iets gegeten?","Did you eat something?","Comeu alguma coisa?")}</b> ${TL(`Tussen ${hm(r.t0)} en ${hm(r.t1)} steeg je van ${_idaN(r.b0)} naar ${_idaN(r.b1)}, zonder gelogde koolhydraten.`,`Between ${hm(r.t0)} and ${hm(r.t1)} you rose from ${_idaN(r.b0)} to ${_idaN(r.b1)} without logged carbs.`,`Entre ${hm(r.t0)} e ${hm(r.t1)} subiu de ${_idaN(r.b0)} para ${_idaN(r.b1)} sem hidratos registados.`)}</span></div>
       <div class="icacts" id="riseActs"><button class="ibtn dark" data-rise="30" data-t="${r.t0}">${TL("Ja, ~30 g","Yes, ~30 g","Sim, ~30 g")}</button><button class="ibtn" data-rise="ander" data-t="${r.t0}">${TL("Andere hoeveelheid","Other amount","Outra quantidade")}</button><button class="ibtn" data-rise="0" data-t="${r.t0}">${TL("Nee","No","Não")}</button></div></article>`);
   }
+  // Weekoverzicht: op zondag en maandag als kaart
+  const wd=new Date().getDay();
+  if(wd===0||wd===1){ const R=weekReview(c); if(R) cards.push(`<article class="icard"><div class="icrow"><span class="icic t">${_idaIcon("trend")}</span><span class="ictxt"><b>${TL("Je weekoverzicht staat klaar.","Your weekly review is ready.","O seu resumo semanal está pronto.")}</b> ${TL(`In bereik ${_idaPct(R.A.tir)}${R.B?` (week ervoor ${_idaPct(R.B.tir)})`:""}.`,`In range ${_idaPct(R.A.tir)}${R.B?` (previous week ${_idaPct(R.B.tir)})`:""}.`,`No alvo ${_idaPct(R.A.tir)}.`)}</span></div><div class="icacts"><button class="ibtn acc" data-ida="week">${TL("Bekijk","View","Ver")}</button></div></article>`); }
   const host=_idaEl("assist"); host.innerHTML=cards.join("");
+  host.querySelectorAll("[data-ida=week]").forEach(b=>b.onclick=()=>{ showTab("consult"); setTimeout(()=>{ const w=_idaEl("weekCard"); if(w) w.scrollIntoView({behavior:"smooth",block:"start"}); },80); });
   host.querySelectorAll("[data-ida=profiel]").forEach(b=>b.onclick=()=>showTab("profiel"));
   host.querySelectorAll("[data-rise]").forEach(b=>b.onclick=()=>_riseAnswer(b.dataset.rise, +b.dataset.t));
 }
@@ -206,9 +210,12 @@ function idaTeam(c){
       const w=v==null?0:Math.min(100,v/scale*100), gw=Math.min(100,goal/scale*100);
       return `<div class="imeter"><div class="imrow"><span>${lab}</span><span><b>${v==null?"—":(k==="vlow"?_idaN(v*100):Math.round(v*100))+"%"}</b> <i>→ &lt;${k==="vlow"?_idaN(goal*100):Math.round(goal*100)}%</i>${b!=null&&act?` <i>(${TL("was","was","era")} ${k==="vlow"?_idaN(b*100):Math.round(b*100)}%)</i>`:""}</span></div><div class="imbar"><i style="width:${w.toFixed(0)}%;background:${col}"></i><em style="left:${gw.toFixed(0)}%"></em></div></div>`; }).join("")+
     `<span class="its">${TL("De zwarte streep is het doel. Kom je in een blok vaker laag, dan zie je meteen welk blok het is.","The black line is the goal. If a block gets more lows, you see straight away which one.","A linha preta é o objetivo.")}</span></section>`;
-  html+=`<div class="igrid2"><button class="itile sm tap" id="idaWeek"><b class="ittl">${TL("Weektrend","Weekly trend","Tendência semanal")}</b><span class="its">${TL("tijd in bereik per week","time in range per week","tempo no alvo por semana")}</span></button><button class="itile sm tap" id="idaPdf"><b class="ittl">${TL("Consult-PDF","Consult PDF","PDF da consulta")}</b><span class="its">${TL("profiel, dagprofiel en meting","profile, daily profile and measurement","perfil e medição")}</span></button></div>`;
+  const WR=weekReview(c);
+  if(WR) html+=`<section class="itile wide" id="weekCard">${weekCardHtml(WR)}</section>`;
+  html+=`<div class="igrid2"><button class="itile sm tap" id="idaWeek"><b class="ittl">${TL("Weektrend","Weekly trend","Tendência semanal")}</b><span class="its">${TL("tijd in bereik per week","time in range per week","tempo no alvo por semana")}</span></button><button class="itile sm tap" id="idaPdf"><b class="ittl">${TL("Consult-PDF","Consult PDF","PDF da consulta")}</b><span class="its">${TL("profiel, dagprofiel en meting","profile, daily profile and measurement","perfil, perfil diário e medição")}</span></button></div>`;
   host.innerHTML=html;
   host.querySelectorAll("[data-ida=profiel]").forEach(b=>b.onclick=()=>showTab("profiel"));
+  if(WR && _idaEl("weekAIbtn")){ _idaEl("weekAIbtn").onclick=()=>weekAISummary(WR); try{ if(localStorage.getItem("ida.week."+localDayKey(Date.now()))) weekAISummary(WR); }catch(_){} }
   _idaEl("idaWeek").onclick=()=>{ try{ goTo("secTrend","analyses"); }catch(_){ showTab("analyses"); } };
   _idaEl("idaPdf").onclick=()=>{ try{ openReport(); }catch(e){ console.error(e); } };
 }
@@ -253,9 +260,11 @@ function idaProfiel(c){
   html+=`<section class="itile wide"><div class="itabs" role="tablist">${tabs.map(([k,l])=>`<button role="tab" aria-selected="${k===_profTab}" data-ptab="${k}">${l}</button>`).join("")}</div>${rows}</section>`;
   const iobMin=_idaN(P.maxIobMin+(P.mealBolus||0));
   html+=`<section class="inote">${TL(`Je <b>max IOB</b> is niet zichtbaar in je data. Zet die op minstens ${iobMin} E (3× je hoogste basaal plus je gemiddelde maaltijdbolus).`,`Your <b>max IOB</b> isn't visible in your data. Set it to at least ${iobMin} U (3× your highest basal plus your average meal bolus).`,`O seu <b>max IOB</b> não é visível. Defina pelo menos ${iobMin} U.`)}</section>
+    <button class="ibtn" id="profExplain" style="align-self:flex-start">${TL("Leg dit profiel uit","Explain this profile","Explicar este perfil")}</button>
     <div class="iacts"><button class="ibtn big acc" id="profCopy">${TL("Kopieer voor AAPS","Copy for AAPS","Copiar para AAPS")}</button><button class="ibtn big" id="profAct">${TL("Ik heb het profiel geactiveerd","I've activated the profile","Ativei o perfil")}</button></div>`;
   host.innerHTML=html;
   host.querySelectorAll("[data-ptab]").forEach(b=>b.onclick=()=>{ _profTab=b.dataset.ptab; idaProfiel(c); });
+  _idaEl("profExplain").onclick=()=>openAI(TL("Uitleg bij je profiel","About your profile","Sobre o seu perfil"), _profileFacts(P), TL("Leg in gewone taal uit wat er in dit nieuwe profiel verandert en waarom.","Explain in plain words what changes in this new profile and why.","Explique em palavras simples o que muda neste novo perfil e porquê."));
   _idaEl("profCopy").onclick=async()=>{ const txt=aapsProfileText(P);
     try{ await navigator.clipboard.writeText(txt); toast(TL("Gekopieerd. Plak het naast AAPS → Profiel.","Copied.","Copiado.")); }
     catch(_){ const ta=document.createElement("textarea"); ta.value=txt; document.body.appendChild(ta); ta.select(); try{ document.execCommand("copy"); toast(TL("Gekopieerd.","Copied.","Copiado.")); }catch(__){} ta.remove(); } };
@@ -267,12 +276,12 @@ function idaProfiel(c){
 }
 
 /* ── Snel loggen ─────────────────────────────────────────────────────────── */
-const _LOGT=[["sport",TL("Sport","Exercise","Exercício"),'<circle cx="14" cy="4.5" r="1.8"/><path d="M8 21l3-6 3 2v4M6 12l3-3 4 1 3 4h3"/>'],
+const _LOGT_=()=>[["sport",TL("Sport","Exercise","Exercício"),'<circle cx="14" cy="4.5" r="1.8"/><path d="M8 21l3-6 3 2v4M6 12l3-3 4 1 3 4h3"/>'],
   ["ziek",TL("Ziek","Ill","Doente"),'<path d="M10 3h4v8a3 3 0 1 1-4 0z"/><path d="M12 14v2"/>'],
   ["stress",TL("Stress","Stress","Stress"),'<path d="M13 2L4 14h7l-1 8 9-12h-7z"/>'],
   ["alcohol",TL("Alcohol","Alcohol","Álcool"),'<path d="M8 3h8l-1 7a3 3 0 0 1-6 0zM12 13v8M9 21h6"/>'],
   ["correctie",TL("Correctie zonder eten","Correction without food","Correção sem comida"),'<path d="M12 3v12M8 11l4 4 4-4M5 21h14"/>'],
-  ["pen",TL("Op pen","On pen","Em caneta"),'<path d="M4 20l4-1 11-11-3-3L5 16zM14 6l3 3"/>']];
+  ["pen",TL("Op pen","On pen","Em caneta"),'<path d="M4 20l4-1 11-11-3-3L5 16zM14 6l3 3"/>']];   // functie: labels in de actuele taal
 function openLogSheet(){
   _qlSel=null; _qlWhen=0; _qlDur=60;
   const d=_idaEl("logSheet"); renderLogSheet();
@@ -282,7 +291,7 @@ function renderLogSheet(){
   const pen=_qlSel==="pen", durs=pen?[[1,TL("1 dag","1 day","1 dia")],[3,TL("3 dagen","3 days","3 dias")],[7,TL("7 dagen","7 days","7 dias")]]:[[30,"30 min"],[60,"60 min"],[90,"90 min"]];
   if(pen && ![1,3,7].includes(_qlDur)) _qlDur=1; if(!pen && ![30,60,90].includes(_qlDur)) _qlDur=60;
   const showDur=_qlSel && _qlSel!=="correctie";
-  _idaEl("logBody").innerHTML=`<div class="lgrid">${_LOGT.map(([k,l,ic])=>`<button class="ltile${_qlSel===k?" on":""}" data-lt="${k}"><svg viewBox="0 0 24 24" aria-hidden="true">${ic}</svg>${l}</button>`).join("")}</div>
+  _idaEl("logBody").innerHTML=`<div class="lgrid">${_LOGT_().map(([k,l,ic])=>`<button class="ltile${_qlSel===k?" on":""}" data-lt="${k}"><svg viewBox="0 0 24 24" aria-hidden="true">${ic}</svg>${l}</button>`).join("")}</div>
     <span class="llab">${TL("Wanneer","When","Quando")}</span><div class="lchips">${[[0,TL("Nu","Now","Agora")],[30,TL("30 min geleden","30 min ago","há 30 min")],[120,TL("2 uur geleden","2 h ago","há 2 h")]].map(([v,l])=>`<button class="lchip${_qlWhen===v?" on":""}" data-lw="${v}">${l}</button>`).join("")}</div>
     ${showDur?`<span class="llab">${TL("Hoe lang","How long","Quanto tempo")}</span><div class="lchips">${durs.map(([v,l])=>`<button class="lchip${_qlDur===v?" on":""}" data-ld="${v}">${l}</button>`).join("")}</div>`:""}
     <button class="ibtn big acc" id="logSave" ${_qlSel?"":"disabled"}>${TL("Opslaan","Save","Guardar")}</button>`;
@@ -294,7 +303,7 @@ function renderLogSheet(){
 }
 async function saveQuickLog(){
   if(!_qlSel) return;
-  const ts=Date.now()-_qlWhen*60000, lab=(_LOGT.find(x=>x[0]===_qlSel)||[])[1]||_qlSel;
+  const ts=Date.now()-_qlWhen*60000, lab=(_LOGT_().find(x=>x[0]===_qlSel)||[])[1]||_qlSel;
   const an={ id:"q"+ts+"-"+Math.random().toString(36).slice(2,6), ts, type:_qlSel, created:Date.now(), src:"quick",
     note: _qlSel==="pen" ? TL(`${_qlDur} dag(en) op pen`,`${_qlDur} day(s) on pen`,`${_qlDur} dia(s) em caneta`) : _qlSel==="correctie" ? "" : `${_qlDur} min`,
     days: _qlSel==="pen" ? _qlDur : undefined, dur: _qlSel!=="pen" ? _qlDur : undefined };
@@ -308,4 +317,118 @@ function closeLogSheet(){ const d=_idaEl("logSheet"); try{ d.close(); }catch(_){
 function penDayKeys(anns){
   const s=new Set(); for(const a of anns||[]){ if(a.type!=="pen") continue; const n=Math.max(1,Math.min(30,+a.days||1));
     for(let i=0;i<n;i++) s.add(localDayKey(a.ts+i*864e5)); } return s;
+}
+
+/* ── AI-assistent: uitleg bij het profiel, doorvragen op kaarten, weekoverzicht ──
+   Gebruikt de eigen AI-dienst uit Instellingen (OpenAI-compatibel of lokaal). De AI krijgt alleen
+   de samenvattende cijfers die IDA al toont. Hij legt uit; profielwaarden berekent IDA zelf. */
+let _aiMsgs = [], _aiSys = "", _aiBusy = false;
+async function aiChat(messages, maxTokens){
+  const r=await fetch(cfg.aiUrl.replace(/\/+$/,"")+"/chat/completions",{ method:"POST",
+    headers:{ "Content-Type":"application/json", "Authorization":"Bearer "+cfg.aiKey },
+    body:JSON.stringify({ model:cfg.aiModel||"gpt-4o-mini", temperature:0.3, max_tokens:maxTokens||500, messages }) });
+  if(!r.ok){ const tx=await r.text().catch(()=>""); throw new Error("HTTP "+r.status+(tx?" — "+tx.slice(0,160):"")); }
+  const j=await r.json(); return ((j&&j.choices&&j.choices[0]&&j.choices[0].message&&j.choices[0].message.content)||"").trim();
+}
+function _aiSystem(extra){
+  const lang=_AI_LANG[LANG]||"Dutch", ctx=buildAskContext();
+  return `You are IDA, a calm, practical assistant for a young adult with type 1 diabetes using AndroidAPS (closed loop, Omnipod Dash, Libre CGM). `+
+    `Answer in ${lang}, briefly (max ~120 words unless asked for more), in plain words, no jargon without explanation. Use ONLY the facts below; if they don't contain the answer, say so. Never invent numbers. `+
+    `Profile values (basal, ISF, carb ratio) are calculated by IDA with safety rules; you may explain them but never propose other insulin numbers or doses. `+
+    `You may suggest habits (carb counting, timing, logging, exercise). Do not add disclaimers about consulting a care team; the user knows. Use mmol/L.\n\nFACTS:\n`+
+    (ctx?ctx.text:"(no data)")+(extra?"\n\n"+extra:"");
+}
+function _profileFacts(P){
+  if(!P||!P.basal) return "";
+  const f=v=>v==null?"?":(+v).toFixed(2);
+  return "IDA PROFILE PROPOSAL ("+_profName()+"), from "+P.days+" usable days:\n"+
+    "Basal blocks (start: new U/h, was, reason): "+P.basal.map(b=>`${b.from}: ${f(b.value)} (was ${b.now.map(f).join("/")}; ${b.why==="laag"?"lowered: "+Math.round(b.low*100)+"% of time low":b.act?"loop delivered "+f(b.act[0])+"-"+f(b.act[1])+" U/h when fasting":"no data"})`).join("; ")+
+    ". Each basal block starts 1 hour before the need because basal takes ~1 h to act. Daily basal "+f(P.dayNow)+" -> "+f(P.dayNew)+" U (max +30% per step).\n"+
+    "ISF blocks: "+P.isf.map(b=>`${b.from}: ${b.value} (was ${b.now})`).join("; ")+". ISF estimates: "+P.isfEst.map(e=>`${e.k} ${e.v.toFixed(2)}`).join(", ")+".\n"+
+    "Carb ratio blocks: "+P.ic.map(b=>`${b.from}: ${b.value} (was ${b.now}; measured ${b.measured!=null?b.measured.toFixed(2):"?"} over ${b.n} meals; status ${b.why})`).join("; ")+
+    ". Carb ratio is not changed when glucose rises clearly more than entered carbs explain (seen "+(P.mfrac?Math.round(P.mfrac*100)+"%":"?")+"), because that points to under-counting carbs.\n"+
+    "Autosens at its maximum "+(P.sensMax!=null?Math.round(P.sensMax*100)+"% of the time":"unknown")+"; mean autosens "+(P.sensMean?P.sensMean.toFixed(2):"?")+". Total daily dose "+(P.tdd?P.tdd.toFixed(1):"?")+" U.";
+}
+function openAI(title, extra, first){
+  const d=_idaEl("aiSheet"); _idaEl("aiTitle").textContent=title;
+  _aiMsgs=[]; _aiSys=_aiSystem(extra); _idaEl("aiLog").innerHTML="";
+  if(!aiEnabled()){
+    _idaEl("aiLog").innerHTML=`<div class="aimsg sys">${TL("Stel eerst je AI-dienst in bij Instellingen ⚙ → AI-assistent: adres, model en sleutel. Met een lokaal model (Ollama, LM Studio) blijven je gegevens op je eigen apparaat.","First set up your AI service under Settings ⚙ → AI assistant: address, model and key. With a local model your data stays on your device.","Configure primeiro o serviço de IA nas Definições.")}</div><button class="ibtn acc" id="aiToCfg">${TL("Naar Instellingen","Open settings","Abrir definições")}</button>`;
+    _idaEl("aiToCfg").onclick=()=>{ closeAI(); document.getElementById("btnCfg").click(); };
+    _idaEl("aiForm").hidden=true;
+  } else _idaEl("aiForm").hidden=false;
+  try{ d.showModal(); }catch(_){ d.setAttribute("open",""); }
+  if(first && aiEnabled()) aiSend(first);
+}
+function closeAI(){ const d=_idaEl("aiSheet"); try{ d.close(); }catch(_){ d.removeAttribute("open"); } }
+function _aiRender(){
+  _idaEl("aiLog").innerHTML=_aiMsgs.map(m=>`<div class="aimsg ${m.role==="user"?"me":"ai"}">${esc(m.content).replace(/\n/g,"<br>")}</div>`).join("")+(_aiBusy?`<div class="aimsg ai busy">${TL("IDA denkt na…","IDA is thinking…","IDA está a pensar…")}</div>`:"");
+  const l=_idaEl("aiLog"); l.scrollTop=l.scrollHeight;
+}
+async function aiSend(text){
+  text=(text||"").trim(); if(!text||_aiBusy) return;
+  _aiMsgs.push({role:"user",content:text}); _aiBusy=true; _aiRender();
+  try{ const a=await aiChat([{role:"system",content:_aiSys},..._aiMsgs.slice(-10)]); _aiMsgs.push({role:"assistant",content:a||TL("Geen antwoord ontvangen.","No answer received.","Sem resposta.")}); }
+  catch(e){ _aiMsgs.push({role:"assistant",content:TL("Er ging iets mis met je AI-dienst: ","Your AI service failed: ","O serviço de IA falhou: ")+e.message}); }
+  _aiBusy=false; _aiRender();
+}
+// Doorvragen op elke kaart (assistent-kaarten en bevindingen)
+document.addEventListener("click",e=>{
+  const b=e.target.closest&&e.target.closest("[data-idaask]"); if(!b) return;
+  e.preventDefault();
+  const card=b.closest(".f,.icard,.itile"); const txt=card?card.innerText.replace(/Vraag door ›|Ask more ›|Perguntar ›/g,"").replace(/\s+/g," ").trim().slice(0,600):"";
+  openAI(TL("Vraag door","Ask more","Perguntar"), "THE CARD THE USER ASKS ABOUT: "+txt+(b.dataset.idaask==="profiel"?"\n\n"+_profileFacts(_P):""), null);
+  setTimeout(()=>{ const i=_idaEl("aiIn"); if(i){ i.placeholder=TL("Bijv. wat kan ik hieraan doen?","E.g. what can I do about this?","Ex.: o que posso fazer?"); i.focus(); } },50);
+});
+
+/* ── Weekoverzicht ──────────────────────────────────────────────────────── */
+function weekStats(c, endTs){
+  const from=endTs-7*864e5;
+  const g=c.glucose.filter(x=>x.ts>=from&&x.ts<endTs&&c.q.usableKeys.has(localDayKey(x.ts)));
+  if(g.length<288*3) return null;
+  const m=metrics(g), days=new Set(g.map(x=>localDayKey(x.ts))).size;
+  const carbs=c.treatments.filter(t=>t.carbs>0&&t.ts>=from&&t.ts<endTs&&c.q.usableKeys.has(localDayKey(t.ts))).reduce((s,t)=>s+t.carbs,0);
+  const ds=_dsAll.filter(d=>d.ts>=from&&d.ts<endTs&&d.sens!=null), top=ds.length?Math.max(...ds.map(d=>d.sens)):0;
+  return { days, tir:m.tir, tbr:m.tbr, vlow:m.veryLow, tar:m.tar, cv:m.cv, mean:m.mean, carbsDay:carbs/Math.max(1,days),
+    smax:(ds.length&&top>=1.1)?ds.filter(d=>d.sens>=top-0.005).length/ds.length:null };
+}
+function weekReview(c){
+  const end=c.glucose[c.glucose.length-1].ts, A=weekStats(c,end), B=weekStats(c,end-7*864e5);
+  if(!A) return null;
+  const better=[], worse=[];
+  if(B){ if(A.tir-B.tir>=0.03) better.push(TL(`tijd in bereik ${_idaPct(B.tir)} → ${_idaPct(A.tir)}`,`time in range ${_idaPct(B.tir)} → ${_idaPct(A.tir)}`,`tempo no alvo ${_idaPct(B.tir)} → ${_idaPct(A.tir)}`));
+    else if(B.tir-A.tir>=0.03) worse.push(TL(`tijd in bereik ${_idaPct(B.tir)} → ${_idaPct(A.tir)}`,`time in range ${_idaPct(B.tir)} → ${_idaPct(A.tir)}`,`tempo no alvo ${_idaPct(B.tir)} → ${_idaPct(A.tir)}`));
+    if(B.tbr-A.tbr>=0.01) better.push(TL(`minder laag (${_idaN(B.tbr*100)}% → ${_idaN(A.tbr*100)}%)`,`fewer lows (${_idaN(B.tbr*100)}% → ${_idaN(A.tbr*100)}%)`,`menos baixas`));
+    else if(A.tbr-B.tbr>=0.01) worse.push(TL(`meer laag (${_idaN(B.tbr*100)}% → ${_idaN(A.tbr*100)}%)`,`more lows (${_idaN(B.tbr*100)}% → ${_idaN(A.tbr*100)}%)`,`mais baixas`));
+    if(B.cv-A.cv>=0.02) better.push(TL(`stabieler (variatie ${_idaPct(B.cv)} → ${_idaPct(A.cv)})`,`steadier (CV ${_idaPct(B.cv)} → ${_idaPct(A.cv)})`,`mais estável`));
+    else if(A.cv-B.cv>=0.02) worse.push(TL(`grilliger (variatie ${_idaPct(B.cv)} → ${_idaPct(A.cv)})`,`more variable (CV ${_idaPct(B.cv)} → ${_idaPct(A.cv)})`,`mais variável`)); }
+  let focus;
+  if(A.tbr>0.04||A.vlow>0.01) focus=TL("Minder laagtes: kijk bij Patronen wanneer ze vallen.","Fewer lows: check Patterns for when they happen.","Menos baixas.");
+  else if(_P&&_P.changed&&!_idaActivation()) focus=TL("Zet je nieuwe profiel in AAPS en tik op 'Ik heb het profiel geactiveerd'.","Set your new profile in AAPS and tap 'I've activated the profile'.","Ative o novo perfil.");
+  else if(_P&&_P.mfrac>=1.25) focus=TL("Tel je koolhydraten nauwkeuriger: weeg deze week een paar maaltijden af.","Count carbs more precisely: weigh a few meals this week.","Conte os hidratos com mais rigor.");
+  else if(A.tar>0.25) focus=TL("Minder hoog: kijk bij Patronen in welke uren je het vaakst boven 10 zit.","Fewer highs: check Patterns for your high hours.","Menos altas.");
+  else focus=TL("Zo doorgaan; log sport en ziek zijn met de +-knop.","Keep going; log exercise and illness with the + button.","Continue assim.");
+  return { A, B, better, worse, focus };
+}
+function weekCardHtml(R){
+  const row=(lab,a,b,fmt)=>`<div class="imrow"><span>${lab}</span><span><b>${fmt(a)}</b>${b!=null?` <i>(${TL("week ervoor","prev. week","semana anterior")} ${fmt(b)})</i>`:""}</span></div>`;
+  const B=R.B||{};
+  return `<b class="ittl">${TL("Weekoverzicht","Weekly review","Resumo semanal")}</b><span class="its">${TL(`laatste 7 dagen (${R.A.days} bruikbaar)`,`last 7 days (${R.A.days} usable)`,`últimos 7 dias`)}</span>
+    ${row(TL("In bereik","In range","No alvo"),R.A.tir,B.tir,_idaPct)}${row(TL("Laag","Low","Baixa"),R.A.tbr,B.tbr,v=>v==null?"—":_idaN(v*100)+"%")}${row(TL("Boven 10","Above 10","Acima de 10"),R.A.tar,B.tar,_idaPct)}${row(TL("Variatie","Variability","Variabilidade"),R.A.cv,B.cv,_idaPct)}
+    ${R.better.length?`<span class="its big">✓ ${R.better.join(", ")}</span>`:""}${R.worse.length?`<span class="its big">! ${R.worse.join(", ")}</span>`:""}
+    <span class="its big"><b>${TL("Focus deze week:","Focus this week:","Foco:")}</b> ${R.focus}</span>
+    <div id="weekAI"></div>
+    <div class="icacts"><button class="ibtn acc" id="weekAIbtn">${TL("Samenvatting door IDA","Summary by IDA","Resumo pela IDA")}</button><button class="ibtn" data-idaask="week">${TL("Vraag door","Ask more","Perguntar")} ›</button></div>`;
+}
+async function weekAISummary(R){
+  const host=_idaEl("weekAI"); if(!host) return;
+  if(!aiEnabled()){ openAI(TL("Weekoverzicht","Weekly review","Resumo semanal"),"",null); return; }
+  const key="ida.week."+localDayKey(Date.now());
+  let txt=null; try{ txt=localStorage.getItem(key); }catch(_){}
+  if(!txt){ host.innerHTML=`<span class="its">${TL("IDA schrijft je samenvatting…","IDA is writing your summary…","A escrever…")}</span>`;
+    const facts=`WEEK REVIEW (last 7 days vs the week before): TIR ${_idaPct(R.A.tir)} vs ${R.B?_idaPct(R.B.tir):"?"}; low <3.9 ${_idaN(R.A.tbr*100)}% vs ${R.B?_idaN(R.B.tbr*100)+"%":"?"}; <3.0 ${_idaN(R.A.vlow*100)}%; >10 ${_idaPct(R.A.tar)} vs ${R.B?_idaPct(R.B.tar):"?"}; CV ${_idaPct(R.A.cv)} vs ${R.B?_idaPct(R.B.cv):"?"}; logged carbs ${Math.round(R.A.carbsDay)} g/day; autosens at max ${R.A.smax!=null?_idaPct(R.A.smax):"?"}. Rule-based focus: ${R.focus}\n`+_profileFacts(_P);
+    try{ txt=await aiChat([{role:"system",content:_aiSystem(facts)},{role:"user",content:TL("Schrijf mijn weekoverzicht in 3 korte alinea's: wat ging goed, wat vraagt aandacht, en één concrete focus voor komende week.","Write my weekly review in 3 short paragraphs: what went well, what needs attention, and one concrete focus for next week.","Escreva o meu resumo semanal em 3 parágrafos curtos.")}],400);
+      try{ localStorage.setItem(key,txt); }catch(_){} }
+    catch(e){ host.innerHTML=`<span class="its">${TL("AI-dienst gaf een fout: ","AI service error: ","Erro: ")}${esc(e.message)}</span>`; return; } }
+  host.innerHTML=`<div class="aiweek">${esc(txt).replace(/\n/g,"<br>")}</div>`;
 }

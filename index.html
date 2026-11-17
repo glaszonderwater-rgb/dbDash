@@ -800,6 +800,12 @@ button.ghost{border-radius:22px}
 .nu{background:var(--ida-card)!important;border:0!important;border-radius:22px!important;box-shadow:none!important;font-family:var(--sans)!important}
 .nu .val{font-family:var(--sans)!important;font-weight:800!important}
 .nu .age,.nu .onb{font-family:var(--sans)!important}
+.ailog{display:flex;flex-direction:column;gap:.5rem;max-height:55vh;overflow:auto;margin-bottom:.7rem}
+.aimsg{border-radius:18px;padding:.65rem .85rem;font-size:.9rem;line-height:1.45;max-width:90%}
+.aimsg.ai{background:var(--surface-2);align-self:flex-start} .aimsg.me{background:var(--ida-acc);color:#fff;align-self:flex-end} .aimsg.sys{background:var(--surface-2)} .aimsg.busy{opacity:.6}
+.aiform{display:flex;gap:.5rem} .iinp.wide{flex:1;width:auto;height:44px}
+.iask{border:0;background:none;color:var(--t-accent);font:inherit;font-size:.78rem;font-weight:700;padding:.4rem 0 0;cursor:pointer;min-height:32px}
+.aiweek{background:var(--surface-2);border-radius:16px;padding:.7rem .8rem;font-size:.86rem;line-height:1.45;margin-top:.3rem}
 /* onderbalk */
 .nav.inav{left:16px;right:16px;bottom:calc(14px + env(safe-area-inset-bottom,0px));border-radius:34px;background:#16191D!important;border:0;padding:.35rem .4rem;backdrop-filter:none;align-items:center;gap:0;max-width:560px;margin:0 auto}
 .nav.inav .tab{color:#8C939A!important;background:transparent!important;border-radius:22px;padding:.3rem 0;min-height:52px;font-size:.66rem;font-weight:700}
@@ -960,9 +966,9 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
       <div class="mvshead"><span data-i18n="home.mvsSetting">instelling</span><span data-i18n="home.mvsMeasured">gemeten · ingesteld</span></div>
       <div id="tune"></div>
     </div>
-  <details class="deep" data-an="geheugen"><summary><span>Maaltijdgeheugen</span> <span class="foldhint">jouw eigen uitkomst per product</span></summary><div class="body"><div class="loading">…</div></div></details>
+  <details class="deep" data-an="geheugen"><summary><span data-i18n="an.memory">Maaltijdgeheugen</span> <span class="foldhint">jouw eigen uitkomst per product</span></summary><div class="body"><div class="loading">…</div></div></details>
   <details class="deep" data-an="maand"><summary><span>Maandtrend</span> <span class="foldhint">tijd in bereik per maand</span></summary><div class="body"><div class="loading">…</div></div></details>
-  <details class="deep" data-an="uur"><summary><span>Per uur</span> <span class="foldhint">spreiding, hypo's &amp; hoogtes per uur</span></summary><div class="body"><div class="loading">…</div></div></details>
+  <details class="deep" data-an="uur"><summary><span data-i18n="an.hours">Per uur</span> <span class="foldhint">spreiding, hypo's &amp; hoogtes per uur</span></summary><div class="body"><div class="loading">…</div></div></details>
   <details class="deep" data-an="loopbasal"><summary><span data-i18n="an.loopBasal">Loop-basaal</span> <span class="foldhint" data-i18n="an.loopBasalHint">wat je loop echt levert vs. je profiel</span></summary><div class="body"><div class="loading" data-i18n="loading">Openklappen om te berekenen…</div></div></details>
   <details class="deep" data-an="dagpatroon"><summary><span data-i18n="an.daypattern">Dagpatroon</span> <span class="foldhint" data-i18n="an.daypatternHint">vaste uren waarop je wegdrijft (basaal)</span></summary><div class="body"><div class="loading" data-i18n="loading">Openklappen om te berekenen…</div></div></details>
   <details class="fold" id="secInsulin" hidden>
@@ -1225,7 +1231,7 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
     <div class="foldbody"><div id="proposals"></div></div>
   </details>
   <details class="fold" id="secEffects" open>
-    <summary><span>Effect van doorgevoerde wijzigingen</span> <span class="foldhint">meting 14 dagen erna</span></summary>
+    <summary><span data-i18n="an.effects">Effect van doorgevoerde wijzigingen</span> <span class="foldhint">meting 14 dagen erna</span></summary>
     <div class="foldbody"><div id="effects"><div class="muted">…</div></div><div id="backupNote"></div></div>
   </details>
   <section class="epoch" id="epConsult" style="margin-left:0">
@@ -1255,6 +1261,12 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
   <div class="ishandle"></div>
   <div class="ishead"><h2 id="logTitle" data-i18n="log.title">Wat wil je vastleggen?</h2><button class="iclose" id="logClose" data-i18n-al="btn.close" aria-label="Sluiten"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
   <div id="logBody"></div>
+</dialog>
+<dialog id="aiSheet" class="isheet" aria-labelledby="aiTitle">
+  <div class="ishandle"></div>
+  <div class="ishead"><h2 id="aiTitle">IDA</h2><button class="iclose" id="aiClose" data-i18n-al="btn.close" aria-label="Sluiten"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+  <div id="aiLog" class="ailog"></div>
+  <form id="aiForm" class="aiform"><label class="srl" for="aiIn" data-i18n="ai.label">Je vraag</label><input id="aiIn" class="iinp wide" type="text" autocomplete="off" data-i18n-ph="ai.ph" placeholder="Stel een vraag…"><button class="ibtn acc" type="submit" data-i18n="ai.send">Vraag</button></form>
 </dialog>
 
 
@@ -1481,6 +1493,12 @@ Object.assign(I18N, {
   "tab.overview2":{ nl:"Vandaag", en:"Today", pt:"Hoje" },
   "an.all":{ nl:"Alle analyses", en:"All analyses", pt:"Todas as análises" },
   "team.details":{ nl:"Details en consult", en:"Details and consult", pt:"Detalhes e consulta" },
+  "an.memory":{ nl:"Maaltijdgeheugen", en:"Meal memory", pt:"Memória de refeições" },
+  "an.hours":{ nl:"Per uur", en:"By hour", pt:"Por hora" },
+  "an.effects":{ nl:"Effect van doorgevoerde wijzigingen", en:"Effect of applied changes", pt:"Efeito das alterações aplicadas" },
+  "ai.label":{ nl:"Je vraag", en:"Your question", pt:"A sua pergunta" },
+  "ai.ph":{ nl:"Stel een vraag…", en:"Ask a question…", pt:"Faça uma pergunta…" },
+  "ai.send":{ nl:"Vraag", en:"Ask", pt:"Perguntar" },
   "log.title":{ nl:"Wat wil je vastleggen?", en:"What do you want to log?", pt:"O que quer registar?" },
   "log.open":{ nl:"Loggen", en:"Log", pt:"Registar" },
   "home.last24":{ nl:"Laatste 24 uur", en:"Last 24 hours", pt:"Últimas 24 horas" },
@@ -2244,7 +2262,7 @@ async function _refresh(){
 }
 // Hertekent alles in de huidige taal (na een taalwissel), zonder opnieuw te syncen.
 function rerender(){
-  if(_ctx && _ctx.glucose){ render(_ctx.glucose, _ctx.treatments, _ctx.timeline); setTimeout(()=>{ try{ renderIda(true); }catch(_){} },120); }
+  if(_ctx && _ctx.glucose){ render(_ctx.glucose, _ctx.treatments, _ctx.timeline); setTimeout(()=>{ try{ renderIda(true); }catch(_){} },400); }
   try{ renderCbCats(); renderCbResults(); renderCbPlate(); renderEtenInsight(); }catch(_){}
 }
 async function doSync(){
@@ -2995,6 +3013,9 @@ document.getElementById("btnPlus").onclick=()=>openLogSheet();
 document.getElementById("logClose").onclick=()=>closeLogSheet();
 document.getElementById("logSheet").addEventListener("click",e=>{ if(e.target.id==="logSheet") closeLogSheet(); });
 document.getElementById("profBack").onclick=()=>showTab("consult");
+document.getElementById("aiClose").onclick=()=>closeAI();
+document.getElementById("aiSheet").addEventListener("click",e=>{ if(e.target.id==="aiSheet") closeAI(); });
+document.getElementById("aiForm").onsubmit=e=>{ e.preventDefault(); const i=document.getElementById("aiIn"); const v=i.value; i.value=""; aiSend(v); };
 document.getElementById("goImport").onclick=()=>{ try{closeDlg();}catch(_){} showTab("import"); }; document.getElementById("backEten").onclick=()=>showTab("eten");
 
 // De index: élke analyse bij naam, één tik — geen zoeken

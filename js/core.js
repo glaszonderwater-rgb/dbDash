@@ -760,7 +760,7 @@ function bandBarHtml(m){
   const bar=top.map(b=>`<span style="flex:${(m.share(b.id)*1000).toFixed(0)} 0 auto;background:var(${b.css})"></span>`).join("");
   const rows=top.map(b=>`<div class="trow"><i class="sw" style="background:var(${b.css})"></i><span class="lbl">${bandLabel(b)}</span><b>${pct0(m.share(b.id))}</b>${badge(b.id)}</div>`).join("");
   return `<div class="tirbar">${bar}</div><div class="tirrows">${rows}</div>`+
-    `<div class="hypoline">Hypo-tijd (&lt;3,9): <b>${pct0(m.tbr)}</b> · streef &lt;4% ${tick(m.tbr<0.04)}</div>`;
+    `<div class="hypoline">${TL("Hypo-tijd","Low time","Tempo em hipo")} (&lt;${DECSEP()==="."?"3.9":"3,9"}): <b>${pct0(m.tbr)}</b> · ${TL("streef","aim","meta")} &lt;4% ${tick(m.tbr<0.04)}</div>`;
 }
 // Insuline & koolhydraten over de periode
 function insulinCarbs(treatments, timeline, q){
@@ -1225,6 +1225,7 @@ function findingCard(f, st){
   if (f.seenable && !seen) acts.push(`<button class="act ghost" data-seen="${f.id}">${TL("✓ gezien","✓ seen","✓ visto")}</button>`);
   if (acts.length) more += `<div class="acts">${acts.join("")}</div>`;
   if (more) html += `<details class="fmore-d"><summary aria-label="${TL("details","details","detalhes")}">${TL("details","details","detalhes")}</summary>${more}</details>`;
+  if (!seen) html += `<button class="iask" data-idaask="kaart">${TL("Vraag door","Ask more","Perguntar")} ›</button>`;
   return html+`</div>`;
 }
 let _fctx=null;
@@ -1700,7 +1701,7 @@ function driftSvg(stat){
     const col=o.structural?(o.med>0?"var(--high)":"var(--low)"):"var(--line-2)";
     s+=`<line x1="${cx.toFixed(1)}" y1="${Y(o.p75).toFixed(1)}" x2="${cx.toFixed(1)}" y2="${Y(o.p25).toFixed(1)}" stroke="var(--muted)" stroke-width="1"/>`;
     s+=`<rect x="${x.toFixed(1)}" y="${Math.min(y0,y).toFixed(1)}" width="${w.toFixed(1)}" height="${Math.abs(y-y0).toFixed(1)}" rx="1.5" fill="${col}"/>`; });
-  s+=`<text x="${PL}" y="12" font-size="7.5" fill="var(--dim)">mmol/L per uur — omhoog = stijgt, omlaag = zakt</text>`;
+  s+=`<text x="${PL}" y="12" font-size="7.5" fill="var(--dim)">${TL("mmol/L per uur — omhoog = stijgt, omlaag = zakt","mmol/L per hour — up = rising, down = falling","mmol/L por hora — cima = sobe, baixo = desce")}</text>`;
   return s+"</svg>";
 }
 function absorpSvg(GRID, medc, t50){
@@ -1787,16 +1788,16 @@ function exerciseLatePattern(glucose, q, anns){
 
 function anDagpatroon(glucose, treatments, q){
   const d=basalDrift(glucose, treatments, q);
-  if(!d.stat) return `<div class="muted">Te weinig maaltijd-/bolusvrije momenten (${d.total}) voor een dagpatroon. Bijna al je uren vallen binnen 5 uur na een maaltijd of bolus — met meer nuchtere periodes of historie komt dit beschikbaar.</div>`;
+  if(!d.stat) return `<div class="muted">${TL(`Te weinig maaltijd-/bolusvrije momenten (${d.total}) voor een dagpatroon. Bijna al je uren vallen binnen 5 uur na een maaltijd of bolus.`,`Too few meal/bolus-free moments (${d.total}) for a daily pattern. Almost all your hours fall within 5 h of a meal or bolus.`,`Poucos momentos sem refeição/bólus (${d.total}) para um padrão diário.`)}</div>`;
   const {stat,up,down,total}=d;
   const peak=l=>l.reduce((m,s)=>Math.abs(s.med)>Math.abs(m)?s.med:m,0);
   let obs;
-  if(!up.length&&!down.length) obs="Geen uur waarop je in maaltijd- en bolusvrije vensters structureel wegdrijft — je basaal lijkt over de dag heen in balans.";
+  if(!up.length&&!down.length) obs=TL("Geen uur waarop je in maaltijd- en bolusvrije vensters structureel wegdrijft — je basaal lijkt over de dag heen in balans.","No hour where you drift structurally in meal- and bolus-free windows — your basal looks balanced across the day.","Nenhuma hora com deriva estrutural em janelas sem refeição — o basal parece equilibrado.");
   else { const parts=[];
-    if(up.length)parts.push(`stijg je rond <b>${joinHrs(up.map(s=>s.h)).join(", ")}</b> (tot ${nl1(peak(up))} mmol/L/u) — waar een iets hóger basaal in beeld komt`);
-    if(down.length)parts.push(`zak je rond <b>${joinHrs(down.map(s=>s.h)).join(", ")}</b> (tot ${nl1(peak(down))} mmol/L/u) — waar een iets láger basaal hypo's kan schelen`);
-    obs=`In stille vensters ${parts.join("; en ")}. In AAPS pas je een basaalblok doorgaans 1–2 uur vóór het effect aan. Observatie, geen instelwaarde.`; }
-  return driftSvg(stat)+`<div class="obs">${obs}</div><div class="muted" style="margin-top:.4rem">n = ${total.toLocaleString(LOCALE())} driftmetingen in schone vensters · drempel 0,3 mmol/L/u · bij een closed loop kan temp-basaal een echt profielverschil maskeren</div>`;
+    if(up.length)parts.push(TL(`stijg je rond <b>${joinHrs(up.map(s=>s.h)).join(", ")}</b> (tot ${nl1(peak(up))} mmol/L/u)`,`you rise around <b>${joinHrs(up.map(s=>s.h)).join(", ")}</b> (up to ${nl1(peak(up))} mmol/L/h)`,`sobe por volta das <b>${joinHrs(up.map(s=>s.h)).join(", ")}</b>`));
+    if(down.length)parts.push(TL(`zak je rond <b>${joinHrs(down.map(s=>s.h)).join(", ")}</b> (tot ${nl1(peak(down))} mmol/L/u)`,`you fall around <b>${joinHrs(down.map(s=>s.h)).join(", ")}</b> (up to ${nl1(peak(down))} mmol/L/h)`,`desce por volta das <b>${joinHrs(down.map(s=>s.h)).join(", ")}</b>`));
+    obs=TL(`In stille vensters ${parts.join("; en ")}.`,`In quiet windows ${parts.join("; and ")}.`,`Em janelas calmas ${parts.join("; e ")}.`); }
+  return driftSvg(stat)+`<div class="obs">${obs}</div><div class="muted" style="margin-top:.4rem">${TL(`n = ${total.toLocaleString(LOCALE())} driftmetingen in schone vensters · bij een closed loop kan temp-basaal een echt profielverschil maskeren`,`n = ${total.toLocaleString(LOCALE())} drift measurements in clean windows · with a closed loop, temp basals can mask a real profile difference`,`n = ${total.toLocaleString(LOCALE())} medições de deriva · num loop fechado o basal temporário pode mascarar diferenças`)}</div>`;
 }
 
 // Loop-basaal: voor een closed loop werkt basaaldrift niet (de loop regelt de drift
