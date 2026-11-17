@@ -7,7 +7,7 @@ const TL=(nl,en,pt)=>nl; const t=k=>k; const DECSEP=()=>","; const esc=s=>String
 const document={documentElement:{}}; const getComputedStyle=()=>({getPropertyValue:()=>""});
 const indexedDB={open(){throw new Error("geen idb")}}; const localStorage={getItem(){return null},setItem(){}};
 `;
-const post=`;({metrics,localDayKey,todMin,fmtMin,loopBasal,smbISF,applyGuardrails,guardrailStats,DAYPARTS,toMgdl,mmol,bandOf,_pMed,_pMean})`;
+const post=`;({metrics,localDayKey,todMin,fmtMin,loopBasal,smbISF,_segment,applyGuardrails,guardrailStats,DAYPARTS,toMgdl,mmol,bandOf,_pMed,_pMean})`;
 const ctx=vm.createContext({console,Intl,Date,Math,Map,Set,Promise,JSON,Object,Array,Number,String,RegExp,parseFloat,isFinite,setTimeout,navigator:{}});
 const X=vm.runInContext(pre+core+post,ctx);
 let n=0; const T=(name,f)=>{try{f();n++;console.log('OK  ',name)}catch(e){console.log('FAIL',name,'\n',e.message);process.exitCode=1}};
@@ -45,4 +45,9 @@ T('smbISF: koolhydraatvrije SMB-vensters met daling geven mediaan',()=>{
   const g=series(20,(ts,d,i)=>{const m=i%96; return m<12?10:(m<36?10-(m-12)*0.1:7.6)}); // elke 8 u: start 10, daalt ~2.4
   const tr=[]; for(let d=0;d<20;d++)for(let k=0;k<3;k++) tr.push({ts:base+d*24*H+k*8*H,insulin:1,isSMB:true,carbs:0});
   const r=X.smbISF(g,tr,null,null); assert.ok(r.n>=12,'n='+r.n); assert.ok(r.med>0,'med='+r.med); });
+T('_segment: kiest blokgrenzen waar de waarde echt verandert, min. 2 uur',()=>{
+  const v=[...Array(6).fill(1.2),...Array(5).fill(0.6),...Array(13).fill(1.0)];
+  const s=X._segment(v,2,0.015,8); assert.equal(JSON.stringify(s.map(x=>x[0])),"[0,6,11]"); assert.ok(s.every(([a,b])=>b-a>=2)); });
+T('_segment: losse uitschieter van 1 uur geeft geen eigen blok',()=>{
+  const v=Array(24).fill(1.0); v[10]=1.3; const s=X._segment(v,2,0.015,8); assert.ok(s.every(([a,b])=>b-a>=2)); });
 console.log(`\n${n} tests geslaagd`); 

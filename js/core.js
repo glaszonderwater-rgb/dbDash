@@ -2228,6 +2228,18 @@ function proposalEngine(drift, oi, MR, pi, glucose, treatments, q, timeline){
 const _r05=x=>Math.round(x*20)/20, _r1=x=>Math.round(x*10)/10;
 function _hhmm(m){ return String(Math.floor(m/60)).padStart(2,"0")+":"+String(m%60).padStart(2,"0"); }
 function _hourTs(h, now){ return now + (((h*60+30 - todMin(now))%1440+1440)%1440) * 60000; }   // eerstvolgend moment: het profiel dat nu geldt
+// Beste indeling van 24 uurwaarden in blokken: minimale kwadratische afwijking + boete per blok,
+// elk blok minstens minLen uur, hooguit maxB blokken. Geeft [[van,tot), ...] in uren.
+function _segment(v, minLen, lambda, maxB){
+  const n=v.length, cost=(a,b)=>{ const s=v.slice(a,b), m=s.reduce((x,y)=>x+y,0)/s.length; return s.reduce((x,y)=>x+(y-m)**2,0); };
+  const INF=1e18, best=Array.from({length:maxB+1},()=>Array(n+1).fill(INF)), from=Array.from({length:maxB+1},()=>Array(n+1).fill(-1));
+  best[0][0]=0;
+  for(let k=1;k<=maxB;k++) for(let i=minLen;i<=n;i++) for(let j=0;j<=i-minLen;j++){ if(best[k-1][j]>=INF) continue;
+    const c=best[k-1][j]+cost(j,i)+lambda; if(c<best[k][i]){ best[k][i]=c; from[k][i]=j; } }
+  let k=1; for(let kk=1;kk<=maxB;kk++) if(best[kk][n]<best[k][n]) k=kk;
+  const out=[]; let i=n; while(k>0){ const j=from[k][i]; out.unshift([j,i]); i=j; k--; }
+  return out;
+}
 function mealCR(glucose, treatments, timeline, q, isfEff){
   const H=3600e3, g=glucose, T=g.map(x=>x.ts);
   const at=ts=>{ let lo=0,hi=T.length; while(lo<hi){const m=(lo+hi)>>1; if(T[m]<ts)lo=m+1;else hi=m;}
@@ -2277,15 +2289,17 @@ function aapsProfile(glucose, treatments, timeline, q, ds){
   const sumCur=hours.reduce((s,o)=>s+o.cur,0), sumNew=hours.reduce((s,o)=>s+o.nv,0);
   if(sumNew>sumCur*1.3){ const up=hours.reduce((s,o)=>s+Math.max(0,o.nv-o.cur),0), room=sumCur*1.3-(sumNew-up), k=up>0?Math.max(0,room/up):0;
     for(const o of hours) if(o.nv>o.cur) o.nv=o.cur+(o.nv-o.cur)*k; }
-  // samenvoegen tot blokken
-  const blocks=[]; for(const o of hours){ const b=blocks[blocks.length-1];
-    const v=_r05(o.nv);
-    if(b && Math.abs(v-b.vals.reduce((s,x)=>s+x,0)/b.vals.length)<=0.1 && (o.why==="laag")===(b.why==="laag")){ b.vals.push(v); b.hrs.push(o); }
-    else blocks.push({ from:o.h, vals:[v], hrs:[o], why:o.why }); }
-  const basal=blocks.map(b=>{ const v=Math.max(0.05,_r05(b.vals.reduce((s,x)=>s+x,0)/b.vals.length));
-    const curs=[...new Set(b.hrs.map(o=>_r05(o.cur)))], acts=b.hrs.map(o=>o.act).filter(x=>x!=null);
-    const low=Math.max(...b.hrs.map(o=>o.low)), high=Math.max(...b.hrs.map(o=>o.high));
-    return { from:_hhmm(b.from*60), now:curs, value:v, act:acts.length?[Math.min(...acts),Math.max(...acts)]:null, low, high, why:b.why }; });
+  // Basaal werkt pas na ~1 uur: een blok begint een uur vóór het uur waarin je de insuline nodig hebt.
+  const lead=hours.map((o,h)=>{ const n=hours[(h+1)%24]; let nv=n.nv; if(o.why==="laag") nv=Math.min(nv,o.nv);
+    return { h, cur:o.cur, nv, act:n.act, low:Math.max(o.low,n.low), high:n.high, why:(n.why==="laag"||o.why==="laag")?"laag":n.why }; });
+  // Bloktijden vrij gekozen: de indeling met de kleinste afwijking per uur, met een "prijs" per extra blok
+  // en minstens 2 uur per blok (geen losse uurtjes uit toeval).
+  const segs=_segment(lead.map(o=>o.nv), 2, 0.015, 8);
+  const basal=segs.map(([f,t])=>{ const hrs=lead.slice(f,t); const mean=hrs.reduce((s,o)=>s+o.nv,0)/hrs.length;
+    const lowH=hrs.filter(o=>o.why==="laag"); const v=Math.max(0.05,_r05(lowH.length?Math.min(mean,...lowH.map(o=>o.nv)):mean));
+    const curs=[...new Set(hrs.map(o=>_r05(o.cur)))], acts=hrs.map(o=>o.act).filter(x=>x!=null);
+    return { from:_hhmm(f*60), to:t, now:curs, value:v, act:acts.length?[Math.min(...acts),Math.max(...acts)]:null,
+      low:Math.max(...hrs.map(o=>o.low)), high:Math.max(...hrs.map(o=>o.high)), why:lowH.length?"laag":(acts.length?"lev":"") }; });
   const dayNow=hours.reduce((s,o)=>s+o.cur,0), dayNew=basal.reduce((s,b,i)=>{ const to=i+1<basal.length?hhmmToMin(basal[i+1].from)/60:24; return s+b.value*(to-hhmmToMin(b.from)/60); },0);
   // autosens
   const sensV=(ds||[]).filter(d=>d.sens!=null && (!usable||usable.has(localDayKey(d.ts)))).map(d=>d.sens);
@@ -2297,23 +2311,49 @@ function aapsProfile(glucose, treatments, timeline, q, ds){
   if(sensMean) est.push({k:"autosens",v:isfMed/sensMean});
   if(ic0.tdd>5) est.push({k:"tdd",v:100/ic0.tdd});
   let isfNew=est.length?_pMed(est.map(e=>e.v)):isfMed; isfNew=_r1(Math.min(Math.max(isfNew,isfMed*0.8),isfMed*1.15));
-  const isfBlocks=[]; for(let h=0;h<24;h++){ const keep=hours[h].low>0.04; const v=keep?_r1(isfNow[h]):isfNew;
-    const b=isfBlocks[isfBlocks.length-1]; if(b&&b.value===v&&_r1(b.nowv)===_r1(isfNow[h])) continue;
-    isfBlocks.push({ from:_hhmm(h*60), now:_r1(isfNow[h]), nowv:isfNow[h], value:v, why:keep?"laag":"est" }); }
-  // KH-ratio per bestaand blok
+  // ISF per uur: waar je vaak laag zit blijft de huidige waarde; blokken van minstens 3 uur.
+  const isfT=isfNow.map((v,h)=>hours[h].low>0.04?v:isfNew);
+  const isfBlocks=_segment(isfT,3,0.05,6).map(([f,t])=>{ const keep=hours.slice(f,t).some(o=>o.low>0.04);
+    const v=_r1(keep?Math.max(...isfT.slice(f,t)):isfT.slice(f,t).reduce((s,x)=>s+x,0)/(t-f)); const nw=_pMed(isfNow.slice(f,t));
+    return { from:_hhmm(f*60), to:t, now:_r1(nw), nowv:nw, value:v, why:(keep&&Math.abs(v-isfNew)>=0.05)?"laag":"est" }; });
+  // KH-ratio: bloktijden vrij gekozen op je maaltijden (1–3 blokken, elk ≥8 maaltijden),
+  // grens daar waar je ratio echt verschilt. Te weinig maaltijden: huidige waarde blijft.
   const icNow=[]; for(let h=0;h<24;h++) icNow.push(cur(h).ic);
-  const icB=[]; for(let h=0;h<24;h++){ const b=icB[icB.length-1]; if(b&&b.now===icNow[h]){ b.to=h+1; continue; } icB.push({from:h,to:h+1,now:icNow[h]}); }
   const meals=mealCR(glucose,treatments,timeline,q, isfMed/(sensMean||1));
-  const ic=icB.map(b=>{ const ms=meals.filter(m=>m.min>=b.from*60&&m.min<b.to*60).map(m=>m.cr);
-    const med=ms.length?_pMed(ms):null; let v=b.now, why="weinig";
-    if(ms.length>=8){ why="gelijk"; if(Math.abs(med-b.now)/b.now>0.10){ v=_r1(Math.min(Math.max(med,b.now*0.8),b.now*1.2)); why="gemeten"; } }
-    return { from:_hhmm(b.from*60), now:_r1(b.now), value:_r1(v), measured:med, n:ms.length, why }; });
+  let mfrac=null; try{ const MR=mealResults(glucose,treatments,timeline); if(MR&&MR.results&&MR.results.length>=MEAL_MIN) mfrac=MR.mfrac; }catch(_){}
+  const lg=meals.map(m=>({h:m.min/60, l:Math.log(m.cr), cr:m.cr}));
+  const sse=a=>{ if(!a.length) return 0; const m=a.reduce((s,x)=>s+x.l,0)/a.length; return a.reduce((s,x)=>s+(x.l-m)**2,0); };
+  let bestSplit=[0,24], bestCost=sse(lg)+0.6;
+  for(let b1=4;b1<=22;b1++){ const A=lg.filter(x=>x.h<b1), B=lg.filter(x=>x.h>=b1); if(A.length<8||B.length<8) continue;
+    const c2=sse(A)+sse(B)+1.2; if(c2<bestCost){ bestCost=c2; bestSplit=[0,b1,24]; }
+    for(let b2=b1+3;b2<=22;b2++){ const B2=lg.filter(x=>x.h>=b1&&x.h<b2), C=lg.filter(x=>x.h>=b2); if(B2.length<8||C.length<8) continue;
+      const c3=sse(A)+sse(B2)+sse(C)+1.8; if(c3<bestCost){ bestCost=c3; bestSplit=[0,b1,b2,24]; } } }
+  const ic=[]; for(let i=0;i+1<bestSplit.length;i++){ const f=bestSplit[i], t=bestSplit[i+1];
+    const ms=meals.filter(m=>m.min>=f*60&&m.min<t*60).map(m=>m.cr), nowB=_pMed(icNow.slice(f,t));
+    const med=ms.length?_pMed(ms):null; let v=nowB, why="weinig";
+    if(ms.length>=8){ why="gelijk"; if(Math.abs(med-nowB)/nowB>0.10){ v=Math.min(Math.max(med,nowB*0.8),nowB*1.2); why="gemeten"; } }
+    // Zie je na het eten duidelijk meer stijging dan je ingevoerde koolhydraten verklaren (≥125%),
+    // dan ligt het waarschijnlijk aan het tellen, niet aan de ratio: niet sterker maken.
+    if(v<nowB && mfrac!=null && mfrac>=1.25){ v=nowB; why="tellen"; }
+    // Vangrail: geen zwakkere ratio waar je na het eten vaak hoog zit, geen sterkere waar je vaak laag zit.
+    // (gemeten in de 4 uur na de maaltijden van dit blok)
+    let pn=0,ph=0,pl=0; const GT=glucose.map(x=>x.ts);
+    for(const m of meals.filter(m=>m.min>=f*60&&m.min<t*60)){ let lo=0,hi=GT.length; while(lo<hi){const k=(lo+hi)>>1; if(GT[k]<m.ts)lo=k+1;else hi=k;}
+      for(let j=lo;j<GT.length&&GT[j]<=m.ts+4*3600e3;j++){ pn++; if(glucose[j].bg>10)ph++; if(glucose[j].bg<3.9)pl++; } }
+    const hiF=pn?ph/pn:0, loF=pn?pl/pn:0;
+    if(v>nowB && hiF>0.30){ v=nowB; why="hoog"; } else if(v<nowB && loF>0.04){ v=nowB; why="laag"; }
+    if(why==="gemeten"){ ic.push({ from:_hhmm(f*60), to:t, now:_r1(nowB), nowAll:[...new Set(icNow.slice(f,t).map(_r1))], value:_r1(v), measured:med, n:ms.length, why }); continue; }
+    // Niet aanpassen = je huidige blokken binnen dit stuk precies laten staan.
+    for(let h=f;h<t;){ let e=h; while(e<t && _r1(icNow[e])===_r1(icNow[h])) e++;
+      ic.push({ from:_hhmm(h*60), to:e, now:_r1(icNow[h]), nowAll:[_r1(icNow[h])], value:_r1(icNow[h]), measured:med, n:ms.length, why }); h=e; } }
+  // aaneengesloten gelijke blokken samenvoegen
+  for(let i=ic.length-1;i>0;i--){ if(ic[i].value===ic[i-1].value && ic[i].now===ic[i-1].now){ ic[i-1].to=ic[i].to; ic.splice(i,1); } }
   const maxBasal=Math.max(...basal.map(b=>b.value));
   const changed = basal.some(b=>b.now.length!==1||Math.abs(b.now[0]-b.value)>=0.05) || isfBlocks.some(b=>Math.abs(b.now-b.value)>=0.1) || ic.some(b=>Math.abs(b.now-b.value)>=0.1);
   return { basal, isf:isfBlocks, ic, isfEst:est, isfNow:isfMed, sensMean, sensMax, tdd:ic0.tdd, dayNow, dayNew,
     maxIobMin:_r1(3*maxBasal), days:usable?usable.size:null, meals:meals.length, changed,
     target:{ lo:cur(0).targetLow??null, hi:cur(0).targetHigh??null }, name:cur(0).name,
-    mealBolus:_pMed(treatments.filter(t=>t.insulin>=0.5&&!t.isSMB&&(!usable||usable.has(localDayKey(t.ts)))).map(t=>t.insulin)) };
+    mfrac, mealBolus:_pMed(treatments.filter(t=>t.insulin>=0.5&&!t.isSMB&&(!usable||usable.has(localDayKey(t.ts)))).map(t=>t.insulin)) };
 }
 function aapsProfileText(P){
   const f=v=>String(v).replace(".",",");
