@@ -741,7 +741,7 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
   <div class="h3" id="anaGrid" style="margin-top:.2rem" data-i18n="an.meals">Maaltijden</div>
   <details class="deep" data-an="meals"><summary><span data-i18n="an.mealResp">Maaltijdrespons</span> <span class="foldhint" data-i18n="an.mealRespHint">opname, piek &amp; dagdelen</span></summary><div class="body"><div class="loading" data-i18n="loading">Openklappen om te berekenen…</div></div></details>
   <details class="deep" data-an="lunch"><summary><span>Lunchtijd</span> <span class="foldhint">laat of overgeslagen lunch</span></summary><div class="body"><div class="loading" data-i18n="loading">Openklappen om te berekenen…</div></div></details>
-  <details class="fold" id="secAgp" hidden>
+  <details class="fold" id="secAgp" hidden open>
     <summary><span data-i18n="an.agp">Dagprofiel (AGP)</span> <span class="foldhint" data-i18n="an.agpHint">je typische dag als band</span></summary>
     <div class="foldbody">
       <div id="agp"></div>
@@ -755,7 +755,7 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
   </details>
 
   <div class="h3" data-i18n="an.safetyRange">Veiligheid &amp; bereik</div>
-  <details class="fold" id="secSafety" hidden>
+  <details class="fold" id="secSafety" hidden open>
     <summary><span data-i18n="an.safety">Veiligheid — hypo's</span> <span class="foldhint" data-i18n="an.safetyHint">episodes, dips, patronen</span></summary>
     <div class="foldbody">
       <div class="kpis" id="hypoKpis" style="margin-bottom:.8rem"></div>
@@ -771,14 +771,6 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
   </details>
 
   <div class="h3" data-i18n="an.insulinBasal">Insuline &amp; basaal</div>
-  <details class="fold" id="secProposals" hidden>
-    <summary><span data-i18n="an.proposals">Bespreekwaarden</span> <span class="foldhint" data-i18n="an.proposalsHint">concrete getallen om met je team te bespreken</span></summary>
-    <div class="foldbody"><div id="proposals"></div></div>
-  </details>
-  <details class="fold" id="secEffects">
-    <summary><span>Effect van doorgevoerde wijzigingen</span> <span class="foldhint">meting 14 dagen erna</span></summary>
-    <div class="foldbody"><div id="effects"><div class="muted">…</div></div></div>
-  </details>
   <details class="deep" data-an="geheugen"><summary><span>Maaltijdgeheugen</span> <span class="foldhint">jouw eigen uitkomst per product</span></summary><div class="body"><div class="loading">…</div></div></details>
   <details class="deep" data-an="maand"><summary><span>Maandtrend</span> <span class="foldhint">tijd in bereik per maand</span></summary><div class="body"><div class="loading">…</div></div></details>
   <details class="deep" data-an="uur"><summary><span>Per uur</span> <span class="foldhint">spreiding, hypo's &amp; hoogtes per uur</span></summary><div class="body"><div class="loading">…</div></div></details>
@@ -797,7 +789,7 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
   </details>
 
   <div class="h3" data-i18n="an.progress">Voortgang</div>
-  <details class="fold" id="secTrend" hidden>
+  <details class="fold" id="secTrend" hidden open>
     <summary><span data-i18n="an.trend">Weektrend</span> <span class="foldhint" data-i18n="an.trendHint">tijd in bereik per week</span></summary>
     <div class="foldbody">
       <div id="trend"></div>
@@ -921,10 +913,12 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
 
     <div class="cbFatNote" id="cbFatNote" data-i18n="eten.fatNote">Kies een vet of eiwitrijk product (pizza, friet, kaas, noten…) en je krijgt bij de portie meteen een korte bolus-tip.</div>
   </section>
+  <div style="margin-top:.8rem"><button class="ghost" id="goImport" style="font-size:.78rem">⬇ NEVO-voedseldatabase naar Nightscout importeren</button></div>
   </div>
 
   <!-- IMPORT — NEVO naar Nightscout (schrijft; apart van de leesverbinding) -->
   <div class="view" data-view="import" hidden>
+  <button class="ghost" id="backEten" style="font-size:.78rem;margin-bottom:.5rem">← terug naar Eten</button>
   <section class="epoch" style="margin-left:0"><div class="eh"><h2>NEVO naar Nightscout</h2><span class="sub">voedseldatabase voor AAPS</span></div>
   <div id="nvRoot"><div class="box"><b>Verbinding om te schrijven</b>
 <div class="nvwarn">Dit tabblad is het <b>enige deel van de app dat naar je Nightscout schrijft</b>. Het gebruikt <b>niet</b> je leestoken van het tandwiel: vul hier een token met schrijfrechten (rol admin) in. Het wordt nergens bewaard en verdwijnt bij het sluiten van de pagina.</div>
@@ -995,6 +989,15 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
 
   <!-- CONSULT -->
   <div class="view" data-view="consult" hidden>
+  <div class="h3" style="margin-top:.2rem">Voorstellen &amp; effect</div>
+  <details class="fold" id="secProposals" hidden open>
+    <summary><span data-i18n="an.proposals">Bespreekwaarden</span> <span class="foldhint" data-i18n="an.proposalsHint">concrete getallen om met je team te bespreken</span></summary>
+    <div class="foldbody"><div id="proposals"></div></div>
+  </details>
+  <details class="fold" id="secEffects" open>
+    <summary><span>Effect van doorgevoerde wijzigingen</span> <span class="foldhint">meting 14 dagen erna</span></summary>
+    <div class="foldbody"><div id="effects"><div class="muted">…</div></div></div>
+  </details>
   <section class="epoch" id="epConsult" style="margin-left:0">
     <div class="eh"><h2 data-i18n="consult.title">Richting je consult</h2><span class="sub" id="consultSub"></span></div>
     <div id="consultList"></div>
@@ -1023,9 +1026,6 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
   <button class="tab" data-tab="consult">
     <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M9 12h6"/><path d="M9 16h6"/></svg>
     <span data-i18n="tab.consult">Consult</span><span class="cbadge" id="consultBadge" hidden></span></button>
-  <button class="tab" data-tab="import">
-    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M4 20h16"/></svg>
-    <span>Import</span></button>
 </nav>
 
 
@@ -4757,6 +4757,7 @@ function showTab(tab){
   window.scrollTo({top:0});
 }
 document.querySelectorAll("#tabbar .tab").forEach(b=>b.onclick=()=>showTab(b.dataset.tab));
+document.getElementById("goImport").onclick=()=>showTab("import"); document.getElementById("backEten").onclick=()=>showTab("eten");
 
 // De index: élke analyse bij naam, één tik — geen zoeken
 // Sprong vanuit Overzicht-links naar een analyse: open de sectie en scrol erheen.
