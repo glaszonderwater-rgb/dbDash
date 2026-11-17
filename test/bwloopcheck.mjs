@@ -28,7 +28,7 @@ const r=await page.evaluate(()=>({
   basaalCard:[...document.querySelectorAll('#proposals .pcard')].map(c=>({t:c.querySelector('.pctitle')?.textContent,why:c.querySelector('.pcwhy')?.textContent,metas:[...c.querySelectorAll('.pdmeta')].map(m=>m.textContent)})).find(c=>/Basaal/.test(c.t))}));
 console.log('=== matrix (dagdeel | ISF | Basaal | KH) ===');
 for(const row of r.rows) console.log('  ', row.join(' | '));
-const basaalChanged=r.rows.some(row=>/→/.test(row[2]||''));
+const basaalChanged=r.rows.some(row=>/→/.test(row.slice(1).join(' ')));
 console.log('basaal-kolom gevuld met kandidaat:', basaalChanged?'JA':'NEE');
 console.log('basaal-bron loop-basaal:', r.basaalCard && /loop.*profiel|temp-basaal/i.test((r.basaalCard.why||'')+(r.basaalCard.metas||[]).join(' '))?'JA':'NEE');
 console.log('errors:', errors.length?errors:'geen');

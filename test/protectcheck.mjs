@@ -1,0 +1,15 @@
+import { chromium } from 'playwright-core';
+const b=await chromium.launch({executablePath:'/opt/pw-browsers/chromium-1194/chrome-linux/chrome'});
+const p=await b.newPage();const errs=[];p.on('pageerror',e=>errs.push(e.message));
+await p.route('https://mock.nightscout.test/**',r=>r.fulfill({status:200,contentType:'application/json',body:'[]'}));
+await p.goto(''+new URL('../index.html',import.meta.url).href+'');
+await p.fill('#inUrl','https://mock.nightscout.test');await p.fill('#inTok','geheim-token-123');
+await p.check('#inProtect');await p.fill('#inPass','hunter2');await p.click('#btnSave');await p.waitForTimeout(1500);
+console.log('opgeslagen:',await p.evaluate(()=>localStorage.getItem('dbdash.cfg')).then(s=>({heeftToken:s.includes('geheim-token-123'),enc:s.includes('"enc"'),prot:s.includes('"protected":true')})));
+await p.reload();await p.waitForTimeout(800);
+console.log('dialoog zichtbaar:',await p.evaluate(()=>!!document.getElementById('unlockDlg')));
+await p.fill('#unlockPw','fout');await p.click('#unlockOk');await p.waitForTimeout(300);
+console.log('fout wachtwoord:',await p.evaluate(()=>document.getElementById('unlockErr').textContent));
+await p.fill('#unlockPw','hunter2');await p.click('#unlockOk');await p.waitForTimeout(500);
+console.log('token na ontgrendelen:',await p.evaluate(()=>cfg.token),'dialoog weg:',await p.evaluate(()=>!document.getElementById('unlockDlg')));
+console.log('errors',errs);await b.close();

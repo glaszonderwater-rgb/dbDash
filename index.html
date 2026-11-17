@@ -28,11 +28,12 @@
    én donker via tokens. ─────────────────────────────────────────────────── */
 :root{
   --bg:#F3F4F1; --surface:#FFFFFF; --surface-2:#F7F8F5; --raised:#FFFFFF;
-  --ink:#20272E; --muted:#5E6A75; --dim:#7B8590;
+  --ink:#20272E; --muted:#5E6A75; --dim:#66727D;
   --line:#E7E9E4; --line-2:#DCDFD9;
   --accent:#2E7BD6; --accent-soft:#E7F0FB; --on-accent:#FFFFFF;
   --veryLow:#B23A3A; --low:#DB5F5A; --inRange:#1FA877; --high:#D2942A; --veryHigh:#C86A2A; --carb:#7E6BC8;
   --warn:#C08320; --risk-bg:#FBF1EC; --risk-line:#EFDCCC;
+  --t-inRange:#11765A; --t-high:#8A5A00; --t-low:#B23A36; --t-veryLow:#9A2F2F; --t-warn:#8A5A00; --t-accent:#1F66B8;
   --sans:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",sans-serif;
   --mono:ui-monospace,"SF Mono","Roboto Mono","DejaVu Sans Mono",Menlo,monospace;
   --serif:Charter,Georgia,"Times New Roman",serif;
@@ -49,6 +50,7 @@
     --accent:#5AA0EA; --accent-soft:#17293D; --on-accent:#081827;
     --inRange:#35C08C; --high:#E0A94A; --low:#E76B66; --veryHigh:#DE8A43; --veryLow:#C0554E; --carb:#A99BE0;
     --warn:#E0A94A; --risk-bg:#241A16; --risk-line:#43281F;
+    --t-inRange:var(--inRange); --t-high:var(--high); --t-low:var(--low); --t-veryLow:var(--veryLow); --t-warn:var(--warn); --t-accent:var(--accent);
     --shadow:0 1px 2px rgba(0,0,0,.4), 0 16px 34px -18px rgba(0,0,0,.66);
     --shadow-sm:0 1px 2px rgba(0,0,0,.4);
 } }
@@ -59,6 +61,7 @@
     --accent:#5AA0EA; --accent-soft:#17293D; --on-accent:#081827;
     --inRange:#35C08C; --high:#E0A94A; --low:#E76B66; --veryHigh:#DE8A43; --veryLow:#C0554E; --carb:#A99BE0;
     --warn:#E0A94A; --risk-bg:#241A16; --risk-line:#43281F;
+    --t-inRange:var(--inRange); --t-high:var(--high); --t-low:var(--low); --t-veryLow:var(--veryLow); --t-warn:var(--warn); --t-accent:var(--accent);
     --shadow:0 1px 2px rgba(0,0,0,.4), 0 16px 34px -18px rgba(0,0,0,.66);
     --shadow-sm:0 1px 2px rgba(0,0,0,.4);
 }
@@ -93,10 +96,10 @@ button.ghost{background:var(--surface);border-color:var(--line-2);color:var(--mu
   padding:.42rem .6rem;box-shadow:var(--shadow-sm)}
 button.ghost:hover:not(:disabled){color:var(--ink);opacity:1}
 
-.scope{display:flex;flex-wrap:wrap;gap:.1rem 1.1rem;font-size:.64rem;color:var(--muted);
+.scope{display:flex;flex-wrap:wrap;gap:.1rem 1.1rem;font-size:.75rem;color:var(--muted);
   font-variant-numeric:tabular-nums;padding:.4rem 0;border-top:1px solid var(--line)}
 .scope i{font-style:normal;opacity:.7} .scope b{color:var(--ink);font-weight:600}
-.scope .warn b{color:var(--warn)}
+.scope .warn b{color:var(--t-warn)}
 
 /* Onderbalk-navigatie — duim-bereikbaar, vast onderaan */
 .nav{position:fixed;left:0;right:0;bottom:0;z-index:30;display:flex;justify-content:center;gap:.15rem;
@@ -104,17 +107,17 @@ button.ghost:hover:not(:disabled){color:var(--ink);opacity:1}
   border-top:1px solid var(--line);padding:.3rem .35rem calc(.3rem + env(safe-area-inset-bottom,0px))}
 .nav .tab{position:relative;flex:1 1 0;max-width:6.5rem;display:flex;flex-direction:column;align-items:center;gap:.16rem;
   background:transparent;border:0;box-shadow:none;color:var(--dim);
-  font-size:.62rem;font-weight:650;letter-spacing:.01em;padding:.34rem .3rem;border-radius:.85rem;
+  font-size:.75rem;font-weight:650;letter-spacing:.01em;padding:.34rem .3rem;border-radius:.85rem;
   cursor:pointer;transition:color .14s,background .14s}
 .nav .tab svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;
   stroke-linecap:round;stroke-linejoin:round;display:block}
-.nav .tab.on{color:var(--accent);background:var(--accent-soft)}
+.nav .tab.on{color:var(--t-accent);background:var(--accent-soft)}
 .nav .tab:active{transform:translateY(.5px)}
 @media (hover:hover){ .nav .tab:hover:not(.on){color:var(--muted)} }
 
 main{padding-top:1.4rem}
 section{margin-bottom:1.6rem}
-h2.sect{font-size:.66rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;
+h2.sect{font-size:.75rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;
   color:var(--dim);margin:0 0 .7rem;display:flex;align-items:center;gap:.6rem}
 h2.sect::after{content:"";flex:1;height:1px;background:var(--line)}
 
@@ -125,13 +128,13 @@ h2.sect::after{content:"";flex:1;height:1px;background:var(--line)}
   border:1px solid var(--line);border-radius:999px;box-shadow:var(--shadow);
   padding:.55rem 1.05rem;margin-bottom:1.5rem}
 .nu .val{font-family:var(--mono);font-size:1.35rem;line-height:1;font-weight:650;
-  color:var(--inRange);font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+  color:var(--t-inRange);font-variant-numeric:tabular-nums;letter-spacing:-.02em}
 .nu .arrow{font-size:1rem;color:var(--muted)}
 .nu .age{font-size:.7rem;color:var(--muted)}
-.nu .age.stale{color:var(--warn)}
-.nu .onb{margin-left:auto;font-family:var(--mono);font-size:.68rem;color:var(--dim);text-align:right}
+.nu .age.stale{color:var(--t-warn)}
+.nu .onb{margin-left:auto;font-family:var(--mono);font-size:.75rem;color:var(--dim);text-align:right}
 .nu .onb b{color:var(--ink);font-weight:600}
-.nu .ob-hint{color:var(--warn);font-weight:700}
+.nu .ob-hint{color:var(--t-warn);font-weight:700}
 
 /* tijdlijn-ruggengraat */
 .tl{position:relative;padding-left:1.5rem}
@@ -139,12 +142,12 @@ h2.sect::after{content:"";flex:1;height:1px;background:var(--line)}
 .epoch{position:relative;margin-bottom:2.1rem;scroll-margin-top:7.5rem}
 .epoch::before{content:"";position:absolute;left:-1.38rem;top:.24rem;width:11px;height:11px;
   border-radius:50%;background:var(--bg);border:2.5px solid var(--accent)}
-.epoch.warned::before{border-color:var(--warn)}
+.epoch.warned::before{border-color:var(--t-warn)}
 .eh{display:flex;align-items:baseline;gap:.6rem;margin-bottom:.7rem}
-.eh h2{font-size:.68rem;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--accent)}
-.epoch.warned .eh h2{color:var(--warn)}
-.eh .sub{font-size:.72rem;color:var(--dim)}
-.h3{font-size:.72rem;font-weight:750;letter-spacing:.11em;text-transform:uppercase;color:var(--muted);margin:1.4rem .2rem .55rem}
+.eh h2{font-size:.75rem;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--t-accent)}
+.epoch.warned .eh h2{color:var(--t-warn)}
+.eh .sub{font-size:.75rem;color:var(--dim)}
+.h3{font-size:.75rem;font-weight:750;letter-spacing:.11em;text-transform:uppercase;color:var(--muted);margin:1.4rem .2rem .55rem}
 
 /* bevinding-kaarten (inbox-stijl) */
 .f{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
@@ -157,30 +160,30 @@ h2.sect::after{content:"";flex:1;height:1px;background:var(--line)}
 .fdot.w{background:var(--warn)} .fdot.g{background:var(--inRange)} .fdot.n{background:var(--dim);opacity:.4}
 .ftxt{font-family:var(--serif);font-size:1rem;line-height:1.5}
 .ftxt b{font-weight:650}
-.fwhen{margin-left:auto;flex:none;font-size:.64rem;color:var(--dim);font-family:var(--mono)}
+.fwhen{margin-left:auto;flex:none;font-size:.75rem;color:var(--dim);font-family:var(--mono)}
 .f.read{opacity:.62}
 .f.read .ftxt{font-family:inherit;font-size:.88rem}
 /* bewijsketen 1→2→3 */
 .f details{margin:.45rem 0 0 1.5rem}
-.f summary{list-style:none;cursor:pointer;user-select:none;font-size:.74rem;font-weight:650;color:var(--accent)}
+.f summary{list-style:none;cursor:pointer;user-select:none;font-size:.75rem;font-weight:650;color:var(--t-accent)}
 .f summary::-webkit-details-marker{display:none}
 .f summary::after{content:" ↓"} .f details[open] summary::after{content:" ↑"}
 .chain{margin-top:.5rem}
 .step{display:flex;gap:.6rem;padding:.26rem 0;font-size:.82rem;color:var(--muted);line-height:1.55}
 .step .no{flex:none;width:1.1rem;height:1.1rem;border-radius:50%;background:var(--surface-2);
-  border:1px solid var(--line);font-size:.6rem;font-weight:700;color:var(--accent);
+  border:1px solid var(--line);font-size:.75rem;font-weight:700;color:var(--t-accent);
   display:flex;align-items:center;justify-content:center;transform:translateY(.15rem)}
 .step b{color:var(--ink)}
-.ffine{font-family:var(--mono);font-size:.64rem;color:var(--dim);margin:.4rem 0 0 1.7rem}
+.ffine{font-family:var(--mono);font-size:.75rem;color:var(--dim);margin:.4rem 0 0 1.7rem}
 .facts-row{margin-left:1.5rem}
 .acts{display:flex;gap:.45rem;margin:.65rem 0 0 1.5rem;flex-wrap:wrap}
-.act{font-size:.72rem;font-weight:650;border-radius:999px;padding:.34rem .7rem;cursor:pointer;
-  color:var(--accent);background:var(--accent-soft);border:0}
+.act{font-size:.75rem;font-weight:650;border-radius:999px;padding:.34rem .7rem;cursor:pointer;
+  color:var(--t-accent);background:var(--accent-soft);border:0}
 .act.ghost{background:transparent;border:1px solid var(--line-2);color:var(--muted)}
 .act.done{background:transparent;border:1px dashed var(--line-2);color:var(--dim);cursor:default}
 
 /* gemeten-vs-ingesteld */
-.mvshead{display:flex;font-size:.6rem;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);margin-bottom:.2rem}
+.mvshead{display:flex;font-size:.75rem;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);margin-bottom:.2rem}
 .mvshead span:last-child{margin-left:auto}
 .mvs{width:100%;border-collapse:collapse;font-size:.86rem;font-variant-numeric:tabular-nums}
 .mvs td{padding:.38rem 0;border-top:1px solid var(--line)}
@@ -189,20 +192,20 @@ h2.sect::after{content:"";flex:1;height:1px;background:var(--line)}
 .mvs td:nth-child(2){color:var(--ink);font-weight:600}
 .mvs td:nth-child(3){color:var(--dim)}
 .mvs .st{width:1.5rem;text-align:right}
-.mvs .okd{color:var(--inRange)} .mvs .wad{color:var(--warn);font-weight:700}
+.mvs .okd{color:var(--t-inRange)} .mvs .wad{color:var(--t-warn);font-weight:700}
 
 /* consultlijst */
 .citem{display:flex;gap:.6rem;align-items:baseline;background:var(--surface);border:1px solid var(--line);
   border-radius:14px;padding:.7rem .9rem;margin-bottom:.5rem;font-size:.86rem}
 .citem .del{margin-left:auto;background:none;border:0;color:var(--dim);cursor:pointer;font-size:.9rem;padding:0 .2rem}
 .cbadge{position:absolute;top:.16rem;right:.9rem;background:var(--warn);color:#fff;font-family:var(--mono);
-  font-size:.54rem;line-height:1;border-radius:999px;padding:.1rem .32rem;display:inline-block}
+  font-size:.75rem;line-height:1;border-radius:999px;padding:.1rem .32rem;display:inline-block}
 .cbadge[hidden]{display:none}
 
 .spark{width:100%;height:56px;display:block;margin-top:.7rem}
 .onboard{display:flex;gap:1.1rem;margin-top:.5rem;font-size:.8rem;color:var(--muted);flex-wrap:wrap}
 .onboard b{color:var(--ink);font-weight:650;font-family:var(--mono)}
-.onboard .ob-hint{color:var(--warn);font-weight:600}
+.onboard .ob-hint{color:var(--t-warn);font-weight:600}
 
 /* analyse-index (tegels) */
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-bottom:1.1rem}
@@ -210,9 +213,9 @@ h2.sect::after{content:"";flex:1;height:1px;background:var(--line)}
   box-shadow:var(--shadow-sm);padding:.7rem .8rem;cursor:pointer;color:var(--ink);
   display:flex;flex-direction:column;gap:.1rem;font:inherit;letter-spacing:0}
 .tile b{font-size:.86rem;font-weight:650}
-.tile span{font-size:.68rem;color:var(--muted)}
+.tile span{font-size:.75rem;color:var(--muted)}
 .tile:active{transform:translateY(.5px)}
-.tolink{margin-top:.7rem;font-size:.8rem;font-weight:650;color:var(--accent);cursor:pointer}
+.tolink{margin-top:.7rem;font-size:.8rem;font-weight:650;color:var(--t-accent);cursor:pointer}
 .view[data-view="consult"] .epoch,.view[data-view="eten"] .epoch{padding-left:0}
 .view[data-view="consult"] .epoch::before,.view[data-view="eten"] .epoch::before{display:none}
 details.fold{scroll-margin-top:7.5rem}
@@ -235,9 +238,9 @@ details.fold>.foldbody{padding:0 1.05rem 1.05rem}
 /* ── Grootste kans (tint-vlak i.p.v. accent-balk) ──────────────────────────── */
 .opp{background:var(--accent-soft);border-color:transparent}
 .opp.risk{background:var(--risk-bg)}
-.opp .lead{font-size:.62rem;font-weight:700;letter-spacing:.13em;text-transform:uppercase;
-  color:var(--accent);display:flex;align-items:center;gap:.35rem}
-.opp.risk .lead{color:var(--low)}
+.opp .lead{font-size:.75rem;font-weight:700;letter-spacing:.13em;text-transform:uppercase;
+  color:var(--t-accent);display:flex;align-items:center;gap:.35rem}
+.opp.risk .lead{color:var(--t-low)}
 .opp .lead::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor}
 .opp .msg{font-size:1.02rem;margin-top:.4rem;line-height:1.45;color:var(--muted)}
 .opp .msg b{color:var(--ink);font-weight:650}
@@ -246,14 +249,14 @@ details.fold>.foldbody{padding:0 1.05rem 1.05rem}
 .kpis{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));
   background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden;box-shadow:var(--shadow-sm)}
 .kpi{padding:.8rem .85rem;display:flex;flex-direction:column;gap:.12rem;box-shadow:inset 1px 1px 0 0 var(--line)}
-.kpi .k{font-size:.58rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);
+.kpi .k{font-size:.75rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);
   display:flex;align-items:center;gap:.3rem;line-height:1.2}
 .kpi .v{font-family:var(--mono);font-size:1.45rem;font-weight:600;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
-.kpi .s{font-size:.6rem;color:var(--dim)}
+.kpi .s{font-size:.75rem;color:var(--dim)}
 .kpi.safety{background:var(--risk-bg)}
-.badge{font-size:.58rem;font-weight:700;padding:.03rem .32rem;border-radius:999px;line-height:1.4}
-.badge.ok{background:color-mix(in srgb,var(--inRange) 20%,transparent);color:var(--inRange)}
-.badge.no{background:color-mix(in srgb,var(--low) 20%,transparent);color:var(--low)}
+.badge{font-size:.75rem;font-weight:700;padding:.03rem .32rem;border-radius:999px;line-height:1.4}
+.badge.ok{background:color-mix(in srgb,var(--inRange) 20%,transparent);color:var(--t-inRange)}
+.badge.no{background:color-mix(in srgb,var(--low) 20%,transparent);color:var(--t-low)}
 
 /* ── Band-verdeling ────────────────────────────────────────────────────────── */
 .tirbar{display:flex;gap:2px;height:15px;border-radius:5px;overflow:hidden;margin:.1rem 0 .9rem;
@@ -271,17 +274,17 @@ details.fold>.foldbody{padding:0 1.05rem 1.05rem}
 
 /* ── SVG-grafieken ─────────────────────────────────────────────────────────── */
 .chart{width:100%;height:auto;display:block}
-.legend{display:flex;flex-wrap:wrap;gap:.35rem .9rem;font-size:.64rem;color:var(--muted);margin-top:.55rem}
+.legend{display:flex;flex-wrap:wrap;gap:.35rem .9rem;font-size:.75rem;color:var(--muted);margin-top:.55rem}
 .legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:.25rem;vertical-align:-1px}
 
 .obs{font-size:.88rem;margin-top:.7rem;line-height:1.5;color:var(--muted)} .obs b{color:var(--ink);font-weight:600}
 .muted{color:var(--muted);font-size:.76rem;line-height:1.5}
 .prof3{display:grid;grid-template-columns:repeat(3,1fr);gap:.5rem;margin-top:.8rem}
 .pcol{border:1px solid var(--line);border-radius:.6rem;padding:.55rem .5rem;background:var(--bg)}
-.pcol .ph{font-size:.64rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:.35rem}
+.pcol .ph{font-size:.75rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:.35rem}
 .prow{display:flex;justify-content:space-between;align-items:baseline;font-size:.82rem;padding:.12rem 0}
-.prow span{color:var(--muted);font-family:var(--mono);font-size:.72rem} .prow b{color:var(--ink);font-weight:650}
-.pcol .pu{font-size:.64rem;color:var(--muted);margin-top:.35rem;text-align:right}
+.prow span{color:var(--muted);font-family:var(--mono);font-size:.75rem} .prow b{color:var(--ink);font-weight:650}
+.pcol .pu{font-size:.75rem;color:var(--muted);margin-top:.35rem;text-align:right}
 .logform{padding-bottom:.7rem;border-bottom:1px solid var(--line);margin-bottom:.5rem}
 .chips{display:flex;flex-wrap:wrap;gap:.35rem;margin-bottom:.55rem}
 .chip{font-size:.76rem;padding:.3rem .55rem;border-radius:.5rem;border:1px solid var(--line-2);background:var(--bg);color:var(--muted);cursor:pointer;white-space:nowrap}
@@ -292,30 +295,30 @@ details.fold>.foldbody{padding:0 1.05rem 1.05rem}
 .logentry{padding:.6rem 0;border-top:1px solid var(--line)} .logentry:first-child{border-top:0}
 .leh{display:flex;align-items:baseline;gap:.5rem}
 .leh .ic{font-size:1rem} .leh .lt{font-weight:600;font-size:.9rem;color:var(--ink)}
-.leh .ld{font-family:var(--mono);font-size:.72rem;color:var(--muted)}
+.leh .ld{font-family:var(--mono);font-size:.75rem;color:var(--muted)}
 .leh .del{margin-left:auto;background:none;border:0;color:var(--dim);font-size:1rem;cursor:pointer;padding:.1rem .3rem;line-height:1}
 .lenote{font-size:.82rem;color:var(--muted);margin-top:.2rem}
 .lecarb{font-size:.82rem;color:var(--ink);margin-top:.25rem;font-weight:600}
 .lecarb .litems{font-weight:400;color:var(--muted)}
 /* ── Koolhydraat-schatter ──────────────────────────────────────────────────── */
-.cbNote{font-size:.72rem;line-height:1.45;color:var(--muted);background:var(--surface-2);border-radius:.6rem;padding:.5rem .65rem;margin-bottom:.7rem}
+.cbNote{font-size:.75rem;line-height:1.45;color:var(--muted);background:var(--surface-2);border-radius:.6rem;padding:.5rem .65rem;margin-bottom:.7rem}
 /* "Zo reageert jóuw lijf" — persoonlijke maaltijdrespons uit eigen data */
 .cbMe{border:1px solid var(--line-2);border-left:3px solid var(--accent);border-radius:.7rem;background:var(--surface);box-shadow:var(--shadow-sm);padding:.6rem .75rem;margin-bottom:.7rem}
-.cbMe .cbMeH{font-size:.72rem;font-weight:700;letter-spacing:.02em;color:var(--ink);margin-bottom:.35rem;display:flex;align-items:center;gap:.35rem}
-.cbMe .cbMeH .cbMeN{font-weight:400;color:var(--dim);font-size:.68rem}
+.cbMe .cbMeH{font-size:.75rem;font-weight:700;letter-spacing:.02em;color:var(--ink);margin-bottom:.35rem;display:flex;align-items:center;gap:.35rem}
+.cbMe .cbMeH .cbMeN{font-weight:400;color:var(--dim);font-size:.75rem}
 .cbMe .cbMeRow{font-size:.78rem;line-height:1.5;color:var(--muted);display:flex;gap:.45rem;align-items:baseline;padding:.12rem 0}
 .cbMe .cbMeRow b{color:var(--ink)}
-.cbMe .cbMeK{flex:none;color:var(--dim);width:5.4rem;font-size:.72rem}
+.cbMe .cbMeK{flex:none;color:var(--dim);width:5.4rem;font-size:.75rem}
 .cbMe.thin{border-left-color:var(--line-2)}
 .cbMe.thin .cbMeRow{color:var(--dim)}
 /* "Vraag het je data" — lokale vraag-router */
 .ask{margin:.2rem 0 .9rem}
 .ask .askrow{display:flex;align-items:center;gap:.5rem;background:var(--surface);border:1px solid var(--line-2);border-radius:.8rem;padding:.15rem .7rem;box-shadow:var(--shadow-sm)}
-.ask .askrow:focus-within{border-color:var(--accent)}
+.ask .askrow:focus-within{border-color:var(--t-accent)}
 .ask .askic{width:18px;height:18px;flex:none;stroke:var(--dim);fill:none;stroke-width:2;stroke-linecap:round}
 .ask #askInput{flex:1;border:none;background:none;font-size:.92rem;padding:.6rem 0;color:var(--ink);outline:none}
 .ask .chips{margin:.5rem 0 0}
-.ask .chips .chip{font-size:.74rem}
+.ask .chips .chip{font-size:.75rem}
 .askA{margin-top:.7rem;border:1px solid var(--line-2);border-left:3px solid var(--accent);border-radius:.7rem;background:var(--surface);box-shadow:var(--shadow-sm);padding:.7rem .8rem}
 .askA .askAh{font-size:.82rem;font-weight:700;color:var(--ink);margin-bottom:.3rem}
 .askA .askAb{font-size:.82rem;line-height:1.55;color:var(--muted)}
@@ -323,26 +326,26 @@ details.fold>.foldbody{padding:0 1.05rem 1.05rem}
 .askA .askAe{font-size:.7rem;color:var(--dim);margin-top:.45rem}
 .askA .askFollow{margin-top:.55rem}
 .askA .askAct{margin-top:.55rem;display:flex;gap:.4rem;flex-wrap:wrap}
-.askA .askAct .act{font-size:.74rem}
+.askA .askAct .act{font-size:.75rem}
 .askNone{font-size:.8rem;color:var(--muted);line-height:1.5}
 .askA.ai{border-left-color:var(--carb)}
-.askA .askBadge{font-size:.66rem;color:var(--dim);margin-top:.5rem;display:flex;align-items:center;gap:.3rem}
+.askA .askBadge{font-size:.75rem;color:var(--dim);margin-top:.5rem;display:flex;align-items:center;gap:.3rem}
 .askA .askBadge b{color:var(--carb);font-weight:700}
 .askA details.aiSent{margin-top:.4rem}
-.askA details.aiSent summary{font-size:.68rem;color:var(--dim);cursor:pointer}
-.askA details.aiSent pre{font-size:.66rem;white-space:pre-wrap;color:var(--muted);background:var(--surface-2);border-radius:.5rem;padding:.5rem .6rem;margin:.35rem 0 0;max-height:11rem;overflow:auto}
+.askA details.aiSent summary{font-size:.75rem;color:var(--dim);cursor:pointer}
+.askA details.aiSent pre{font-size:.75rem;white-space:pre-wrap;color:var(--muted);background:var(--surface-2);border-radius:.5rem;padding:.5rem .6rem;margin:.35rem 0 0;max-height:11rem;overflow:auto}
 .aitog{display:flex;align-items:center;gap:.5rem;margin-top:.5rem;font-size:.85rem;color:var(--ink)}
 .aitog input{width:auto;margin:0}
 #inAiUrl,#inAiModel,#inAiKey{margin-top:.4rem}
 #cbSearch{width:100%;box-sizing:border-box;font-size:.95rem;padding:.7rem .85rem;border:1px solid var(--line-2);border-radius:.7rem;background:var(--surface);color:var(--ink);box-shadow:var(--shadow-sm)}
-#cbSearch:focus{outline:none;border-color:var(--accent)}
+#cbSearch:focus{outline:none;border-color:var(--t-accent)}
 /* categorie-chips: één horizontale scroll-strip i.p.v. een muur */
 .cbCats{display:flex;flex-wrap:nowrap;gap:.4rem;margin:.6rem 0 .2rem;overflow-x:auto;padding-bottom:.35rem;
   scrollbar-width:none;-webkit-overflow-scrolling:touch}
 .cbCats::-webkit-scrollbar{display:none}
 .cbCats .chip{flex:none;white-space:nowrap}
 /* nette tab-titel voor de Eten-tab (i.p.v. de micro-epoch-kop) */
-.view[data-view="consult"] .eh h2{color:var(--muted);letter-spacing:.11em;font-size:.72rem;font-weight:750}
+.view[data-view="consult"] .eh h2{color:var(--muted);letter-spacing:.11em;font-size:.75rem;font-weight:750}
 .view[data-view="eten"] .eh{flex-wrap:wrap;margin-bottom:.5rem}
 .view[data-view="eten"] .eh h2{font-size:1.2rem;font-weight:750;letter-spacing:-.01em;text-transform:none;color:var(--ink)}
 .view[data-view="eten"] .eh .sub{font-size:.78rem;color:var(--muted)}
@@ -358,7 +361,7 @@ details.fold>.foldbody{padding:0 1.05rem 1.05rem}
 .cbRow:first-child{border-top:0}
 .cbRhead{display:flex;align-items:baseline;gap:.5rem;cursor:pointer}
 .cbRhead .cbN{font-weight:600;font-size:.9rem;color:var(--ink)}
-.cbRhead .cbP{margin-left:auto;font-family:var(--mono);font-size:.72rem;color:var(--muted);white-space:nowrap}
+.cbRhead .cbP{margin-left:auto;font-family:var(--mono);font-size:.75rem;color:var(--muted);white-space:nowrap}
 .cbEdit{margin-top:.5rem;padding:.55rem .6rem;background:var(--surface-2);border-radius:.55rem}
 .cbUnits{display:flex;flex-wrap:wrap;gap:.3rem;margin-bottom:.5rem}
 .cbUnit{font-size:.76rem;padding:.28rem .5rem;border-radius:.5rem;border:1px solid var(--line-2);background:var(--bg);color:var(--muted);cursor:pointer}
@@ -366,62 +369,62 @@ details.fold>.foldbody{padding:0 1.05rem 1.05rem}
 .cbQrow{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap}
 .cbQrow label{font-size:.78rem;color:var(--muted)}
 .cbQrow input{width:4.2rem;font-size:.9rem;padding:.35rem .45rem;border:1px solid var(--line-2);border-radius:.5rem;background:var(--bg);color:var(--ink)}
-.cbEst{font-weight:700;color:var(--accent);font-variant-numeric:tabular-nums}
+.cbEst{font-weight:700;color:var(--t-accent);font-variant-numeric:tabular-nums}
 .cbAdd{flex:0 0 auto;margin-left:auto;font-size:.8rem;padding:.35rem .7rem;border-radius:.5rem;border:1px solid var(--accent);background:var(--accent);color:var(--on-accent);cursor:pointer;font-weight:600}
 .cbNone{font-size:.82rem;color:var(--muted);padding:.5rem .1rem}
 .cbPlate{margin-top:.8rem;border-top:2px solid var(--line-2);padding-top:.7rem}
-.cbPlateHead{font-size:.62rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);margin-bottom:.4rem}
+.cbPlateHead{font-size:.75rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);margin-bottom:.4rem}
 .cbItem{display:flex;align-items:baseline;gap:.5rem;padding:.3rem 0;font-size:.85rem}
 .cbItem .ci-n{color:var(--ink)} .cbItem .ci-d{color:var(--muted);font-size:.76rem}
 .cbItem .ci-c{margin-left:auto;font-variant-numeric:tabular-nums;color:var(--ink);font-weight:600}
 .cbItem .ci-x{background:none;border:0;color:var(--dim);font-size:.95rem;cursor:pointer;padding:0 .2rem;line-height:1}
-.cbTotal{margin:.5rem 0 .6rem;font-size:.95rem;color:var(--ink)} .cbTotal b{color:var(--accent);font-variant-numeric:tabular-nums;font-size:1.1rem}
+.cbTotal{margin:.5rem 0 .6rem;font-size:.95rem;color:var(--ink)} .cbTotal b{color:var(--t-accent);font-variant-numeric:tabular-nums;font-size:1.1rem}
 .ba{margin-top:.45rem;padding:.5rem .6rem;border-radius:.55rem;background:var(--surface-2);font-size:.8rem;line-height:1.6}
 .ba .bar{display:flex;justify-content:space-between;gap:.5rem} .ba b{color:var(--ink);font-variant-numeric:tabular-nums}
-.ba .up{color:var(--inRange)} .ba .dn{color:var(--low)}
+.ba .up{color:var(--t-inRange)} .ba .dn{color:var(--t-low)}
 .ba .verdict{margin-top:.3rem;font-weight:600;color:var(--ink)}
 .watable{margin-top:.3rem;font-variant-numeric:tabular-nums}
 .warow{display:grid;grid-template-columns:1fr 1fr 1fr;gap:.3rem .6rem;padding:.32rem 0;font-size:.86rem;border-top:1px solid var(--line)}
-.warow.head{border-top:0;color:var(--muted);font-size:.68rem;text-transform:uppercase;letter-spacing:.05em}
+.warow.head{border-top:0;color:var(--muted);font-size:.75rem;text-transform:uppercase;letter-spacing:.05em}
 .warow span:first-child{color:var(--muted)}
 .warow.cur{font-weight:700} .warow.cur span{color:var(--ink)}
 /* Bespreekwaarden */
 .pcard{border:1px solid var(--line);border-radius:.7rem;padding:.75rem .85rem;margin-bottom:.6rem;background:var(--surface-2)}
 .pchead{display:flex;align-items:baseline;gap:.5rem}
 .pctitle{font-weight:650;font-size:.95rem;color:var(--ink)}
-.pcunit{margin-left:auto;font-size:.66rem;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.pcunit{margin-left:auto;font-size:.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
 .pcwhy{font-size:.83rem;color:var(--muted);line-height:1.5;margin:.35rem 0 .6rem} .pcwhy b{color:var(--ink);font-weight:600}
 .pdrow{margin-bottom:.7rem} .pdrow:last-child{margin-bottom:0}
 .pdlabel{display:flex;align-items:baseline;gap:.5rem;font-weight:650;font-size:.82rem;color:var(--ink);text-transform:capitalize;margin-bottom:.35rem}
-.pdmeta{margin-left:auto;font-size:.66rem;color:var(--muted);font-weight:400;text-transform:none;font-variant-numeric:tabular-nums}
+.pdmeta{margin-left:auto;font-size:.75rem;color:var(--muted);font-weight:400;text-transform:none;font-variant-numeric:tabular-nums}
 .pcands{display:grid;grid-template-columns:1fr 1fr;gap:.5rem}
 .pcands .pcand:only-child{grid-column:1 / -1}
 .pcand{border:1px solid var(--line);border-radius:.55rem;padding:.55rem .6rem;background:var(--card)}
 .pcand.risk{background:var(--risk-bg);border-color:var(--risk-line)}
-.pctag{font-size:.62rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:.25rem}
-.prisk{color:var(--low);font-weight:700;letter-spacing:0;text-transform:none}
+.pctag{font-size:.75rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:.25rem}
+.prisk{color:var(--t-low);font-weight:700;letter-spacing:0;text-transform:none}
 .pcval{font-size:1.02rem;color:var(--muted);font-variant-numeric:tabular-nums} .pcval b{color:var(--ink);font-weight:700} .parr{color:var(--muted);margin:0 .1rem}
-.pcdir{font-size:.72rem;color:var(--muted);margin-top:.15rem}
+.pcdir{font-size:.75rem;color:var(--muted);margin-top:.15rem}
 .pceff{font-size:.76rem;color:var(--ink);margin-top:.35rem;line-height:1.45;font-variant-numeric:tabular-nums}
 .pgood{font-size:.88rem;color:var(--ink);line-height:1.5;padding:.6rem .75rem;border-radius:.55rem;background:var(--accent-soft)}
 @media (max-width:360px){.pcands{grid-template-columns:1fr}}
 /* het ene overzicht: dagdelen × hefbomen */
 .bwm{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
-.bwm th{font-size:.66rem;color:var(--muted);font-weight:600;text-align:right;padding:.2rem .3rem .45rem;vertical-align:bottom}
+.bwm th{font-size:.75rem;color:var(--muted);font-weight:600;text-align:right;padding:.2rem .3rem .45rem;vertical-align:bottom}
 .bwm th:first-child{text-align:left;text-transform:uppercase;letter-spacing:.05em}
-.bwu{display:block;font-size:.56rem;color:var(--dim);font-weight:400;text-transform:none;letter-spacing:0}
+.bwu{display:block;font-size:.75rem;color:var(--dim);font-weight:400;text-transform:none;letter-spacing:0}
 .bwm td{border-top:1px solid var(--line);padding:.5rem .3rem}
 .bwd{font-weight:650;font-size:.84rem;text-transform:capitalize}
 .bwc{text-align:right;font-size:.82rem;color:var(--muted)}
 .bwc.none{color:var(--dim);text-align:center}
 .bwc.chg{color:var(--ink)} .bwc.chg .parr{color:var(--dim);margin:0 .12rem} .bwc.chg b{font-weight:700}
-.bwc.risk b{color:var(--low)}
-.bwc.ok{color:var(--inRange);text-align:center;font-weight:700}
-.bwleg{display:flex;flex-wrap:wrap;gap:.15rem 1rem;margin-top:.45rem;font-size:.68rem;color:var(--muted)}
-.bwleg b{font-weight:700;margin-right:.15rem} .bwleg .lok{color:var(--inRange)} .bwleg .ldash{color:var(--dim)} .bwleg .larr{color:var(--ink)}
+.bwc.risk b{color:var(--t-low)}
+.bwc.ok{color:var(--t-inRange);text-align:center;font-weight:700}
+.bwleg{display:flex;flex-wrap:wrap;gap:.15rem 1rem;margin-top:.45rem;font-size:.75rem;color:var(--muted)}
+.bwleg b{font-weight:700;margin-right:.15rem} .bwleg .lok{color:var(--t-inRange)} .bwleg .ldash{color:var(--dim)} .bwleg .larr{color:var(--ink)}
 .bwall{font-size:.82rem;color:var(--ink);margin-top:.5rem} .bwall .pdmeta{margin-left:.3rem}
 .bwdetail{margin-top:.7rem;border-top:1px solid var(--line);padding-top:.5rem}
-.bwdetail>summary{list-style:none;cursor:pointer;font-size:.78rem;font-weight:650;color:var(--accent)}
+.bwdetail>summary{list-style:none;cursor:pointer;font-size:.78rem;font-weight:650;color:var(--t-accent)}
 .bwdetail>summary::-webkit-details-marker{display:none}
 .bwdetail>summary::after{content:" ↓"} .bwdetail[open]>summary::after{content:" ↑"}
 .bwbody{margin-top:.7rem}
@@ -429,21 +432,21 @@ details.fold>.foldbody{padding:0 1.05rem 1.05rem}
 .meth{font-size:.86rem;line-height:1.6;color:var(--ink)}
 .meth p{margin:.35rem 0 .8rem;color:var(--muted)} .meth p b{color:var(--ink);font-weight:600}
 .meth .mlead{font-size:.9rem;color:var(--ink)}
-.mh{font-size:.8rem;font-weight:700;letter-spacing:.02em;color:var(--accent);margin:1.1rem 0 .1rem}
+.mh{font-size:.8rem;font-weight:700;letter-spacing:.02em;color:var(--t-accent);margin:1.1rem 0 .1rem}
 /* Compacte 'wat betekent dit'-uitklap bij cijfers */
 .mini{margin-top:.5rem}
-.mini>summary{list-style:none;cursor:pointer;font-size:.76rem;font-weight:600;color:var(--accent)}
+.mini>summary{list-style:none;cursor:pointer;font-size:.76rem;font-weight:600;color:var(--t-accent)}
 .mini>summary::-webkit-details-marker{display:none}
 .mini>summary::after{content:" ↓"} .mini[open]>summary::after{content:" ↑"}
 .minibody{margin-top:.5rem;display:flex;flex-direction:column;gap:.5rem}
 .minibody>div{font-size:.82rem;line-height:1.5;color:var(--muted)} .minibody b{color:var(--ink);font-weight:650}
-.mpart{font-size:.68rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--ink);margin:1.4rem 0 .3rem;padding-top:.9rem;border-top:1px solid var(--line)}
+.mpart{font-size:.75rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--ink);margin:1.4rem 0 .3rem;padding-top:.9rem;border-top:1px solid var(--line)}
 .mpart:first-of-type{border-top:0;padding-top:0;margin-top:.6rem}
 .meth .mterm{font-size:.86rem;line-height:1.55;color:var(--muted);padding:.4rem 0;border-bottom:1px solid var(--line)} .meth .mterm b{color:var(--ink);font-weight:650}
 .meth .mul{margin:.2rem 0 .8rem 1.1rem;padding:0;color:var(--muted)} .meth .mul li{margin:.25rem 0} .meth .mul b{color:var(--ink)}
 .meth .mnote{font-size:.76rem;color:var(--dim);margin:.3rem 0 .8rem}
 .meth code{font-size:.82em;background:var(--surface-2);border:1px solid var(--line);border-radius:.3rem;padding:.02rem .3rem}
-.meth .lok{color:var(--inRange)} .meth .prisk{color:var(--low)}
+.meth .lok{color:var(--t-inRange)} .meth .prisk{color:var(--t-low)}
 .watch{padding:.55rem .7rem;border-radius:.55rem;background:var(--surface-2);border-left:3px solid var(--high);margin-bottom:.45rem}
 .watch:last-of-type{margin-bottom:0}
 .watch.info{border-left-color:var(--line-2)}
@@ -458,7 +461,7 @@ body.reporting main>section, body.reporting main>.empty, body.reporting #tabbar,
 .rep{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:1.3rem;box-shadow:var(--shadow)}
 .rep h1{font-size:1.2rem;letter-spacing:-.01em;margin-bottom:.15rem}
 .rmeta{font-size:.8rem;color:var(--muted);margin-bottom:.6rem}
-.rep h2{font-size:.68rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);margin:1.2rem 0 .5rem;border-bottom:1px solid var(--line);padding-bottom:.25rem}
+.rep h2{font-size:.75rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--t-accent);margin:1.2rem 0 .5rem;border-bottom:1px solid var(--line);padding-bottom:.25rem}
 .rep table{width:100%;border-collapse:collapse;font-size:.85rem}
 .rep td{padding:.3rem 0;border-bottom:1px solid var(--line);vertical-align:baseline}
 .rep .rv{font-weight:650;text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
@@ -468,11 +471,11 @@ body.reporting main>section, body.reporting main>.empty, body.reporting #tabbar,
 .rep .rp .rdir{display:block;color:var(--muted);font-size:.82rem;margin-top:.1rem}
 .rep ul.rlist{font-size:.85rem;line-height:1.5;padding-left:1.1rem;margin:.2rem 0} .rep ul.rlist li{margin:.3rem 0}
 .rep .rnone{font-size:.85rem;color:var(--muted)}
-.rep .rfoot{font-size:.72rem;color:var(--muted);margin-top:1.3rem;border-top:1px solid var(--line);padding-top:.6rem;line-height:1.5}
+.rep .rfoot{font-size:.75rem;color:var(--muted);margin-top:1.3rem;border-top:1px solid var(--line);padding-top:.6rem;line-height:1.5}
 .empty{font-family:var(--mono);font-size:.8rem;color:var(--muted);text-align:center;padding:3.5rem 1rem;line-height:1.9}
 
 /* ── Verdieping ────────────────────────────────────────────────────────────── */
-.loading{font-family:var(--mono);font-size:.74rem;color:var(--dim);padding:.4rem 0}
+.loading{font-family:var(--mono);font-size:.75rem;color:var(--dim);padding:.4rem 0}
 details.deep{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
   padding:.85rem 1.05rem;margin-bottom:.6rem;box-shadow:var(--shadow)}
 details.deep > summary{cursor:pointer;font-weight:650;font-size:.88rem;list-style:none;
@@ -485,7 +488,7 @@ details.deep > .body{padding-top:.8rem;margin-top:.6rem;border-top:1px solid var
 #secSafety details.deep{box-shadow:none;border:none;border-top:1px solid var(--line);border-radius:0;padding:.7rem 0 0;margin-bottom:0}
 #secSafety details.deep > summary{font-size:.85rem}
 
-footer{font-family:var(--mono);font-size:.62rem;color:var(--dim);border-top:1px solid var(--line);
+footer{font-family:var(--mono);font-size:.75rem;color:var(--dim);border-top:1px solid var(--line);
   margin-top:2.4rem;padding-top:.9rem;line-height:1.8}
 
 /* ── Dialoog + terugval voor oude browsers zonder <dialog>.showModal() ──────── */
@@ -496,14 +499,14 @@ dialog::backdrop{background:rgba(10,18,15,.5);backdrop-filter:blur(2px)}
 dialog.fb[open]{display:block;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:1000}
 body:has(dialog.fb[open])::before{content:"";position:fixed;inset:0;z-index:999;background:rgba(10,18,15,.5)}
 dialog h2{font-size:1.15rem;margin-bottom:.3rem;letter-spacing:-.01em} dialog p{font-size:.82rem;color:var(--muted);margin-bottom:.8rem}
-label{display:block;font-size:.62rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:.9rem 0 .3rem}
+label{display:block;font-size:.75rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:.9rem 0 .3rem}
 input,select{width:100%;background:var(--surface-2);color:var(--ink);border:1px solid var(--line-2);
   border-radius:10px;padding:.6rem .75rem;font-family:var(--mono);font-size:.82rem}
 input:focus,select:focus{outline:2px solid var(--accent);outline-offset:-1px;border-color:transparent}
 .hint{font-size:.7rem;color:var(--dim);margin-top:.35rem;line-height:1.5}
 .hint b{color:var(--muted)}
 .actions{display:flex;gap:.5rem;margin-top:1.3rem;flex-wrap:wrap;align-items:center}
-.err{font-family:var(--mono);font-size:.72rem;color:var(--low);margin-top:.8rem;white-space:pre-wrap}
+.err{font-family:var(--mono);font-size:.75rem;color:var(--t-low);margin-top:.8rem;white-space:pre-wrap}
 
 #toast{position:fixed;left:50%;bottom:calc(74px + env(safe-area-inset-bottom,0px));transform:translateX(-50%) translateY(20px);z-index:9998;
   background:var(--ink);color:var(--bg);font-size:.8rem;padding:.65rem 1.1rem;border-radius:12px;
@@ -542,7 +545,7 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:-1px;bor
 .greet .sub{display:block;font-size:.88rem;color:var(--muted);margin-top:.22rem}
 .hero{display:flex;align-items:baseline;gap:.5rem;background:var(--surface);border:1px solid var(--line);
   border-radius:22px;padding:1.15rem 1.3rem;margin-top:.7rem;box-shadow:var(--shadow)}
-.hero .hv{font-family:var(--mono);font-size:3rem;line-height:.95;font-weight:700;color:var(--inRange);letter-spacing:-.03em}
+.hero .hv{font-family:var(--mono);font-size:3rem;line-height:.95;font-weight:700;color:var(--t-inRange);letter-spacing:-.03em}
 .hero .hu{font-size:.82rem;color:var(--dim);font-weight:600}
 .hero .harw{font-size:1.4rem;color:var(--muted);margin-left:.25rem}
 .hero .hside{margin-left:auto;align-self:center;text-align:right;font-size:.76rem;color:var(--muted);line-height:1.5;font-variant-numeric:tabular-nums}
@@ -553,8 +556,8 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:-1px;bor
 .ring .rbg{fill:none;stroke:var(--surface-2);stroke-width:10}
 .ring .rarc{fill:none;stroke:var(--inRange);stroke-width:10;stroke-linecap:round;transition:stroke-dashoffset .5s ease}
 .ring .lbl{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
-.ring .lbl b{font-family:var(--mono);font-size:1.9rem;font-weight:700;letter-spacing:-.02em;line-height:1;color:var(--inRange)}
-.ring .lbl small{font-size:.54rem;color:var(--dim);text-transform:uppercase;letter-spacing:.1em;margin-top:.22rem}
+.ring .lbl b{font-family:var(--mono);font-size:1.9rem;font-weight:700;letter-spacing:-.02em;line-height:1;color:var(--t-inRange)}
+.ring .lbl small{font-size:.75rem;color:var(--dim);text-transform:uppercase;letter-spacing:.1em;margin-top:.22rem}
 .hinfo .st{font-size:1.02rem;font-weight:750}
 .hinfo .meta{font-size:.79rem;color:var(--muted);margin-top:.42rem;line-height:1.65}
 .hinfo .meta b{font-family:var(--mono);color:var(--ink);font-weight:600}
@@ -566,12 +569,12 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:-1px;bor
 .acts .act:active{transform:translateY(.5px)}
 .acts .act .cig{width:42px;height:42px;border-radius:13px;display:grid;place-items:center}
 .acts .act .cig svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
-.acts .act .a1{background:var(--accent-soft);color:var(--accent)}
-.acts .act .a2{background:color-mix(in srgb,var(--inRange) 15%,transparent);color:var(--inRange)}
-.acts .act .a3{background:color-mix(in srgb,var(--warn) 18%,transparent);color:var(--warn)}
+.acts .act .a1{background:var(--accent-soft);color:var(--t-accent)}
+.acts .act .a2{background:color-mix(in srgb,var(--inRange) 15%,transparent);color:var(--t-inRange)}
+.acts .act .a3{background:color-mix(in srgb,var(--warn) 18%,transparent);color:var(--t-warn)}
 .chead{display:flex;align-items:baseline;gap:.5rem;margin:1.6rem .2rem .55rem;
-  font-size:.72rem;text-transform:uppercase;letter-spacing:.11em;color:var(--muted);font-weight:750}
-.chead .sub{font-size:.64rem;letter-spacing:.02em;text-transform:none;color:var(--dim);font-weight:500;margin-left:auto}
+  font-size:.75rem;text-transform:uppercase;letter-spacing:.11em;color:var(--muted);font-weight:750}
+.chead .sub{font-size:.75rem;letter-spacing:.02em;text-transform:none;color:var(--dim);font-weight:500;margin-left:auto}
 .chome .kpis{display:grid;grid-template-columns:1fr 1fr;gap:.6rem}
 .chome .kpis .kpi{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:.8rem .9rem;box-shadow:var(--shadow-sm)}
 .nu.hideOnHome{display:none}
@@ -602,10 +605,23 @@ details.fold>summary:focus-visible,details.deep>summary:focus-visible{outline-of
 #nvRoot progress{width:100%}#nvRoot .row{display:flex;gap:.5rem}#nvRoot .row button{width:50%}
 #nvRoot .nvwarn{background:var(--risk-bg);border:1px solid var(--risk-line);border-radius:8px;padding:.5rem;font-size:.85rem;margin-top:.4rem}
 .lnbar{display:flex;align-items:center;gap:.4rem;font-size:.75rem;color:var(--muted)}.lnbar i{display:inline-block;height:.6rem;background:var(--accent);border-radius:3px}
-.pgr{font-size:.72rem;margin:.3rem 0;padding:.3rem .5rem;border-radius:6px;background:var(--panel2,rgba(128,128,128,.12))}
+.pgr{font-size:.75rem;margin:.3rem 0;padding:.3rem .5rem;border-radius:6px;background:var(--panel2,rgba(128,128,128,.12))}
 .pgr.block{border-left:3px solid var(--low)}.pgr.unclear,.pgr.queue{border-left:3px solid var(--muted)}.pgr.warn{border-left:3px solid var(--high)}
 .pdec{display:flex;gap:.4rem;flex-wrap:wrap;margin-top:.4rem;align-items:center}.pdst{font-size:.75rem;font-weight:600}
 button.act[data-consult],button.act[data-askconsult]{display:inline-block;width:auto;height:auto;flex-direction:row;padding:.28rem .7rem;margin-top:.3rem}
+
+/* Toegankelijkheid: tikdoelen ≥44px, lettergrootte ≥12px */
+button,summary,.tab,.chip,.act,.del{min-height:44px}
+.act,.chip,.del{display:inline-flex;align-items:center;justify-content:center}
+.chome .kpis .kpi.kwide{grid-column:1/-1;flex-direction:row;align-items:baseline;gap:.6rem;padding:.55rem .9rem}
+.kpi.kwide .v2{font-family:var(--mono);font-weight:700;font-size:1.05rem}
+.ask .chips{display:none}.ask:focus-within .chips{display:flex}
+.fmore{margin:.4rem 0}
+#updBar{position:fixed;left:12px;right:12px;bottom:calc(76px + env(safe-area-inset-bottom));z-index:60;display:flex;gap:.6rem;align-items:center;justify-content:space-between;
+  background:var(--ink);color:var(--bg);padding:.6rem .9rem;border-radius:14px;box-shadow:var(--shadow);font-size:.85rem}
+#updBar button{background:var(--bg);color:var(--ink);border:0;border-radius:10px;padding:.4rem .9rem;font-weight:650}
+.act{flex-direction:row;white-space:nowrap;gap:.3rem}
+:root{--serif:var(--sans)}
 </style>
 </head>
 <body>
@@ -688,10 +704,7 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
       </div>
     </details>
     <div id="secWatch" hidden><div id="watch" style="margin-top:.6rem"></div></div>
-    <div class="card" id="mvsCard" style="margin-top:.6rem" hidden>
-      <div class="mvshead"><span data-i18n="home.mvsSetting">instelling</span><span data-i18n="home.mvsMeasured">gemeten · ingesteld</span></div>
-      <div id="tune"></div>
-    </div>
+
 
     <div class="chead" id="epVandaag"><span data-i18n="home.attention">Aandacht</span> <span class="sub" id="todaySub"></span></div>
     <div id="findToday"></div>
@@ -773,6 +786,10 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
 
   <div class="h3" data-i18n="an.insulinBasal">Insuline &amp; basaal</div>
   <details class="fold" id="secMore"><summary><span>Meer analyses</span> <span class="foldhint">maandtrend, per uur, maaltijdgeheugen, loop-basaal, dagpatroon</span></summary><div class="foldbody">
+    <div class="card" id="mvsCard" style="margin-top:.6rem" hidden>
+      <div class="mvshead"><span data-i18n="home.mvsSetting">instelling</span><span data-i18n="home.mvsMeasured">gemeten · ingesteld</span></div>
+      <div id="tune"></div>
+    </div>
   <details class="deep" data-an="geheugen"><summary><span>Maaltijdgeheugen</span> <span class="foldhint">jouw eigen uitkomst per product</span></summary><div class="body"><div class="loading">…</div></div></details>
   <details class="deep" data-an="maand"><summary><span>Maandtrend</span> <span class="foldhint">tijd in bereik per maand</span></summary><div class="body"><div class="loading">…</div></div></details>
   <details class="deep" data-an="uur"><summary><span>Per uur</span> <span class="foldhint">spreiding, hypo's &amp; hoogtes per uur</span></summary><div class="body"><div class="loading">…</div></div></details>
@@ -999,7 +1016,7 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
   </details>
   <details class="fold" id="secEffects" open>
     <summary><span>Effect van doorgevoerde wijzigingen</span> <span class="foldhint">meting 14 dagen erna</span></summary>
-    <div class="foldbody"><div id="effects"><div class="muted">…</div></div></div>
+    <div class="foldbody"><div id="effects"><div class="muted">…</div></div><div id="backupNote"></div></div>
   </details>
   <section class="epoch" id="epConsult" style="margin-left:0">
     <div class="h3" data-i18n="consult.title" style="margin:1.4rem .2rem .55rem">Richting je consult</div>
@@ -1087,6 +1104,9 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
   <input id="inAiUrl" type="url" placeholder="https://api.openai.com/v1" autocomplete="off" spellcheck="false">
   <input id="inAiModel" type="text" placeholder="gpt-4o-mini" autocomplete="off" spellcheck="false">
   <input id="inAiKey" type="password" placeholder="sk-… (API-sleutel)" autocomplete="off" spellcheck="false">
+  <label class="aitog" style="margin-top:.8rem"><input type="checkbox" id="inProtect"> <span>Token en sleutel met wachtwoord beveiligen</span></label>
+  <input id="inPass" type="password" placeholder="wachtwoord (nodig bij elke keer opslaan)" autocomplete="new-password" hidden>
+  <div class="hint">Aanrader op GitHub Pages: andere pagina's op dezelfde herkomst kunnen anders je token lezen. Vergeet je het wachtwoord, dan vul je het token opnieuw in.</div>
 </dialog>
 
 <script>
@@ -1096,7 +1116,26 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
 const CFG_KEY = "dbdash.cfg";
 const cfg = Object.assign({ url:"", token:"", days:30, peak:75, lang:"", aiOn:false, aiUrl:"", aiModel:"", aiKey:"" },
   JSON.parse(localStorage.getItem(CFG_KEY) || "{}"));
-const saveCfg = () => localStorage.setItem(CFG_KEY, JSON.stringify(cfg));
+const saveCfg = () => { const out=Object.assign({},cfg); if(cfg.protected){ delete out.token; delete out.aiKey; } localStorage.setItem(CFG_KEY, JSON.stringify(out)); };
+/* Optioneel wachtwoord: token en AI-sleutel staan dan versleuteld (AES-GCM, PBKDF2) in de opslag en pas na ontgrendelen in het geheugen.
+   Zo kan een andere pagina op dezelfde GitHub Pages-herkomst ze niet zomaar lezen. */
+const _B64=b=>btoa(String.fromCharCode(...new Uint8Array(b))), _UB64=x=>Uint8Array.from(atob(x),c=>c.charCodeAt(0));
+async function _pkey(pass,salt){ const km=await crypto.subtle.importKey("raw",new TextEncoder().encode(pass),"PBKDF2",false,["deriveKey"]);
+  return crypto.subtle.deriveKey({name:"PBKDF2",salt,iterations:250000,hash:"SHA-256"},km,{name:"AES-GCM",length:256},false,["encrypt","decrypt"]); }
+async function encryptSecrets(pass){ const salt=crypto.getRandomValues(new Uint8Array(16)), iv=crypto.getRandomValues(new Uint8Array(12));
+  const ct=await crypto.subtle.encrypt({name:"AES-GCM",iv},await _pkey(pass,salt),new TextEncoder().encode(JSON.stringify({token:cfg.token||"",aiKey:cfg.aiKey||""})));
+  cfg.enc={salt:_B64(salt),iv:_B64(iv),ct:_B64(ct)}; cfg.protected=true; }
+async function decryptSecrets(pass){ const pt=await crypto.subtle.decrypt({name:"AES-GCM",iv:_UB64(cfg.enc.iv)},await _pkey(pass,_UB64(cfg.enc.salt)),_UB64(cfg.enc.ct));
+  const o=JSON.parse(new TextDecoder().decode(pt)); cfg.token=o.token||""; cfg.aiKey=o.aiKey||""; }
+function ensureUnlocked(){ return new Promise(res=>{
+  if(!cfg.protected||cfg.token||!cfg.enc) return res(true);
+  const d=document.createElement("dialog"); d.id="unlockDlg";
+  d.innerHTML='<form method="dialog" style="display:flex;flex-direction:column;gap:.6rem;min-width:240px"><b>'+TL("Ontgrendel","Unlock","Desbloquear")+'</b><input id="unlockPw" type="password" autocomplete="current-password" placeholder="'+TL("wachtwoord","password","palavra-passe")+'"><div id="unlockErr" class="muted" hidden></div><div style="display:flex;gap:.5rem"><button id="unlockOk" type="button">'+TL("Ontgrendel","Unlock","Desbloquear")+'</button><button id="unlockSkip" type="button" class="ghost">'+TL("Alleen opgeslagen data","Stored data only","Só dados guardados")+'</button></div></form>';
+  document.body.appendChild(d); try{ d.showModal(); }catch(_){ d.setAttribute("open",""); }
+  d.querySelector("#unlockSkip").onclick=()=>{ d.remove(); res(false); };
+  const go=async()=>{ try{ await decryptSecrets(d.querySelector("#unlockPw").value); d.remove(); res(true); }catch(_){ const e=d.querySelector("#unlockErr"); e.textContent=TL("Onjuist wachtwoord.","Wrong password.","Palavra-passe errada."); e.hidden=false; } };
+  d.querySelector("#unlockOk").onclick=go; d.querySelector("#unlockPw").onkeydown=ev=>{ if(ev.key==="Enter"){ ev.preventDefault(); go(); } };
+}); }
 /* Koppellink: open de app één keer via  …/index.html#setup=<base64>  en adres+token
    worden bewaard; de hash verdwijnt direct uit de adresbalk/geschiedenis. */
 (function applySetupLink(){
@@ -1905,7 +1944,7 @@ function fineTune(drift, oi, MR, stack, pi){
   const chains=rows.map((r,i)=>`<div class="step"><span class="no">${i+1}</span><span><b>${r.title}.</b> ${r.read}${r.dir?`<br><span style="color:var(--ink)">→ ${r.dir}.</span>`:""}<br><span class="ffine" style="margin:0">${r.ev}</span></span></div>`).join("");
   const warns=rows.filter(r=>r.st==="warn").length;
   return table+
-    `<details style="margin-top:.6rem"><summary style="list-style:none;cursor:pointer;font-size:.76rem;font-weight:650;color:var(--accent)">${warns?TL(`wat betekent ▲ (${warns})`,`what does ▲ mean (${warns})`,`o que significa ▲ (${warns})`):TL("uitleg per regel","explanation per line","explicação por linha")} ↓</summary>`+
+    `<details style="margin-top:.6rem"><summary style="list-style:none;cursor:pointer;font-size:.76rem;font-weight:650;color:var(--t-accent)">${warns?TL(`wat betekent ▲ (${warns})`,`what does ▲ mean (${warns})`,`o que significa ▲ (${warns})`):TL("uitleg per regel","explanation per line","explicação por linha")} ↓</summary>`+
     `<div class="chain" style="margin-top:.5rem">${chains}</div>`+
     `<div class="ffine" style="margin-left:0">${TL("meetwaarden, geen voorschriften · één ding tegelijk aanpassen, met je team","measured values, not prescriptions · change one thing at a time, with your team","valores medidos, não prescrições · altere uma coisa de cada vez, com a sua equipa")}</div></details>`;
 }
@@ -2424,8 +2463,8 @@ function render(glucose, treatments, timeline){
     [TL("Hypo","Low","Hipo"), pct0(m.tbr), TL("streef <4%","aim <4%","meta <4%"), tick(m.tbr<0.04)],
     [TL("Variatie (CV)","Variability (CV)","Variabilidade (CV)"), pct0(m.cv), TL("streef ≤36%","aim ≤36%","meta ≤36%"), tick(m.cv<=0.36)],
     [TL("Strak 3,9–7,8","Tight 3.9–7.8","Estrito 3,9–7,8"), pct0(m.titr), TL("tweede maat","secondary","segunda medida"), ""],
-    ["GMI", nl1(m.gmi)+"%", TL("geschat HbA1c","estimated HbA1c","HbA1c estimada"), ""],
-  ].map(([k,v,s3,b])=>`<div class="kpi"><div class="k">${k} ${b}</div><div class="v">${v}</div><div class="s">${s3}</div></div>`).join("");
+  ].map(([k,v,s3,b])=>`<div class="kpi"><div class="k">${k} ${b}</div><div class="v">${v}</div><div class="s">${s3}</div></div>`).join("")+
+    `<div class="kpi kwide"><span class="k">GMI</span><span class="v2">${nl1(m.gmi)}%</span><span class="s">${TL("geschat HbA1c","estimated HbA1c","HbA1c estimada")}</span></div>`;
   document.getElementById("bandBar").innerHTML = bandBarHtml(m);
 
   const watch = watchList(glucose, q);
@@ -2526,11 +2565,24 @@ function render(glucose, treatments, timeline){
 
   // ── bevindingen + consultlijst (async, buiten de renderflow) ──
   renderFindings({ glucose, q, m, hy, tr, drift, oi, MR, stack, treatments, timeline });
-  renderLog(); renderAware(); renderConsult(); renderEffects();
+  renderLog(); renderAware(); renderConsult(); renderEffects(); renderBackupNote();
 }
 
 /* ── Bevindingen-engine — de app vertelt wat er toe doet ─────────────────── */
 function fmtHM(ts){ return fmtMin(todMin(ts)); }
+
+// Overzicht: toon de eerste N aandachtspunten; de rest achter één knop.
+function limitFindings(n){
+  const cards=[...document.querySelectorAll("#findToday .f, #findWeek .f")];
+  document.getElementById("fmore")?.remove();
+  cards.forEach((c,i)=>{ c.hidden=false; });
+  if(cards.length<=n) return;
+  cards.slice(n).forEach(c=>{ c.hidden=true; });
+  const b=document.createElement("button"); b.id="fmore"; b.className="ghost fmore";
+  b.textContent=TL(`Toon alle ${cards.length} aandachtspunten`,`Show all ${cards.length} points`,`Mostrar todos os ${cards.length} pontos`);
+  b.onclick=()=>{ cards.forEach(c=>{c.hidden=false;}); b.remove(); };
+  document.getElementById("findWeek").after(b);
+}
 function findingCard(f, st){
   const seen = st && st.seen && f.seenable;
   const cls = "f"+(seen?" read":(f.sev==="w"?" unread":f.pos?" unread pos":""));
@@ -2719,6 +2771,7 @@ async function renderFindings(ctx){
   const paint=(el,list)=>{ el.innerHTML=list.map(f2=>findingCard(f2,{seen:fs[f2.id]&&fs[f2.id].seen,onList:onList(f2.id)})).join(""); };
   paint(document.getElementById("findToday"), today);
   paint(document.getElementById("findWeek"), week);
+  limitFindings(3);
   const warned=list=>list.some(f2=>f2.sev==="w" && !(fs[f2.id]&&fs[f2.id].seen));
   document.getElementById("epVandaag").classList.toggle("warned", warned(today));
   document.getElementById("epWeek").classList.toggle("warned", warned(week));
@@ -3142,15 +3195,18 @@ function loopBasal(treatments, timeline, q){
   const carbTs=treatments.filter(t=>t.carbs>=20).map(t=>t.ts).sort((a,b)=>a-b);
   const MEAL=3*3600e3;
   const nearMeal=ts=>{ let lo=0,hi=carbTs.length; while(lo<hi){const m=(lo+hi)>>1; if(carbTs[m]<=ts)lo=m+1;else hi=m;} return lo>0 && carbTs[lo-1]>ts-MEAL; };
-  const STEP=10*60e3, hp=Array.from({length:24},()=>({a:0,p:0,n:0}));
+  const STEP=10*60e3, hp=Array.from({length:24},()=>({a:0,p:0,n:0,s:0}));
+  const okDay=ts=>!q.usableKeys||q.usableKeys.has(localDayKey(ts));   // alleen bruikbare dagen (geen pen-/loop-uit-dagen)
   for(let t=from;t<to;t+=STEP){
-    if(nearMeal(t)) continue;
+    if(!okDay(t)||nearMeal(t)) continue;
     const prof=profileAt(timeline,t); if(!prof||prof.basal==null||prof.source==="geen") continue;
     const pr=prof.basal; let ar=pr; const i=lastTemp(t);
     if(i>=0 && t<temps[i].end){ const tb=temps[i]; ar = tb.abs!=null ? tb.abs : pr*(tb.pct/100); }
     const h=Math.floor(todMin(t)/60)%24; hp[h].a+=ar; hp[h].p+=pr; hp[h].n++;
   }
-  const hours=hp.map((o,h)=>o.n>=18?{h,act:o.a/o.n,prof:o.p/o.n,n:o.n}:{h,n:o.n});
+  // SMB's tellen mee als geleverde insuline: een loop die minder temp-basaal maar meer SMB geeft, levert netto evenveel.
+  for(const t of treatments){ if(!t.isSMB||!(t.insulin>0)||t.ts<from||t.ts>=to) continue; if(!okDay(t.ts)||nearMeal(t.ts)) continue; hp[Math.floor(todMin(t.ts)/60)%24].s+=t.insulin; }
+  const hours=hp.map((o,h)=>o.n>=18?{h,act:o.a/o.n+o.s/(o.n*STEP/3600e3),temp:o.a/o.n,smb:o.s/(o.n*STEP/3600e3),prof:o.p/o.n,n:o.n}:{h,n:o.n});
   const valid=hours.filter(x=>x.act!=null);
   if(valid.length<6) return { few:temps.length, thin:true };
   const totA=valid.reduce((s,x)=>s+x.act,0), totP=valid.reduce((s,x)=>s+x.prof,0);
@@ -3463,7 +3519,12 @@ function proposalEngine(drift, oi, MR, pi, glucose, treatments, q, timeline){
       // A — loop-basaal (voorkeur bij een loop): wat je loop echt leverde vs. profiel
       if(lbHours){ const hrs=lbHours.filter(x=>x.act!=null && x.h>=d.lo/60 && x.h<d.hi/60);
         if(hrs.length>=2){ source=source||"loop";
-          const act=_pMean(hrs.map(x=>x.act)), prof=_pMean(hrs.map(x=>x.prof));
+          const actTot=_pMean(hrs.map(x=>x.act)), actTmp=_pMean(hrs.map(x=>x.temp!=null?x.temp:x.act)), prof=_pMean(hrs.map(x=>x.prof));
+          // Temp-basaal alléén en temp-basaal + SMB moeten dezelfde kant op wijzen; anders compenseert de loop
+          // (minder temp, meer SMB — bv. voor niet-gelogd eten) en is "profiel te hoog/laag" geen veilige conclusie.
+          const mixed = prof>0.05 && Math.abs(actTmp-prof)/prof>=0.15 && Math.abs(actTot-prof)/prof>=0.15 && Math.sign(actTmp-prof)!==Math.sign(actTot-prof);
+          if(mixed){ grid[d.key]={status:"mixed", temp:nl2(actTmp), tot:nl2(actTot), prof:nl2(prof)}; continue; }
+          const act = Math.abs(actTmp-prof)<Math.abs(actTot-prof) ? actTmp : actTot;   // behoudend: de kleinste afwijking
           if(prof>0.05){ const dev=(act-prof)/prof;
             if(Math.abs(dev)>=0.15){ const up=act>prof, seen=new Set(), cands=[];
               for(const [tag,frac] of [["behoudend",0.5],["gemeten",1.0]]){
@@ -3497,7 +3558,7 @@ function proposalEngine(drift, oi, MR, pi, glucose, treatments, q, timeline){
     if(rows.length || Object.values(grid).some(g=>g.status!=="weinig"))
       items.push({ key:"basaal", title:TL("Basaal","Basal","Basal"), unit:TL("E/u","U/h","U/h"), rows, grid,
         why: source==="loop"
-          ? TL(`Wat je loop werkelijk leverde (temp-basaal) naast je profiel-basaal, per dagdeel. Levert de loop structureel méér/minder, dan staat je profiel daar mogelijk te laag/hoog. Maaltijduren zijn eruit gefilterd.`,`What your loop actually delivered (temp basal) next to your profile basal, per part of day. If the loop structurally delivers more/less, your profile may be too low/high there. Meal hours are filtered out.`,`O que o seu loop realmente entregou (basal temporária) face à basal do perfil, por período do dia. Se o loop entrega estruturalmente mais/menos, o seu perfil pode estar baixo/alto aí. As horas de refeição são filtradas.`)
+          ? TL(`Wat je loop werkelijk leverde (temp-basaal + SMB) naast je profiel-basaal, per dagdeel. Levert de loop structureel méér/minder, dan staat je profiel daar mogelijk te laag/hoog. Maaltijduren zijn eruit gefilterd.`,`What your loop actually delivered (temp basal) next to your profile basal, per part of day. If the loop structurally delivers more/less, your profile may be too low/high there. Meal hours are filtered out.`,`O que o seu loop realmente entregou (basal temporária) face à basal do perfil, por período do dia. Se o loop entrega estruturalmente mais/menos, o seu perfil pode estar baixo/alto aí. As horas de refeição são filtradas.`)
           : TL(`In maaltijd- en bolusvrije uren hoort je glucose vlak te lopen. Waar je toch wegdrijft, wijst dat op te veel of te weinig basaal — per dagdeel.`,`In meal- and bolus-free hours your glucose should run flat. Where you drift anyway points to too much or too little basal — per part of day.`,`Em horas sem refeição e sem bólus a sua glicose deve correr plana. Onde deriva mesmo assim aponta para basal a mais ou a menos — por período do dia.`) }); }
 
   // 3 — KH-ratio per maaltijdmoment (ontbijt/lunch/diner). Te hoge piek = onderdekking;
@@ -3581,6 +3642,17 @@ document.addEventListener("click", async ev=>{
    verslechterd · onduidelijk. Veiligheid eerst: meer tijd <3,0 → bespreek terugdraaien.
    Eerlijk: dit is een vergelijking van periodes, geen herhaling van het oref1/AAPS-
    algoritme met andere instellingen — de loop reageert zelf mee, dus oorzaak ≠ bewezen. */
+
+// Herinnering voor een back-up: besluiten en logboek staan alleen in deze browser.
+async function renderBackupNote(){
+  const el=document.getElementById("backupNote"); if(!el) return;
+  let anns=[]; try{ anns=await DB.all("annotations"); }catch(_){}
+  const n=anns.filter(a=>a.type==="voorstel"||a.type==="wijziging").length;
+  const age=cfg.lastBackup?Math.floor((Date.now()-cfg.lastBackup)/864e5):null;
+  if(!n||(age!=null&&age<14)){ el.innerHTML=n?`<div class="muted" style="font-size:.75rem;margin-top:.5rem">${TL(`Laatste back-up ${age} dagen geleden.`,`Last backup ${age} days ago.`,`Última cópia há ${age} dias.`)}</div>`:""; return; }
+  el.innerHTML=`<div class="pgr unclear" style="margin-top:.6rem">${TL("Je besluiten en logboek staan alleen in deze browser. Maak een back-up (wissen van sitegegevens wist ze).","Your decisions and logbook live only in this browser. Make a backup (clearing site data erases them).","As suas decisões e o diário estão só neste navegador. Faça uma cópia.")} <button class="ghost" id="bkNow">${TL("Back-up maken","Back up now","Fazer cópia")}</button></div>`;
+  document.getElementById("bkNow").onclick=()=>document.getElementById("btnExport").click();
+}
 async function renderEffects(){
   const host=document.getElementById("effects"); if(!host) return;
   let anns=[]; try{ anns=await DB.all("annotations"); }catch(_){}
@@ -3597,7 +3669,7 @@ async function renderEffects(){
     const head=`<div class="leh"><span class="ic">⚙</span><span class="lt">${esc(a.note||"")}</span><span class="ld">${when}</span></div>`;
     if(age<14) return `<div class="logentry">${head}<div class="muted">${TL(`Meting loopt: nog ${14-age} dagen nodig na de wijziging.`,`Measuring: ${14-age} more days needed after the change.`,`A medir: faltam ${14-age} dias após a alteração.`)}</div></div>`;
     const r=beforeAfter(gl,q,a.ts,14);
-    if(!r.before.ok||!r.after.ok) return `<div class="logentry">${head}<div class="ba"><b>${TL("Onduidelijk","Unclear","Pouco claro")}</b> — ${TL("te weinig bruikbare dagen vóór of ná de wijziging (min. 3 met ≥70% dekking; loop-gatdagen tellen niet mee).","too few usable days before or after the change (min. 3 with ≥70% coverage; loop-gap days excluded).","poucos dias utilizáveis antes ou depois.")}</div></div>`;
+    if(!r.before.ok||!r.after.ok) return `<div class="logentry">${head}<div class="ba"><b>${TL("Onduidelijk","Unclear","Pouco claro")}</b> — ${TL("te weinig bruikbare dagen vóór of ná de wijziging (min. 7 met ≥70% dekking; loop-gatdagen tellen niet mee).","too few usable days before or after the change (min. 7 with ≥70% coverage; loop-gap days excluded).","poucos dias utilizáveis antes ou depois.")}</div></div>`;
     const b=r.before.m, c=r.after.m, dT=c.tir-b.tir, dB=c.tbr-b.tbr, dV=c.veryLow-b.veryLow;
     let out, cls;
     if(dV>=0.005 && c.veryLow>=0.01){ out=TL("Verslechterd (veiligheid)","Worse (safety)","Pior (segurança)"); cls="dn"; }
@@ -3611,7 +3683,7 @@ async function renderEffects(){
       <div class="bar"><span>&lt;3,9</span><span>${d(b.tbr,c.tbr,pct0)}</span></div>
       <div class="bar"><span>&lt;3,0</span><span>${d(b.veryLow,c.veryLow,pct0)}</span></div>
       <div class="bar"><span>${TL("Gemiddeld","Mean","Média")}</span><span>${d(b.mean,c.mean,nl1)}</span></div>
-      ${rb}<div class="muted" style="font-size:.7rem;margin-top:.25rem">${TL("14 dagen vóór vs ná, alleen dit dagdeel. Periodevergelijking, geen bewijs van oorzaak: de loop past zich zelf ook aan.","14 days before vs after, this part of day only. Period comparison, not proof of cause: the loop adapts as well.","14 dias antes vs depois, só este período. Comparação, não prova de causa.")}</div></div></div>`;
+      ${rb}<div class="muted" style="font-size:.7rem;margin-top:.25rem">${r.before.days}/${r.after.days} ${TL("dagen","days","dias")} · ${TL("14 dagen vóór vs ná, alleen dit dagdeel. Periodevergelijking, geen bewijs van oorzaak: de loop past zich zelf ook aan.","14 days before vs after, this part of day only. Period comparison, not proof of cause: the loop adapts as well.","14 dias antes vs depois, só este período. Comparação, não prova de causa.")}</div></div></div>`;
   }).join("");
 }
 function proposalsHtml(drift, oi, MR, pi, glucose, treatments, q, timeline){
@@ -3644,6 +3716,7 @@ function proposalsHtml(drift, oi, MR, pi, glucose, treatments, q, timeline){
     if(g.status==="change" && g.unclear) return `<td class="bwc none" title="${TL("onduidelijk: te weinig dekkende dagen","unclear: too few covered days","pouco claro: poucos dias")}">? ${g.from}<span class="parr">→</span>${g.to}</td>`;
     if(g.status==="change" && g.warn) return `<td class="bwc chg${g.risky?" risk":""}" title="${TL("let op: zie onderbouwing (waarschuwing)","note: see rationale (warning)","atenção: ver fundamentação")}">⚠ ${g.from}<span class="parr">→</span><b>${g.to}</b></td>`;
     if(g.status==="change") return `<td class="bwc chg${g.risky?" risk":""}">${g.from}<span class="parr">→</span><b>${g.to}</b></td>`;
+    if(g.status==="mixed") return `<td class="bwc none" title="${TL(`loop: temp-basaal ${g.temp} maar met SMB's ${g.tot} (profiel ${g.prof}) — wijst verschillende kanten op; geen voorstel`,`loop: temp basal ${g.temp} but with SMB ${g.tot} (profile ${g.prof}) — points opposite ways; no proposal`,`loop: basal temp ${g.temp} mas com SMB ${g.tot} (perfil ${g.prof}) — sentidos opostos; sem proposta`)}">±</td>`;
     if(g.status==="ok") return `<td class="bwc ok" title="${TL("gemeten sluit aan bij je instelling","measured aligns with your setting","medido alinha com a sua definição")}">✓</td>`;
     return `<td class="bwc none" title="${TL("te weinig schone data in dit dagdeel","too little clean data in this part of day","poucos dados limpos neste período")}">—</td>`; };
   const dpsShown=DAYPARTS.filter(d=>LEV.some(([k])=>cellFor(k,d.key).status!=="weinig"));
@@ -3652,7 +3725,7 @@ function proposalsHtml(drift, oi, MR, pi, glucose, treatments, q, timeline){
     <thead><tr><th>${TL("dagdeel","part of day","período")}</th>${LEVS.map(([,l,u])=>`<th>${l}<span class="bwu">${u}</span></th>`).join("")}</tr></thead>
     <tbody>${dpsShown.map(d=>`<tr><td class="bwd">${dpName(d.key)}</td>${LEVS.map(([k])=>cellHtml(cellFor(k,d.key))).join("")}</tr>`).join("")}</tbody>
   </table>
-  <div class="bwleg"><span><b class="lok">✓</b> ${TL("gemeten sluit aan","measured aligns","medido alinha")}</span><span><b class="ldash">—</b> ${TL("te weinig data","too little data","poucos dados")}</span><span><b class="larr">→</b> ${TL("bespreekwaarde","discussion value","valor de discussão")}</span></div>` : "";
+  <div class="bwleg"><span><b class="lok">✓</b> ${TL("gemeten sluit aan","measured aligns","medido alinha")}</span><span><b class="ldash">±</b> ${TL("tegenstrijdig","conflicting","contraditório")}</span><span><b class="ldash">—</b> ${TL("te weinig data","too little data","poucos dados")}</span><span><b class="larr">→</b> ${TL("bespreekwaarde","discussion value","valor de discussão")}</span></div>` : "";
   // ISF-terugval op de hele dag (geen dagdeel apart genoeg data).
   const allRow = byKey.isf && byKey.isf.allRow;
   const allNote = allRow ? `<div class="bwall">${TL("ISF over de hele dag","ISF over the whole day","ISF ao longo do dia inteiro")}: <b>${allRow.cands[0].from} → ${allRow.cands.map(c=>c.to).join("–")}</b> <span class="pdmeta">${allRow.meta}</span></div>` : "";
@@ -3665,16 +3738,18 @@ function proposalsHtml(drift, oi, MR, pi, glucose, treatments, q, timeline){
   // Waarom staat er een "—"? Concreet per hefboom, met aantallen.
   const why=[];
   if(oi && oi.n!=null && oi.n<8) why.push(TL(`ISF: ${oi.n} losse handmatige correcties (min. 8). Met een closed loop doet de loop de correcties zelf (SMB), dus dit is zelden meetbaar — zie de vuistregel hieronder.`,`ISF: ${oi.n} stand-alone manual corrections (min. 8). On a closed loop the loop does the corrections (SMB), so this is rarely measurable — see the rule of thumb below.`,`ISF: ${oi.n} correções manuais isoladas (mín. 8). Num loop fechado o loop corrige (SMB) — veja a regra prática abaixo.`));
+  const bg0=byKey.basaal&&byKey.basaal.grid; if(bg0){ const mx=Object.entries(bg0).filter(([k,g])=>g.status==="mixed").map(([k])=>dpName(k));
+    if(mx.length) why.push(TL(`Basaal: in ${mx.join(", ")} geeft je loop minder temp-basaal dan je profiel, maar mét SMB's meer. Dat past bij niet-gelogd eten of correcties en is dus geen bewijs dat je basaal fout staat. Daarom geen voorstel; bespreek het met je team.`,`Basal: in ${mx.join(", ")} your loop gives less temp basal than your profile but more with SMBs. That fits unlogged food or corrections and is not proof your basal is wrong, so no proposal; discuss with your team.`,`Basal: em ${mx.join(", ")} o loop dá menos basal temporária que o perfil, mas mais com SMB. Não é prova de basal errada; sem proposta.`)); }
   const icg=byKey.ic&&byKey.ic.grid; if(icg){ const low=Object.entries(icg).filter(([k,g])=>g.status==="weinig"&&g.n!=null).map(([k,g])=>`${dpName(k)} n=${g.n}`);
     if(low.length) why.push(TL(`KH-ratio: te weinig gebolusde maaltijden van ≥30 g (min. ${MEAL_MIN}) in ${low.join(", ")}.`,`Carb ratio: too few bolused meals of ≥30 g (min. ${MEAL_MIN}) in ${low.join(", ")}.`,`Rácio: poucas refeições com bólus ≥30 g (mín. ${MEAL_MIN}) em ${low.join(", ")}.`)); }
   let rule="";
   try{ const ins=insulinCarbs(treatments,timeline,q), isfP=pi.isf&&pi.isf.length?_pMed(pi.isf.map(b=>b.value)):null, icP=pi.ic&&pi.ic.length?_pMed(pi.ic.map(b=>b.value)):null;
     if(ins.tdd>5){ const isfR=100/ins.tdd, icR=500/ins.tdd, dev=(x,y)=>y?Math.round((x/y-1)*100):null;
       const line=(lab,r,pf,u)=>{ const d=pf?dev(r,pf):null; return `<div class="bar"><span>${lab}</span><span>${nl1(r)} ${u} <span class="muted">${TL("vs profiel","vs profile","vs perfil")} ${pf!=null?nl1(pf):"—"}${d!=null?` (${d>0?"+":""}${d}%)`:""}</span></span></div>`; };
-      rule=`<div class="ba" style="margin-top:.6rem"><b>${TL("Vuistregel-check ISF (TDD)","Rule-of-thumb ISF check (TDD)","Verificação ISF por regra (TDD)")}</b><div class="muted" style="font-size:.72rem;margin:.2rem 0">${TL(`Totale dagdosis ≈ ${nl1(ins.tdd)} E (basaal uit profiel + bolus + SMB). Dit is een grove schatting, géén meting van jouw lichaam.`,`Total daily dose ≈ ${nl1(ins.tdd)} U (profile basal + bolus + SMB). A rough estimate, not a measurement.`,`Dose diária total ≈ ${nl1(ins.tdd)} U. Estimativa grosseira, não uma medição.`)}</div>`+
+      rule=`<div class="ba" style="margin-top:.6rem"><b>${TL("Vuistregel-check ISF (TDD)","Rule-of-thumb ISF check (TDD)","Verificação ISF por regra (TDD)")}</b><div class="muted" style="font-size:.75rem;margin:.2rem 0">${TL(`Totale dagdosis ≈ ${nl1(ins.tdd)} E (basaal uit profiel + bolus + SMB). Dit is een grove schatting, géén meting van jouw lichaam.`,`Total daily dose ≈ ${nl1(ins.tdd)} U (profile basal + bolus + SMB). A rough estimate, not a measurement.`,`Dose diária total ≈ ${nl1(ins.tdd)} U. Estimativa grosseira, não uma medição.`)}</div>`+
         line("ISF (100/TDD)",isfR,isfP,"mmol/L/"+TL("E","U","U"))+
         `<div class="muted" style="font-size:.7rem;margin-top:.25rem">${TL("Verschilt het >25%, bespreek dan met je team of er een reden voor is. Geen advies om te wijzigen.","If it differs >25%, ask your team whether there is a reason. Not advice to change.","Se diferir >25%, discuta com a equipa. Não é um conselho para alterar.")}</div></div>`; } }catch(e){}
-  const whyHtml = why.length?`<div class="muted" style="margin-top:.5rem;font-size:.74rem"><b>${TL("Waarom ontbreekt er iets?","Why is something missing?","Porque falta algo?")}</b>${why.map(w=>`<div style="margin-top:.2rem">• ${w}</div>`).join("")}</div>`:"";
+  const whyHtml = why.length?`<div class="muted" style="margin-top:.5rem;font-size:.75rem"><b>${TL("Waarom ontbreekt er iets?","Why is something missing?","Porque falta algo?")}</b>${why.map(w=>`<div style="margin-top:.2rem">• ${w}</div>`).join("")}</div>`:"";
   return matrix + allNote + whyHtml + rule + lead + caveat + detail;
 }
 
@@ -3711,7 +3786,7 @@ function beforeAfter(glucose, q, annTs, win){
   // Zo ja, dan is verbetering erna deels terugval naar het gemiddelde (RTM).
   const prior2 = glucose.filter(x=>x.ts>=annTs-2*win*DAY && x.ts<annTs-win*DAY && usable(x.ts));
   const side = arr => { const days=new Set(arr.map(x=>localDayKey(x.ts))).size;
-    return (arr.length>=200 && days>=3) ? { ok:true, days, m:metrics(arr) } : { ok:false, days }; };
+    return (arr.length>=200 && days>=7) ? { ok:true, days, m:metrics(arr) } : { ok:false, days }; };
   const b=side(before), a=side(after), p2=side(prior2);
   const dip = b.ok && p2.ok && (p2.m.tir - b.m.tir) >= 0.05;   // before was zelf een dip
   return { win, before:b, after:a, dip };
@@ -3792,7 +3867,7 @@ function anHours(glucose, q){
   const pc=(a,p)=>{const s=[...a].sort((x,y)=>x-y);return s.length?s[Math.min(s.length-1,Math.floor(p*s.length))]:null;};
   const rows=H.map((a,h)=>({h,n:a.length,p10:pc(a,.1),p50:pc(a,.5),p90:pc(a,.9),low:a.filter(v=>v<3.9).length/(a.length||1),high:a.filter(v=>v>10).length/(a.length||1),ep:starts[h]}));
   const worstLow=[...rows].sort((a,b)=>b.low-a.low)[0], worstHigh=[...rows].sort((a,b)=>b.high-a.high)[0];
-  const tr=rows.map(r=>`<div class="warow"><span>${String(r.h).padStart(2,"0")}:00</span><span>${nl1(r.p10)}–${nl1(r.p90)}</span><span style="${r.low>0.04?"color:var(--low);font-weight:600":""}">${pct0(r.low)}</span><span style="${r.high>0.25?"color:var(--high);font-weight:600":""}">${pct0(r.high)}</span><span>${r.ep}</span></div>`).join("");
+  const tr=rows.map(r=>`<div class="warow"><span>${String(r.h).padStart(2,"0")}:00</span><span>${nl1(r.p10)}–${nl1(r.p90)}</span><span style="${r.low>0.04?"color:var(--t-low);font-weight:600":""}">${pct0(r.low)}</span><span style="${r.high>0.25?"color:var(--t-high);font-weight:600":""}">${pct0(r.high)}</span><span>${r.ep}</span></div>`).join("");
   return `<div class="watable"><div class="warow head"><span>${TL("uur","hour","hora")}</span><span>p10–p90</span><span>&lt;3,9</span><span>&gt;10</span><span>${TL("hypo-starts","hypo starts","início hipo")}</span></div>${tr}</div>`+
     `<div class="obs" style="margin-top:.5rem">${TL(`Meeste tijd onder 3,9: <b>${String(worstLow.h).padStart(2,"0")}:00</b> (${pct0(worstLow.low)}). Meeste tijd boven 10: <b>${String(worstHigh.h).padStart(2,"0")}:00</b> (${pct0(worstHigh.high)}).`,`Most time below 3.9: <b>${String(worstLow.h).padStart(2,"0")}:00</b> (${pct0(worstLow.low)}). Most time above 10: <b>${String(worstHigh.h).padStart(2,"0")}:00</b> (${pct0(worstHigh.high)}).`,`Mais tempo abaixo de 3,9: <b>${String(worstLow.h).padStart(2,"0")}:00</b> (${pct0(worstLow.low)}). Mais tempo acima de 10: <b>${String(worstHigh.h).padStart(2,"0")}:00</b> (${pct0(worstHigh.high)}).`)}</div>`+
 (worstLow.low>0.04?`<div class="obs" style="margin-top:.4rem"><b>${TL("Idee voor je team (alleen tekst)","Idea for your team (text only)","Ideia para a equipa (só texto)")}</b>: ${TL(`rond ${String(worstLow.h).padStart(2,"0")}:00 zit je boven de ATTD-grens voor laag. Bespreek of een tijdelijk hoger streefdoel of een Automation/profielschakeling in dat uur past. De app wijzigt nooit iets in AAPS of je pomp.`,`around ${String(worstLow.h).padStart(2,"0")}:00 you exceed the ATTD limit for lows. Discuss whether a temporary higher target or an Automation/profile switch fits that hour. The app never changes anything in AAPS or your pump.`,`por volta das ${String(worstLow.h).padStart(2,"0")}:00 excede o limite ATTD para hipos. Discuta um alvo temporário mais alto ou uma Automation. A app nunca altera nada no AAPS ou na bomba.`)}</div>`:"")+
@@ -3861,7 +3936,7 @@ function baHtml(annTs){
   const r=beforeAfter(_ctx.glucose, _ctx.q, annTs, 14);
   if(!r.before.ok && !r.after.ok) return `<div class="ba"><span class="muted">Nog te weinig bruikbare dagen rond deze datum om te vergelijken.</span></div>`;
   if(!r.before.ok || !r.after.ok){ const which=r.before.ok?"ná":"vóór";
-    return `<div class="ba"><span class="muted">Wacht op meer dagen ${which} deze datum (min. 3 met ≥70% dekking) voor een vergelijking.</span></div>`; }
+    return `<div class="ba"><span class="muted">Wacht op meer dagen ${which} deze datum (min. 7 met ≥70% dekking) voor een vergelijking.</span></div>`; }
   const b=r.before.m, a=r.after.m;
   const row=(label,bv,av,fmt,better)=>{ const d=av-bv, flat=Math.abs(d)<1e-9;
     const cls=(!better||flat)?"":better(d)?"up":"dn", arrow=flat?"":d>0?"▲":"▼";
@@ -4072,7 +4147,7 @@ async function doSync(){
 }
 document.getElementById("btnSync").onclick = doSync;
 document.getElementById("btnCfg").onclick = ()=>{
-  document.getElementById("inUrl").value=cfg.url; document.getElementById("inTok").value=cfg.token;
+  document.getElementById("inUrl").value=cfg.url; document.getElementById("inTok").value=cfg.token; { const pc=document.getElementById("inProtect"), pp=document.getElementById("inPass"); pc.checked=!!cfg.protected; pp.hidden=!pc.checked; pp.value=""; }
   document.getElementById("inDays").value=cfg.days; document.getElementById("inLoopGap").checked=cfg.loopgap!==false; document.getElementById("inInsulin").value=String(cfg.peak||75);
   document.getElementById("inLang").value=LANG;
   document.getElementById("inAiOn").checked=!!cfg.aiOn;
@@ -4089,11 +4164,14 @@ document.getElementById("btnLink").onclick = async ()=>{
   try{ await navigator.clipboard.writeText(link); msg.textContent="Gekopieerd — alleen naar jezelf sturen (bevat je token)."; }
   catch(_){ prompt("Koppellink (alleen voor jezelf):",link); }
 };
+document.getElementById("inProtect").onchange=e=>{ document.getElementById("inPass").hidden=!e.target.checked; };
 document.getElementById("btnSave").onclick = async ()=>{
   const err=document.getElementById("cfgErr");
   const url=document.getElementById("inUrl").value.trim().replace(/\/+$/,"");
   if (!/^https:\/\/.+/.test(url)){ err.textContent=TL("Adres moet met https:// beginnen.","Address must start with https://.","O endereço deve começar por https://."); err.hidden=false; return; }
-  cfg.url=url; cfg.token=document.getElementById("inTok").value.trim();
+  const tokIn=document.getElementById("inTok").value.trim();
+  if(cfg.protected && !cfg.token && !tokIn){ err.textContent=TL("Ontgrendel eerst (herlaad de app) of vul het token opnieuw in.","Unlock first (reload the app) or enter the token again.","Desbloqueie primeiro ou volte a introduzir o token."); err.hidden=false; return; }
+  cfg.url=url; cfg.token=tokIn;
   cfg.days=Math.min(365,Math.max(7,+document.getElementById("inDays").value||30));
   cfg.loopgap=document.getElementById("inLoopGap").checked;
   cfg.peak=[45,55,75].includes(+document.getElementById("inInsulin").value)?+document.getElementById("inInsulin").value:75;
@@ -4103,6 +4181,9 @@ document.getElementById("btnSave").onclick = async ()=>{
   cfg.aiUrl=document.getElementById("inAiUrl").value.trim().replace(/\/+$/,"");
   cfg.aiModel=document.getElementById("inAiModel").value.trim();
   cfg.aiKey=document.getElementById("inAiKey").value.trim();
+  const prot=document.getElementById("inProtect").checked, pw=document.getElementById("inPass").value;
+  if(prot){ if(!pw){ err.textContent=TL("Vul een wachtwoord in om te beveiligen.","Enter a password to protect.","Introduza uma palavra-passe."); err.hidden=false; return; } await encryptSecrets(pw); }
+  else { cfg.protected=false; delete cfg.enc; }
   setConn("busy",t("conn.checking"));
   try { await NS.get("/api/v1/status.json"); saveCfg(); document.getElementById("btnSync").disabled=false; closeDlg(); await doSync(); }
   catch(e){ setConn("err",t("conn.noconn")); err.textContent=e.message; err.hidden=false; }
@@ -4125,6 +4206,7 @@ document.getElementById("btnExport").onclick = async ()=>{
   const url=URL.createObjectURL(new Blob([data],{type:"application/json"}));
   const a=document.createElement("a"); a.href=url; a.download=`diametric-logboek-${new Date().toISOString().slice(0,10)}.json`;
   document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),1000);
+  cfg.lastBackup=Date.now(); saveCfg(); renderBackupNote();
   toast(TL(`${anns.length} markeringen geëxporteerd.`,`${anns.length} marks exported.`,`${anns.length} marcas exportadas.`));
 };
 document.getElementById("btnImport").onclick = ()=>document.getElementById("fileImport").click();
@@ -5247,6 +5329,8 @@ try{ $("url").value=cfg.url||"https://"; }catch(_){}
 initDeep();
 snapshotI18n(); applyStaticI18n();   // NL vastleggen, daarna vaste teksten in de gekozen taal
 (async function init(){
+  try{ if(navigator.storage&&navigator.storage.persist) navigator.storage.persist(); }catch(_){}   // vraag de browser je data niet automatisch te wissen
+  await ensureUnlocked();
   if (!cfg.url){ setConn("",t("conn.unset")); openDlg(); }
   else { setConn("ok",t("conn.set")); document.getElementById("btnSync").disabled=false; }
   try { await refresh(); } catch(e){ console.error(e); }
@@ -5258,7 +5342,20 @@ snapshotI18n(); applyStaticI18n();   // NL vastleggen, daarna vaste teksten in d
   if(!("serviceWorker" in navigator)) return;
   if(location.protocol!=="https:" && location.protocol!=="http:") return;
   window.addEventListener("load",function(){
-    navigator.serviceWorker.register("sw.js").catch(function(e){ console.warn("SW niet geregistreerd:", e && e.message); });
+    var hadController = !!navigator.serviceWorker.controller;
+    function banner(){
+      if(document.getElementById("updBar")) return;
+      var d=document.createElement("div"); d.id="updBar"; d.setAttribute("role","status");
+      d.innerHTML='<span>'+TL("Nieuwe versie beschikbaar.","New version available.","Nova versão disponível.")+'</span> <button id="updBtn">'+TL("Vernieuwen","Reload","Recarregar")+'</button>';
+      document.body.appendChild(d); document.getElementById("updBtn").onclick=function(){ location.reload(); };
+    }
+    navigator.serviceWorker.register("sw.js").then(function(reg){
+      reg.addEventListener("updatefound",function(){ var w=reg.installing; if(!w) return;
+        w.addEventListener("statechange",function(){ if(w.state==="installed" && navigator.serviceWorker.controller) banner(); }); });
+      document.addEventListener("visibilitychange",function(){ if(document.visibilityState==="visible") reg.update().catch(function(){}); });
+      reg.update().catch(function(){});
+    }).catch(function(e){ console.warn("SW niet geregistreerd:", e && e.message); });
+    navigator.serviceWorker.addEventListener("controllerchange",function(){ if(hadController) banner(); });
   });
 })();
 </script>
