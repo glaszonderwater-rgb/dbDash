@@ -1327,8 +1327,11 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
   <label style="margin-top:1.1rem" data-i18n="cfg.aiLabel">AI-assistent (optioneel)</label>
   <div class="hint" data-i18n="cfg.aiHint">Voor vrije vragen bovenop de lokale antwoorden. Werkt met je <b>eigen</b> sleutel bij een OpenAI-compatibele dienst — of een lokale Ollama/LM Studio, dan blijft alles op je machine. Er gaan alléén de samenvattende cijfers naartoe die ook op je scherm staan, nooit je ruwe sensorstroom. Antwoorden zijn gegenereerd (kunnen fouten bevatten) en nooit dosisadvies. Je sleutel staat lokaal op dit toestel.</div>
   <label class="aitog"><input type="checkbox" id="inAiOn"> <span data-i18n="cfg.aiEnable">AI-assistent inschakelen</span></label>
+  <label for="inAiUrl" data-i18n="cfg.aiUrlL">Adres van de AI-dienst</label>
   <input id="inAiUrl" type="url" placeholder="https://api.openai.com/v1" autocomplete="off" spellcheck="false">
+  <label for="inAiModel" data-i18n="cfg.aiModelL">Model</label>
   <input id="inAiModel" type="text" placeholder="gpt-4o-mini" autocomplete="off" spellcheck="false">
+  <label for="inAiKey" data-i18n="cfg.aiKeyL">Sleutel (API-key)</label>
   <input id="inAiKey" type="password" placeholder="sk-… (API-sleutel)" autocomplete="off" spellcheck="false">
   <label class="aitog" style="margin-top:.8rem"><input type="checkbox" id="inProtect"> <span>Token en sleutel met wachtwoord beveiligen</span></label>
   <input id="inPass" type="password" placeholder="wachtwoord (nodig bij elke keer opslaan)" autocomplete="new-password" hidden>
@@ -1496,6 +1499,9 @@ Object.assign(I18N, {
   "an.memory":{ nl:"Maaltijdgeheugen", en:"Meal memory", pt:"Memória de refeições" },
   "an.hours":{ nl:"Per uur", en:"By hour", pt:"Por hora" },
   "an.effects":{ nl:"Effect van doorgevoerde wijzigingen", en:"Effect of applied changes", pt:"Efeito das alterações aplicadas" },
+  "cfg.aiUrlL":{ nl:"Adres van de AI-dienst", en:"AI service address", pt:"Endereço do serviço de IA" },
+  "cfg.aiModelL":{ nl:"Model", en:"Model", pt:"Modelo" },
+  "cfg.aiKeyL":{ nl:"Sleutel (API-key)", en:"Key (API key)", pt:"Chave (API key)" },
   "ai.label":{ nl:"Je vraag", en:"Your question", pt:"A sua pergunta" },
   "ai.ph":{ nl:"Stel een vraag…", en:"Ask a question…", pt:"Faça uma pergunta…" },
   "ai.send":{ nl:"Vraag", en:"Ask", pt:"Perguntar" },
