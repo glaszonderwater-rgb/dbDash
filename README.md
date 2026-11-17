@@ -50,3 +50,9 @@ insteladviezen. Wat je met een patroon doet, bespreek je met je behandelteam.
 - **Import** — NEVO-voedingsmiddelen naar de voedseldatabase van Nightscout (voor AAPS).
 - **Eten → Laad NEVO-producten** — leest die database (alleen lezen) en voegt de producten toe aan de koolhydraat-schatter.
 - **Analyses → Lunchtijd** — verdeling van lunchtijd, dagen zonder lunch en glucose na late lunch.
+
+## Gegevenskwaliteit
+
+- **Meetinterval:** bronnen die elke minuut leveren (xDrip+ met Libre) worden per 5 minuten gemiddeld, zodat alle analyses dezelfde 288 slots per dag gebruiken.
+- **Loop-gaten:** voor closed loop slaat de app dagen over waarop de loop minder dan 30% van de gewone activiteit had (telefoon of AAPS uit). Ze staan als "loop uit" in de periodebalk; uitschakelen kan in het tandwiel.
+- **Strak bereik:** naast tijd in bereik (3,9–10) toont de app 3,9–7,8 als tweede maat.

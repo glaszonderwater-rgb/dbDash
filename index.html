@@ -1042,6 +1042,8 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
     <option value="light" data-i18n="cfg.themeLight">Licht</option>
     <option value="dark" data-i18n="cfg.themeDark">Donker</option>
   </select>
+  <label class="aitog"><input type="checkbox" id="inLoopGap" checked> <span>Dagen met niet-actieve loop uitsluiten van de cijfers</span></label>
+  <div class="hint">Voor closed loop: dagen met minder dan 30% van je gewone loop-activiteit (telefoon of AAPS uit) vertekenen je instellingen en tellen dan niet mee. Aan = aanbevolen.</div>
   <label for="inInsulin" data-i18n="cfg.insulinType">Insulinetype</label>
   <select id="inInsulin">
     <option value="75" data-i18n="cfg.insFast">Snelwerkend — Novorapid / Humalog / Apidra</option>
@@ -1565,7 +1567,15 @@ async function loadGlucose(days){
   rows.sort((a,b)=>a.ts-b.ts);
   const seen = new Map();                         // ontdubbelen op de minuut
   for (const r of rows) seen.set(Math.floor(r.ts/6e4), r);
-  return [...seen.values()].map(r=>({ ts:r.ts, bg:mmol(r.sgv), dir:r.direction }));
+  // Sommige bronnen (xDrip+ met Libre) leveren elke minuut een waarde. De hele app
+  // rekent met 5-minutenslots (288 per dag), dus dichtere data middelen we per slot.
+  const slot = new Map();
+  for (const r of seen.values()){
+    const k = Math.floor(r.ts/300e3), o = slot.get(k);
+    if (!o) slot.set(k, { ts:r.ts, sgv:r.sgv, n:1, dir:r.direction });
+    else { o.ts=(o.ts*o.n+r.ts)/(o.n+1); o.sgv=(o.sgv*o.n+r.sgv)/(o.n+1); o.n++; o.dir=r.direction; }
+  }
+  return [...slot.values()].map(o=>({ ts:Math.round(o.ts), bg:mmol(o.sgv), dir:o.dir }));
 }
 
 async function loadTreatments(days){
@@ -1877,13 +1887,30 @@ function fineTune(drift, oi, MR, stack, pi){
 
 /* ── Dekking ────────────────────────────────────────────────────────────── */
 const EXPECTED_PER_DAY = 288, MIN_COVERAGE = 0.70;
-function quality(glucose){
+// Closed loop: dagen waarop de loop nauwelijks actief was (telefoon/AAPS uit, geen upload)
+// geven een vertekend beeld van je instellingen. Alleen voor gebruikers met veel
+// loop-activiteit (mediaan >= 40 temp-basalen/SMB's per dag); drempel 30% van de mediaan.
+function loopGapDays(treatments, dayKeys){
+  const per = new Map();
+  for (const t of treatments){ if (/temp basal/i.test(t.type||"") || t.isSMB){ const k=localDayKey(t.ts); per.set(k,(per.get(k)||0)+1); } }
+  const vals = [...per.values()].sort((a,b)=>a-b);
+  if (vals.length<7) return new Set();
+  const med = vals[vals.length>>1]; if (med<40) return new Set();
+  const th = Math.max(15, med*0.3);
+  return new Set(dayKeys.filter(k=>(per.get(k)||0)<th));
+}
+function quality(glucose, treatments){
   const perDay = new Map();
   for (const g of glucose){ const k=localDayKey(g.ts); perDay.set(k,(perDay.get(k)||0)+1); }
   const days = [...perDay.entries()].map(([day,n])=>({day,n,coverage:n/EXPECTED_PER_DAY})).sort((a,b)=>a.day.localeCompare(b.day));
-  const usable = days.filter(d=>d.coverage>=MIN_COVERAGE);
+  let usable = days.filter(d=>d.coverage>=MIN_COVERAGE);
+  let loopGaps = new Set();
+  if (cfg.loopgap!==false && treatments && treatments.length){
+    loopGaps = loopGapDays(treatments, usable.map(d=>d.day));
+    if (loopGaps.size) usable = usable.filter(d=>!loopGaps.has(d.day));
+  }
   let gaps=0; for (let i=1;i<glucose.length;i++) if (glucose[i].ts-glucose[i-1].ts>30*60e3) gaps++;
-  return { days, usable, usableKeys:new Set(usable.map(d=>d.day)),
+  return { days, usable, loopGaps:[...loopGaps].sort(), usableKeys:new Set(usable.map(d=>d.day)),
     coverage: days.length ? days.reduce((s,d)=>s+Math.min(d.coverage,1),0)/days.length : 0,
     gaps, from: glucose.length?glucose[0].ts:null, to: glucose.length?glucose[glucose.length-1].ts:null };
 }
@@ -1894,8 +1921,9 @@ function metrics(g){
   for (const x of g) counts[bandOf(x.bg).id]++;
   const share = id => counts[id]/g.length;
   const mean = g.reduce((s,x)=>s+x.bg,0)/g.length;
+  const titr = g.filter(x=>x.bg>=3.9 && x.bg<=7.8).length/g.length;
   const sd = Math.sqrt(g.reduce((s,x)=>s+(x.bg-mean)**2,0)/g.length);
-  return { n:g.length, mean, cv:sd/mean, gmi:3.31+0.02392*toMgdl(mean),
+  return { n:g.length, mean, titr, cv:sd/mean, gmi:3.31+0.02392*toMgdl(mean),
     tir:share("inRange"), tbr:share("low")+share("veryLow"), veryLow:share("veryLow"),
     tar:share("high")+share("veryHigh"), veryHigh:share("veryHigh"),
     share };
@@ -2273,13 +2301,14 @@ function render(glucose, treatments, timeline){
   } else ob.hidden = true;
 
   // ── kwaliteit / periode ──
-  const q = quality(glucose);
+  const q = quality(glucose, treatments);
   const g = glucose.filter(x=>q.usableKeys.has(localDayKey(x.ts)));
   const lowCov = q.coverage>0 && q.coverage<MIN_COVERAGE+.05;
   document.getElementById("scope").innerHTML =
     `<span><i>${TL("periode","period","período")}</i> <b>${q.from?new Date(q.from).toLocaleDateString(LOCALE(),{day:"2-digit",month:"short"}):"—"} – ${q.to?new Date(q.to).toLocaleDateString(LOCALE(),{day:"2-digit",month:"short"}):"—"}</b></span>`+
     `<span class="${lowCov?"warn":""}"><i>${TL("dekking","coverage","cobertura")}</i> <b>${q.days.length?pct0(q.coverage):"—"}</b></span>`+
-    `<span><i>${TL("dagen","days","dias")}</i> <b>${q.usable.length}/${q.days.length}</b></span>`;
+    `<span><i>${TL("dagen","days","dias")}</i> <b>${q.usable.length}/${q.days.length}</b></span>`+
+    (q.loopGaps.length?`<span class="warn" title="${esc(q.loopGaps.join(", "))}"><i>${TL("loop uit","loop off","loop desligado")}</i> <b>${q.loopGaps.length}</b></span>`:"");
   document.getElementById("monthSub").textContent = `${q.usable.length} ${TL("dagen","days","dias")} · ${pct0(q.coverage)} ${TL("dekking","coverage","cobertura")}`;
 
   if (!g.length){
@@ -2367,6 +2396,7 @@ function render(glucose, treatments, timeline){
     [TL("In bereik","In range","No alvo"), pct0(m.tir), TL("streef >70%","aim >70%","meta >70%"), tick(m.tir>=0.70)],
     [TL("Hypo","Low","Hipo"), pct0(m.tbr), TL("streef <4%","aim <4%","meta <4%"), tick(m.tbr<0.04)],
     [TL("Variatie (CV)","Variability (CV)","Variabilidade (CV)"), pct0(m.cv), TL("streef ≤36%","aim ≤36%","meta ≤36%"), tick(m.cv<=0.36)],
+    [TL("Strak 3,9–7,8","Tight 3.9–7.8","Estrito 3,9–7,8"), pct0(m.titr), TL("tweede maat","secondary","segunda medida"), ""],
     ["GMI", nl1(m.gmi)+"%", TL("geschat HbA1c","estimated HbA1c","HbA1c estimada"), ""],
   ].map(([k,v,s3,b])=>`<div class="kpi"><div class="k">${k} ${b}</div><div class="v">${v}</div><div class="s">${s3}</div></div>`).join("");
   document.getElementById("bandBar").innerHTML = bandBarHtml(m);
@@ -3715,6 +3745,7 @@ async function buildReport(){
   const U=TL("E","U","U");
   const kern=[
     [TL("Tijd in bereik 3,9–10,0","Time in range 3.9–10.0","Tempo no alvo 3,9–10,0"), pct0(m.tir), ">70%", m.tir>=0.70],
+    [TL("Tijd strak 3,9–7,8","Time tight 3.9–7.8","Tempo estrito 3,9–7,8"), pct0(m.titr), "", null],
     [TL("Tijd <3,9 (hypo)","Time <3.9 (low)","Tempo <3,9 (hipo)"), pct0(m.tbr), "<4%", m.tbr<0.04],
     [TL("Tijd <3,0","Time <3.0","Tempo <3,0"), pct0(m.veryLow), "<1%", m.veryLow<0.01],
     [TL("Tijd >10,0","Time >10.0","Tempo >10,0"), pct0(m.tar), "", null],
@@ -3815,7 +3846,7 @@ async function doSync(){
 document.getElementById("btnSync").onclick = doSync;
 document.getElementById("btnCfg").onclick = ()=>{
   document.getElementById("inUrl").value=cfg.url; document.getElementById("inTok").value=cfg.token;
-  document.getElementById("inDays").value=cfg.days; document.getElementById("inInsulin").value=String(cfg.peak||75);
+  document.getElementById("inDays").value=cfg.days; document.getElementById("inLoopGap").checked=cfg.loopgap!==false; document.getElementById("inInsulin").value=String(cfg.peak||75);
   document.getElementById("inLang").value=LANG;
   document.getElementById("inAiOn").checked=!!cfg.aiOn;
   document.getElementById("inAiUrl").value=cfg.aiUrl||""; document.getElementById("inAiModel").value=cfg.aiModel||""; document.getElementById("inAiKey").value=cfg.aiKey||"";
@@ -3828,6 +3859,7 @@ document.getElementById("btnSave").onclick = async ()=>{
   if (!/^https:\/\/.+/.test(url)){ err.textContent=TL("Adres moet met https:// beginnen.","Address must start with https://.","O endereço deve começar por https://."); err.hidden=false; return; }
   cfg.url=url; cfg.token=document.getElementById("inTok").value.trim();
   cfg.days=Math.min(365,Math.max(7,+document.getElementById("inDays").value||30));
+  cfg.loopgap=document.getElementById("inLoopGap").checked;
   cfg.peak=[45,55,75].includes(+document.getElementById("inInsulin").value)?+document.getElementById("inInsulin").value:75;
   PEAK_MIN=cfg.peak;
   // AI-assistent (optioneel, eigen sleutel/endpoint)
