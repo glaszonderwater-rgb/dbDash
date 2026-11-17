@@ -126,19 +126,19 @@ async function startFrom(store, days, refetch){
   const last = await DB.meta("sync."+store);
   return last ? Math.max(floor, last - refetch) : floor;
 }
-async function syncAll(onProgress){
-  const now = Date.now();
+async function syncAll(onProgress, daysOverride){
+  const now = Date.now(), DAYS = daysOverride || cfg.days;
   const say = (s,n,at)=>onProgress?.(`${s} · ${n.toLocaleString(LOCALE())} · ${new Date(at).toLocaleDateString(LOCALE(),{day:"2-digit",month:"short"})}`);
 
   // metingen (kern)
-  let rows = await NS.entries(await startFrom("entries", cfg.days, 24*36e5), now, (n,at)=>say(TL("metingen","readings","leituras"),n,at));
+  let rows = await NS.entries(await startFrom("entries", DAYS, 24*36e5), now, (n,at)=>say(TL("metingen","readings","leituras"),n,at));
   const E = rows.map(e=>({ _id:String(e._id), ts:parseTs(e.date)??parseTs(e.dateString), sgv:e.sgv, direction:e.direction }))
     .filter(e=>e.ts!=null && e.sgv>0);
   await DB.putMany("entries", E);
   if (E.length) await DB.meta("sync.entries", Math.max(...E.map(e=>e.ts)));
 
   // behandelingen (voor de verdieping) — volledig document bewaren
-  rows = await NS.treatments(await startFrom("treatments", cfg.days, 72*36e5), now, (n,at)=>say(TL("behandelingen","treatments","tratamentos"),n,at));
+  rows = await NS.treatments(await startFrom("treatments", DAYS, 72*36e5), now, (n,at)=>say(TL("behandelingen","treatments","tratamentos"),n,at));
   const T = rows.map(t=>({ ...t, _id:String(t._id), ts:parseTs(t.created_at)??parseTs(t.mills) })).filter(t=>t.ts!=null);
   await DB.putMany("treatments", T);
   if (T.length) await DB.meta("sync.treatments", Math.max(...T.map(t=>t.ts)));

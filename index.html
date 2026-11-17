@@ -690,6 +690,7 @@ details.why>summary::after{content:" ›"}
 .brand .mark{width:26px;height:26px;color:var(--ink)} .brandtxt{font-weight:650;font-size:1.15rem;letter-spacing:-.02em}
 .l24leg{font-size:.68rem;margin-top:.2rem}
 .view[data-view="analyses"]>.scope{border-top:0;border-bottom:1px solid var(--line);margin-bottom:.6rem}
+.dot.warn{background:var(--warn)}
 </style>
 </head>
 <body>
@@ -813,7 +814,7 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
   </details>
 
   <div class="h3" data-i18n="an.insulinBasal">Insuline &amp; basaal</div>
-  <details class="fold" id="secMore"><summary><span>Meer analyses</span> <span class="foldhint">maandtrend, per uur, maaltijdgeheugen, loop-basaal, dagpatroon</span></summary><div class="foldbody">
+
     <div class="card" id="mvsCard" style="margin-top:.6rem" hidden>
       <div class="mvshead"><span data-i18n="home.mvsSetting">instelling</span><span data-i18n="home.mvsMeasured">gemeten · ingesteld</span></div>
       <div id="tune"></div>
@@ -823,7 +824,6 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
   <details class="deep" data-an="uur"><summary><span>Per uur</span> <span class="foldhint">spreiding, hypo's &amp; hoogtes per uur</span></summary><div class="body"><div class="loading">…</div></div></details>
   <details class="deep" data-an="loopbasal"><summary><span data-i18n="an.loopBasal">Loop-basaal</span> <span class="foldhint" data-i18n="an.loopBasalHint">wat je loop echt levert vs. je profiel</span></summary><div class="body"><div class="loading" data-i18n="loading">Openklappen om te berekenen…</div></div></details>
   <details class="deep" data-an="dagpatroon"><summary><span data-i18n="an.daypattern">Dagpatroon</span> <span class="foldhint" data-i18n="an.daypatternHint">vaste uren waarop je wegdrijft (basaal)</span></summary><div class="body"><div class="loading" data-i18n="loading">Openklappen om te berekenen…</div></div></details>
-  </div></details>
   <details class="fold" id="secInsulin" hidden>
     <summary><span data-i18n="an.insulinCarbs">Insuline &amp; koolhydraten</span> <span class="foldhint" data-i18n="an.insulinCarbsHint">dagdosis en verhouding</span></summary>
     <div class="foldbody">
@@ -976,7 +976,6 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
   <section class="epoch" id="epEten" style="margin-left:0">
     <div class="eh"><h2 data-i18n="eten.title">Koolhydraten schatten</h2><span class="sub" data-i18n="eten.sub">kies eten + portie → gram</span></div>
     <div class="cbNote" data-i18n="eten.note">Tabelwaarden, <b>geen dosisadvies</b>.</div>
-    <div class="cbNote" id="nevoRow" style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap"><button type="button" class="ghost" id="nevoLoad" style="font-size:.78rem">Laad NEVO-producten uit Nightscout</button><span id="nevoStat" class="muted"></span></div>
     <div id="cbMe"></div>
     <input type="search" id="cbSearch" data-i18n-ph="eten.searchPh" placeholder="zoek eten… (bijv. banaan, rijst, cola)" autocomplete="off">
     <div class="cbCats" id="cbCats"></div>
@@ -994,7 +993,6 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
 
     <div class="cbFatNote" id="cbFatNote" data-i18n="eten.fatNote">Kies een vet of eiwitrijk product (pizza, friet, kaas, noten…) en je krijgt bij de portie meteen een korte bolus-tip.</div>
   </section>
-  <div style="margin-top:.8rem"><button class="ghost" id="goImport" style="font-size:.78rem">⬇ NEVO-voedseldatabase naar Nightscout importeren</button></div>
   </div>
 
   <!-- IMPORT — NEVO naar Nightscout (schrijft; apart van de leesverbinding) -->
@@ -1157,6 +1155,12 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
     <button class="ghost" id="btnExport" data-i18n="cfg.export">⭳ Exporteer logboek</button>
     <button class="ghost" id="btnImport" data-i18n="cfg.import">⭱ Importeer</button>
     <input type="file" id="fileImport" accept="application/json,.json" hidden>
+  </div>
+
+  <label style="margin-top:1.1rem"><span data-i18n="cfg.nevo">Voedingsdatabase (NEVO)</span></label>
+  <div class="actions" style="margin-top:.4rem;flex-direction:column;align-items:stretch">
+    <div id="nevoRow" style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap"><button type="button" class="ghost" id="nevoLoad" style="font-size:.78rem">Laad NEVO-producten uit Nightscout</button><span id="nevoStat" class="muted"></span></div>
+  <div ><button class="ghost" id="goImport" style="font-size:.78rem">⬇ NEVO-voedseldatabase naar Nightscout importeren</button></div>
   </div>
 
   <label style="margin-top:1.1rem" data-i18n="cfg.aiLabel">AI-assistent (optioneel)</label>
@@ -1324,6 +1328,7 @@ Object.assign(I18N, {
   // Eten
   "eten.title":{ en:"Estimate carbs", pt:"Estimar hidratos" },
   "eten.sub":{ en:"pick food + portion → grams", pt:"escolha alimento + porção → gramas" },
+  "cfg.nevo":{ nl:"Voedingsdatabase (NEVO)", en:"Food database (NEVO)", pt:"Base de alimentos (NEVO)" },
   "home.last24":{ nl:"Laatste 24 uur", en:"Last 24 hours", pt:"Últimas 24 horas" },
   "eten.note":{ nl:"Tabelwaarden, <b>geen dosisadvies</b>.", en:"Table values, <b>not dosing advice</b>.", pt:"Valores de tabela, <b>não é conselho de dose</b>." },
   "eten.searchPh":{ en:"search food… (e.g. banana, rice, cola)", pt:"procurar alimento… (ex. banana, arroz, cola)" },
@@ -2064,7 +2069,11 @@ async function refresh(){
   const prevCls=dot.className, prevTxt=connTxt.textContent;
   setConn("busy",TL("Berekenen…","Calculating…","A calcular…")); await new Promise(r=>setTimeout(r,30));   // eerst laten schilderen, dan zwaar rekenen
   try { return await _refresh(); }
-  finally { if(connTxt.textContent===TL("Berekenen…","Calculating…","A calcular…")){ dot.className=prevCls; connTxt.textContent=prevTxt; } }
+  finally { if(connTxt.textContent===TL("Berekenen…","Calculating…","A calcular…")){ dot.className=prevCls; connTxt.textContent=prevTxt; }
+    // Verouderde data: laat het in de kop zien, zodat je niet naar oude cijfers kijkt.
+    try{ const g=_ctx&&_ctx.glucose, last=g&&g.length?g[g.length-1].ts:null;
+      if(last && !/busy|err/.test(dot.className)){ const m=Math.round((Date.now()-last)/60000);
+        if(m>30) setConn("warn", m<120?TL(`meting ${m} min oud`,`reading ${m} min old`,`leitura há ${m} min`):TL(`meting ${Math.round(m/60)} u oud`,`reading ${Math.round(m/60)} h old`,`leitura há ${Math.round(m/60)} h`)); } }catch(_){} }
 }
 async function _refresh(){
   const glucose = await loadGlucose(cfg.days);
@@ -2080,7 +2089,13 @@ function rerender(){
 }
 async function doSync(){
   const btn=document.getElementById("btnSync"); btn.disabled=true; setConn("busy",t("conn.syncing"));
-  try { await syncAll(msg=>setConn("busy",msg)); setConn("ok",t("conn.updated")); await refresh(); }
+  try {
+    // Eerste keer: eerst 14 dagen ophalen en tonen, daarna de rest op de achtergrond aanvullen.
+    const first=!(await DB.meta("sync.entries")) && cfg.days>14;
+    if(first){ await syncAll(msg=>setConn("busy",msg), 14); setConn("ok",t("conn.updated")); await refresh();
+      setConn("busy",TL("rest aanvullen…","filling in the rest…","a completar…"));
+      await DB.meta("sync.entries",null); await DB.meta("sync.treatments",null); }
+    await syncAll(msg=>setConn("busy",msg)); setConn("ok",t("conn.updated")); await refresh(); }
   catch(e){ setConn("err",t("conn.failed")); toast(TL("Sync mislukt: ","Sync failed: ","Sincronização falhou: ")+e.message); console.error(e); }
   finally { btn.disabled=false; }
 }
@@ -2815,7 +2830,7 @@ function showTab(tab){
   window.scrollTo({top:0});
 }
 document.querySelectorAll("#tabbar .tab").forEach(b=>b.onclick=()=>showTab(b.dataset.tab));
-document.getElementById("goImport").onclick=()=>showTab("import"); document.getElementById("backEten").onclick=()=>showTab("eten");
+document.getElementById("goImport").onclick=()=>{ try{closeDlg();}catch(_){} showTab("import"); }; document.getElementById("backEten").onclick=()=>showTab("eten");
 
 // De index: élke analyse bij naam, één tik — geen zoeken
 // Sprong vanuit Overzicht-links naar een analyse: open de sectie en scrol erheen.
