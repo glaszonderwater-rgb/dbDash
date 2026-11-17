@@ -323,13 +323,7 @@ function penDayKeys(anns){
    Gebruikt de eigen AI-dienst uit Instellingen (OpenAI-compatibel of lokaal). De AI krijgt alleen
    de samenvattende cijfers die IDA al toont. Hij legt uit; profielwaarden berekent IDA zelf. */
 let _aiMsgs = [], _aiSys = "", _aiBusy = false;
-async function aiChat(messages, maxTokens){
-  const r=await fetch(cfg.aiUrl.replace(/\/+$/,"")+"/chat/completions",{ method:"POST",
-    headers:{ "Content-Type":"application/json", "Authorization":"Bearer "+cfg.aiKey },
-    body:JSON.stringify({ model:cfg.aiModel||"gpt-4o-mini", temperature:0.3, max_tokens:maxTokens||500, messages }) });
-  if(!r.ok){ const tx=await r.text().catch(()=>""); throw new Error("HTTP "+r.status+(tx?" — "+tx.slice(0,160):"")); }
-  const j=await r.json(); return ((j&&j.choices&&j.choices[0]&&j.choices[0].message&&j.choices[0].message.content)||"").trim();
-}
+async function aiChat(messages, maxTokens){ return aiRequest(messages, maxTokens||500, 0.3); }
 function _aiSystem(extra){
   const lang=_AI_LANG[LANG]||"Dutch", ctx=buildAskContext();
   return `You are IDA, a calm, practical assistant for a young adult with type 1 diabetes using AndroidAPS (closed loop, Omnipod Dash, Libre CGM). `+

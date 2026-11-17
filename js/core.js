@@ -1600,13 +1600,7 @@ async function askAI(question){
   const sys=`You are a careful assistant helping a person with type 1 diabetes review THEIR OWN CGM and pump data. Answer ONLY using the FACTS provided below. If the facts do not contain the answer, say so plainly — never invent numbers. You are NOT a medical device: never give insulin doses, dose sizes, dose changes, correction amounts, or prescriptions. Frame everything as observations and discussion points for their care team. Glucose is in mmol/L. Be concise (at most ~4 sentences). Reply in ${lang}.\n\nFACTS:\n${ctx.text}`;
   out.innerHTML=`<div class="askA ai"><div class="askAb">${t("ask.aiThinking")}</div></div>`;
   try{
-    const r=await fetch(cfg.aiUrl.replace(/\/+$/,"")+"/chat/completions",{ method:"POST",
-      headers:{ "Content-Type":"application/json", "Authorization":"Bearer "+cfg.aiKey },
-      body:JSON.stringify({ model:cfg.aiModel||"gpt-4o-mini", temperature:0.2, max_tokens:400,
-        messages:[{role:"system",content:sys},{role:"user",content:question}] }) });
-    if(!r.ok){ const tx=await r.text().catch(()=>""); throw new Error("HTTP "+r.status+(tx?" — "+tx.slice(0,160):"")); }
-    const j=await r.json();
-    const msg=(j&&j.choices&&j.choices[0]&&j.choices[0].message&&j.choices[0].message.content||"").trim()
+    const msg=(await aiRequest([{role:"system",content:sys},{role:"user",content:question}],400,0.2))
       || TL("Geen antwoord ontvangen.","No answer received.","Nenhuma resposta recebida.");
     out.innerHTML=`<div class="askA ai"><div class="askAb">${esc(msg).replace(/\n/g,"<br>")}</div>`+
       `<div class="askBadge">${t("ask.aiBadge")}</div>`+
@@ -1614,6 +1608,26 @@ async function askAI(question){
   }catch(e){ out.innerHTML=`<div class="askA ai"><div class="askAb">${t("ask.aiErr")}: ${esc(e.message)}</div></div>`; }
 }
 const aiEnabled = () => !!(cfg.aiOn && cfg.aiKey && cfg.aiUrl);
+// Eén aanroep voor elke AI-dienst. Claude (api.anthropic.com) via de eigen Messages-API, die
+// rechtstreeks vanuit de browser mag (CORS-header); alle andere via /chat/completions (OpenAI-compatibel).
+async function aiRequest(messages, maxTokens, temperature){
+  const base=cfg.aiUrl.replace(/\/+$/,"");
+  if(/anthropic\.com/i.test(base)){
+    const sys=messages.filter(m=>m.role==="system").map(m=>m.content).join("\n\n");
+    const msgs=messages.filter(m=>m.role!=="system");
+    const url=(/\/v1$/.test(base)?base:base+"/v1")+"/messages";
+    const r=await fetch(url,{ method:"POST", headers:{ "Content-Type":"application/json", "x-api-key":cfg.aiKey,
+      "anthropic-version":"2023-06-01", "anthropic-dangerous-direct-browser-access":"true" },
+      body:JSON.stringify({ model:cfg.aiModel||"claude-sonnet-5-5", max_tokens:maxTokens||500, temperature:temperature??0.3, system:sys, messages:msgs }) });
+    if(!r.ok){ const tx=await r.text().catch(()=>""); throw new Error("HTTP "+r.status+(tx?" — "+tx.slice(0,160):"")); }
+    const j=await r.json(); return ((j&&j.content||[]).filter(c=>c.type==="text").map(c=>c.text).join("\n")).trim();
+  }
+  const r=await fetch(base+"/chat/completions",{ method:"POST",
+    headers:{ "Content-Type":"application/json", "Authorization":"Bearer "+cfg.aiKey },
+    body:JSON.stringify({ model:cfg.aiModel||"gpt-4o-mini", temperature:temperature??0.3, max_tokens:maxTokens||500, messages }) });
+  if(!r.ok){ const tx=await r.text().catch(()=>""); throw new Error("HTTP "+r.status+(tx?" — "+tx.slice(0,160):"")); }
+  const j=await r.json(); return ((j&&j.choices&&j.choices[0]&&j.choices[0].message&&j.choices[0].message.content)||"").trim();
+}
 async function renderAsk(query){
   const out=document.getElementById("askAnswer"); if(!out) return;
   // hypo-gevoel-logs voor de awareness-intentie

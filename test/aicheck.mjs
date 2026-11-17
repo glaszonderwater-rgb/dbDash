@@ -46,10 +46,19 @@ const week=await page.evaluate(()=>!!document.getElementById('weekCard'));
 if(week){ await page.click('#weekAIbtn'); await page.waitForTimeout(400); }
 const weekTxt=await page.evaluate(()=>document.getElementById('weekAI')?.innerText||'');
 const sys=sent[0]&&sent[0].messages&&sent[0].messages[0].content||'';
+// Claude (Anthropic Messages-API) rechtstreeks uit de browser
+let ah=null, ab=null;
+await page.route('https://api.anthropic.com/**',route=>{ ah=route.request().headers(); ab=JSON.parse(route.request().postData()||'{}'); route.fulfill({status:200,contentType:'application/json',headers:{'access-control-allow-origin':'*'},body:JSON.stringify({content:[{type:'text',text:'Claude-antwoord'}]})}); });
+await page.evaluate(()=>{ cfg.aiUrl='https://api.anthropic.com/v1'; cfg.aiModel='claude-sonnet-5-5'; showTab('profiel'); });
+await page.click('#profExplain'); await page.waitForTimeout(400);
+const claude=await page.evaluate(()=>document.getElementById('aiLog').innerText);
+await page.evaluate(()=>closeAI());
+const okClaude=/Claude-antwoord/.test(claude) && ah && ah['x-api-key']==='k' && ah['anthropic-dangerous-direct-browser-access']==='true' && ab && typeof ab.system==='string' && ab.messages.every(m=>m.role!=='system');
+console.log('Claude-koppeling:',okClaude?'JA':'NEE');
 console.log('zonder AI → instellingen:',noAI?'JA':'NEE','| profieluitleg:',/Testantwoord/.test(prof)?'JA':'NEE','| vervolgvraag:',follow>=2?'JA':'NEE');
 console.log('profiel in context:',/IDA PROFILE PROPOSAL/.test(sys)?'JA':'NEE','| geen ruwe metingen:',!/sgv|mg\/dL readings/.test(JSON.stringify(sent))?'JA':'NEE','| sleutel als Bearer: JA');
 console.log('doorvragen op kaart:',hasAsk&&askOpen?'JA':'NEE','| weekoverzicht:',week?'JA':'NEE','| AI-samenvatting:',/Testantwoord/.test(weekTxt)?'JA':'NEE');
 console.log('errors:', errors.length?errors:'geen');
-const ok=noAI && /Testantwoord/.test(prof) && follow>=2 && /IDA PROFILE PROPOSAL/.test(sys) && hasAsk && askOpen && week && /Testantwoord/.test(weekTxt) && !errors.length;
+const ok=okClaude && noAI && /Testantwoord/.test(prof) && follow>=2 && /IDA PROFILE PROPOSAL/.test(sys) && hasAsk && askOpen && week && /Testantwoord/.test(weekTxt) && !errors.length;
 console.log('\nRESULTAAT:', ok?'OK':'FOUT');
 await browser.close();
