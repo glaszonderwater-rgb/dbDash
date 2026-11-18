@@ -31,6 +31,29 @@ function hypoDeep(c){
   return { n:hy.eps.length, stacked, rebound, iobMed:_pMed(iobs), iobRef:_pMed(ref), smbMed:_pMed(smbs) };
 }
 
+/* ── Maaltijdbolus bij dalende glucose: hoe vaak volgde een hypo? ───────── */
+// Een bolus op een lage of dalende waarde (onder 7 en zakkend, of AAPS voorspelt onder 5) gaf
+// bij jou vaker een hypo. De bolus-calculator kijkt niet naar de trend; jij kunt dat wel.
+const _ALC=/\b(bier|pils|wijn|alcohol|cocktail|wodka|whisky|rum|gin|cider|prosecco|champagne|beer|wine)\b/i;
+function mealBolusRisk(c){
+  const g=c.glucose, T=g.map(x=>x.ts), at=ts=>{ let lo=0,hi=T.length; while(lo<hi){const m=(lo+hi)>>1; if(T[m]<ts)lo=m+1;else hi=m;} return lo; };
+  const bol=c.treatments.filter(t=>t.insulin>=1&&!t.isSMB&&_usable(c,t.ts)), carbs=c.treatments.filter(t=>t.carbs>0);
+  const res={ fall:{n:0,hypo:0}, ok:{n:0,hypo:0}, alc:{n:0,hypo:0}, last:null };
+  for(const b of bol){
+    const cs=carbs.filter(x=>Math.abs(x.ts-b.ts)<=30*60e3); if(!cs.length) continue;
+    const i=at(b.ts); if(i>=T.length||Math.abs(T[i]-b.ts)>10*60e3) continue;
+    const j=at(b.ts-20*60e3); if(j>=i) continue;
+    const bg=g[i].bg, slope=(g[i].bg-g[j].bg)/((T[i]-T[j])/60000);      // mmol/L per min
+    const ds=_dsAll.find(d=>d.ev!=null&&d.ts>=b.ts-10*60e3&&d.ts<=b.ts);
+    let mn=99; for(let k=i;k<T.length&&T[k]<=b.ts+4*_H;k++) mn=Math.min(mn,g[k].bg);
+    const hypo=mn<LO_T, falling=(bg<7&&slope<-0.03)||(ds&&ds.ev<5), alc=cs.some(x=>_ALC.test((x.notes||"")+" "+((x.raw&&x.raw.notes)||"")));
+    const o=falling?res.fall:res.ok; o.n++; if(hypo) o.hypo++;
+    if(alc){ res.alc.n++; if(hypo) res.alc.hypo++; }
+    if(falling&&hypo&&(!res.last||b.ts>res.last.ts)) res.last={ts:b.ts,bg,slope,min:mn};
+  }
+  return res.fall.n+res.ok.n>=8?res:null;
+}
+
 /* ── Loop-limieten: wilde de loop meer dan hij gaf? ─────────────────────── */
 function loopLimits(c){
   const ds=_dsAll.filter(d=>d.insReq!=null && d.iob!=null && _usable(c,d.ts)); if(ds.length<500) return null;
@@ -127,7 +150,7 @@ const _utc = o => "UTC"+(o>=0?"+":"−")+Math.abs(o/60);
 /* ── Logs tegenover data: alcohol, ziek, stress ─────────────────────────── */
 function logEffects(c){
   const A=_idaAnns||[], out={};
-  const alc=A.filter(a=>a.type==="alcohol"||/alcohol|bier|wijn|drank/i.test(a.note||""));
+  const alc=[...A.filter(a=>a.type==="alcohol"||_ALC.test(a.note||"")), ...c.treatments.filter(t=>t.carbs>0&&_ALC.test((t.notes||"")+" "+((t.raw&&t.raw.notes)||""))).map(t=>({ts:t.ts}))];
   const nightLow=(day0)=>{ const from=day0, g=c.glucose.filter(x=>x.ts>=from&&x.ts<from+7*_H); return g.length>40?g.filter(x=>x.bg<LO_T).length/g.length:null; };
   const nightStart=ts=>{ const m=todMin(ts); return ts-m*60000+ (m>=18*60?24*60*60000:0); };   // eerstvolgende middernacht (lokaal)
   if(alc.length){ const after=alc.map(a=>nightLow(nightStart(a.ts))).filter(v=>v!=null);
@@ -228,6 +251,13 @@ function idaExtrasPatronen(c){
   const HD=hypoDeep(c);
   if(HD) tiles.push(`<article class="itile"><span class="itl">${TL("Rond je hypo's","Around your lows","À volta das hipos")}</span><b class="itn lo">${HD.stacked}/${HD.n}</b>
     <span class="its">${TL(`na ≥1 E SMB in de 2 uur ervoor. Actieve insuline bij de start ${_idaN(HD.iobMed)} E (normaal ${_idaN(HD.iobRef)}). Bij ${HD.rebound} schoot je daarna boven 10: vaak te veel opgegeten.`,`after ≥1 U SMB in the 2 h before. Active insulin at onset ${_idaN(HD.iobMed)} U (normally ${_idaN(HD.iobRef)}). ${HD.rebound} times you then went above 10: often over-treated.`,`após ≥1 U de SMB nas 2 h anteriores. ${HD.rebound} vezes subiu acima de 10 depois.`)}</span></article>`);
+  const MB=mealBolusRisk(c);
+  if(MB && MB.fall.n>=3){ const rf=MB.fall.hypo/MB.fall.n, ro=MB.ok.n?MB.ok.hypo/MB.ok.n:0;
+    tiles.push(`<article class="itile wide"><span class="itl">${TL("Bolussen op een dalende waarde","Bolusing on a falling value","Bólus com glicose a descer")}</span>
+      <div class="imrow"><span>${TL("Glucose onder 7 en dalend bij de bolus","Glucose under 7 and falling at bolus","Abaixo de 7 e a descer")}</span><span><b>${_idaPct(rf)}</b> <i>${TL(`hypo erna (${MB.fall.hypo}/${MB.fall.n})`,`low after (${MB.fall.hypo}/${MB.fall.n})`,`hipo depois (${MB.fall.hypo}/${MB.fall.n})`)}</i></span></div>
+      <div class="imrow"><span>${TL("Anders","Otherwise","Caso contrário")}</span><span><b>${_idaPct(ro)}</b> <i>${TL(`hypo erna (${MB.ok.hypo}/${MB.ok.n})`,`low after (${MB.ok.hypo}/${MB.ok.n})`,`hipo depois`)}</i></span></div>
+      ${MB.alc.n?`<div class="imrow"><span>${TL("Met alcohol erbij","With alcohol","Com álcool")}</span><span><b>${_idaPct(MB.alc.hypo/MB.alc.n)}</b> <i>${TL(`hypo erna (${MB.alc.hypo}/${MB.alc.n})`,`low after (${MB.alc.hypo}/${MB.alc.n})`,`hipo depois`)}</i></span></div>`:""}
+      <span class="its">${TL("De bolus-calculator kijkt niet naar je trend. Zak je al vóór het eten, bolus dan pas bij het eten of iets minder. Alcohol remt je lever, dus bolus niet volledig voor de koolhydraten in bier of wijn.","The bolus calculator ignores your trend. If you're already falling before eating, bolus at the meal or a bit less. Alcohol slows your liver, so don't fully bolus for beer or wine carbs.","A calculadora ignora a tendência. Se já está a descer, faça o bólus à refeição ou um pouco menos. O álcool trava o fígado: não faça bólus completo para cerveja ou vinho.")}</span></article>`); }
   const L=loopLimits(c);
   if(L && !L.few) tiles.push(`<article class="itile"><span class="itl">${TL("Loop wil meer dan hij mag","Loop wants more than allowed","Loop quer mais do que pode")}</span><b class="itn hi">${_idaPct(L.heldFrac)}</b>
     <span class="its">${TL(`van de momenten boven 10 waarop de loop insuline wilde, kwam er geen SMB.${L.ceiling?` Je actieve insuline stopte dan rond ${_idaN(L.ceiling)} E: waarschijnlijk je max IOB.`:""}`,`of moments above 10 where the loop wanted insulin, no SMB followed.${L.ceiling?` Active insulin topped out near ${_idaN(L.ceiling)} U: probably your max IOB.`:""}`,`dos momentos acima de 10, o loop não deu SMB.`)}</span></article>`);
@@ -254,6 +284,9 @@ function idaExtrasVandaag(c){
   if(ill){ const s=_dsAll.filter(d=>d.sens!=null&&d.ts>ill.ts-6*_H).map(d=>d.sens);
     cards.push(`<article class="icard"><div class="icrow"><span class="icic p">${_idaIcon("trend")}</span><span class="ictxt"><b>${TL("Je bent ziek gelogd.","You logged being ill.","Registou doença.")}</b> ${s.length?TL(`Autosens sindsdien gemiddeld ${_idaN(_pMean(s),2)}.`,`Autosens since then averages ${_idaN(_pMean(s),2)}.`,`Autosens médio ${_idaN(_pMean(s),2)}.`):""}</span></div>
       <ul class="ilist"><li>${TL("Blijf drinken, ook als je weinig eet.","Keep drinking, even if you eat little.","Continue a beber.")}</li><li>${TL("Meet ketonen bij glucose boven 14 of als je misselijk bent of overgeeft.","Check ketones above 14 or if you feel sick or vomit.","Meça cetonas acima de 14 ou com náuseas.")}</li><li>${TL("Zet je basaal niet uit; ziek zijn vraagt meestal juist méér insuline.","Don't stop basal; illness usually needs more insulin.","Não pare o basal.")}</li><li>${TL("Bij ketonen boven 1,5 of aanhoudend overgeven: bel direct je diabetesteam of de huisartsenpost.","With ketones above 1.5 or ongoing vomiting: call your diabetes team or out-of-hours GP right away.","Com cetonas acima de 1,5: ligue já.")}</li></ul></article>`); }
+  const MB=mealBolusRisk(c);
+  if(MB&&MB.last&&Date.now()-MB.last.ts<36*_H){ const hm=fmtMin(todMin(MB.last.ts));
+    cards.push(`<article class="icard"><div class="icrow"><span class="icic p">${_idaIcon("food")}</span><span class="ictxt"><b>${TL(`Hypo na je bolus van ${hm}.`,`Low after your ${hm} bolus.`,`Hipo após o bólus das ${hm}.`)}</b> ${TL(`Je zat toen op ${_idaN(MB.last.bg)} en zakte al (${_idaN(MB.last.slope*15)} per kwartier). Daarna kwam je op ${_idaN(MB.last.min)}. Zak je vóór het eten, bolus dan pas bij het eten of iets minder.`,`You were at ${_idaN(MB.last.bg)} and already falling (${_idaN(MB.last.slope*15)} per 15 min). You then reached ${_idaN(MB.last.min)}. If you're falling before a meal, bolus at the meal or a bit less.`,`Estava a ${_idaN(MB.last.bg)} e a descer. Depois chegou a ${_idaN(MB.last.min)}.`)}</span></div><button class="iask" data-idaask="kaart">${TL("Vraag door","Ask more","Perguntar")} ›</button></article>`); }
   let lastExp=null; try{ lastExp=+localStorage.getItem("ida.lastBackup")||null; }catch(_){}
   if((_idaAnns||[]).length>=5 && (!lastExp || Date.now()-lastExp>30*_D))
     cards.push(`<article class="icard"><div class="icrow"><span class="icic t">${_idaIcon("trend")}</span><span class="ictxt"><b>${TL("Maak een back-up van je logboek.","Back up your logbook.","Faça cópia do diário.")}</b> ${TL("Je logs staan alleen op dit apparaat.","Your logs only live on this device.","Os registos só estão neste aparelho.")}</span></div><div class="icacts"><button class="ibtn acc" id="bkNow">${TL("Back-up downloaden","Download backup","Descarregar")}</button></div></article>`);

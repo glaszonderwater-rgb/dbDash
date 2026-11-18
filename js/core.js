@@ -2403,7 +2403,11 @@ function aapsProfile(glucose, treatments, timeline, q, ds){
   // aaneengesloten gelijke blokken samenvoegen
   for(let i=ic.length-1;i>0;i--){ if(ic[i].value===ic[i-1].value && ic[i].now===ic[i-1].now){ ic[i-1].to=ic[i].to; ic.splice(i,1); } }
   const maxBasal=Math.max(...basal.map(b=>b.value));
-  const changed = basal.some(b=>b.now.length!==1||Math.abs(b.now[0]-b.value)>=0.05) || isfBlocks.some(b=>Math.abs(b.now-b.value)>=0.1) || ic.some(b=>Math.abs(b.now-b.value)>=0.1);
+  // Alleen "nieuw profiel" melden bij een betekenisvol verschil (niet bij 0,05 E/u hier en daar):
+  // basaal per uur ≥0,1 E/u of dagtotaal ≥5%, ISF ≥0,2, KH-ratio ≥0,3.
+  const newAt=h=>{ let v=basal[0].value; for(const b of basal) if(hhmmToMin(b.from)<=h*60) v=b.value; return v; };
+  const changed = hours.some(o=>Math.abs(newAt(o.h)-o.cur)>=0.1) || Math.abs(dayNew-dayNow)/dayNow>=0.05
+    || isfBlocks.some(b=>Math.abs(b.now-b.value)>=0.2) || ic.some(b=>Math.abs(b.now-b.value)>=0.3);
   return { basal, isf:isfBlocks, ic, isfEst:est, isfNow:isfMed, sensMean, sensMax, tdd:tddUse, dayNow, dayNew,
     maxIobMin:_r1(3*maxBasal), days:usable?usable.size:null, meals:meals.length, changed,
     target:{ lo:cur(0).targetLow??null, hi:cur(0).targetHigh??null }, name:cur(0).name,
