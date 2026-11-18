@@ -48,7 +48,7 @@ console.log('consult:',r.consult);
 console.log('scrubber:',r.scrub.join(' · '));
 // triage: consultlijst-knop klikken
 await page.waitForFunction(()=>{const t=document.getElementById('connTxt')?.textContent||'';return !/aanvullen|Berekenen|metingen|behandelingen/.test(t);},{timeout:60000}).catch(()=>{}); await page.waitForTimeout(500);
-await page.evaluate(()=>{document.querySelectorAll('.f').forEach(f=>f.hidden=false); const b=document.querySelector('[data-consult]'); const d=b&&b.closest('details'); if(d) d.open=true; if(b) b.id='tstConsult';});
+await page.evaluate(()=>{document.querySelectorAll('.f').forEach(f=>f.hidden=false); const b=document.querySelector('[data-consult]'); if(b){ openDetailFor(b); b.id='tstConsult'; }});
 const btn=await page.$('#tstConsult');
 if(btn){ await btn.click(); await page.waitForTimeout(300);
   const c2=await page.evaluate(()=>({n:document.getElementById('consultBadge').textContent,list:[...document.querySelectorAll('.citem span')].map(x=>x.textContent.slice(0,50))}));

@@ -731,8 +731,8 @@ button.ghost{border-radius:22px}
 .chome.ida .kpis .kpi .s{display:none}
 .chome.ida .kpis .kpi .k{font-size:.7rem;text-transform:none;letter-spacing:0;font-weight:600}
 /* assistent-kaarten en bevindingen */
-.icard,.chome.ida .f{background:var(--ida-card)!important;border-radius:20px!important;padding:.85rem .9rem!important;margin:0 0 .5rem!important;border:0!important}
-.chome.ida .f.unread::before{display:none}
+.icard,.chome.ida .f,#detailBody .f{background:var(--ida-card)!important;border-radius:20px!important;padding:.85rem .9rem!important;margin:0 0 .5rem!important;border:0!important}
+.chome.ida .f.unread::before,#detailBody .f::before{display:none}
 .chome.ida .ftxt{font-size:.92rem!important}
 .icrow{display:flex;gap:.65rem;align-items:flex-start}
 .icic{flex:none;width:32px;height:32px;border-radius:10px;display:flex;align-items:center;justify-content:center}
@@ -844,6 +844,31 @@ button.ghost{border-radius:22px}
 :root[data-theme="dark"] .ihero,:root[data-theme="dark"] .itile.dark,:root[data-theme="dark"] .nav.inav{background:#1A1D21!important}
 :root[data-theme="dark"] .ltile.on{background:#EDEFF1;color:#0D0F12} :root[data-theme="dark"] .icic.p{background:#2A2342} :root[data-theme="dark"] .inote{background:#3A2C12;color:#F6DDB0}
 :root[data-theme="dark"] .ichip.dn{background:#3A2C12;color:#F2B455} :root[data-theme="dark"] .itn.lo{color:#FF9E97} :root[data-theme="dark"] .itn.hi{color:#F2B455}
+
+/* IDA 3 — rijen en detailpagina's, geen uitklapblokken */
+details.irowsrc{display:none!important}
+.irow{display:flex;align-items:center;gap:.75rem;width:100%;min-height:58px;margin:0 0 8px;padding:.7rem 1rem;border:0;border-radius:18px;background:var(--surface);color:var(--ink);font:inherit;text-align:left;cursor:pointer;box-shadow:var(--shadow-sm)}
+.irow:active{transform:scale(.99)}
+.irow .irt{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.irow .irt b{font-size:.95rem;font-weight:700;letter-spacing:-.01em}
+.irow .irt i{font-style:normal;font-size:.78rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.irow .irc{font-size:1.4rem;color:var(--dim);line-height:1}
+#fmore.irow{margin-top:.4rem}
+.view[data-view="analyses"] .h3,.view[data-view="consult"] .h3{margin:1.5rem .2rem .6rem!important;font-size:.78rem;font-weight:750;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.dethead{display:flex;align-items:center;gap:.6rem;margin:.2rem 0 1rem}
+.dethead .iback{position:static;flex:none}
+.dethead .ititle{margin:0;font-size:1.35rem;line-height:1.2}
+#detailBody>details>summary,#detailBody details.indetail>summary{display:none}
+#detailBody details{border:0!important;box-shadow:none!important;background:transparent!important;padding:0!important;margin:0 0 1rem!important}
+#detailBody details>.body,#detailBody details>.foldbody{border-top:0!important;padding-top:0!important;margin-top:0!important}
+#detailBody details details>summary{display:block;pointer-events:none;font-size:.78rem;font-weight:750;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:1.2rem 0 .5rem;list-style:none}
+#detailBody details details>summary::after,#detailBody details details>summary::-webkit-details-marker{display:none;content:none}
+#detailBody .fmore-d{margin-top:0}
+.f .iask{margin-top:.4rem}
+.f .iask{margin-right:1.1rem}
+#detailBody details details>summary span:not(:first-child){display:none}
+.view[data-view="eten"] #cbMe{display:none}
+details.mini{display:none}
 </style>
 </head>
 <body>
@@ -898,14 +923,6 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
     <div class="hero" id="homeHero" hidden><span class="hv" id="ringVal">—</span><span class="hu">mmol/L</span><span class="harw" id="heroArrow"></span><span class="hside" id="ringMeta"></span></div>
     <div class="chead" id="epMaand"><span data-i18n="home.kpiTitle">Kerncijfers</span> <span class="sub" id="monthSub"></span></div>
     <div class="kpis" id="kpis"></div>
-    <details class="mini"><summary data-i18n="home.kpiExplainSummary">Wat betekenen deze cijfers?</summary>
-      <div class="minibody" data-i18n="home.kpiExplainBody">
-        <div><b>In bereik (TIR)</b> — hoeveel % van de tijd je glucose tussen 3,9 en 10,0 zat. Je belangrijkste maat: hoe hoger, hoe stabieler je dag. Streef &gt; 70%.</div>
-        <div><b>Hypo</b> — % tijd te laag (&lt; 3,9). Dit gaat over veiligheid — laag houden telt zwaarder dan een paar procent extra in bereik. Streef &lt; 4%.</div>
-        <div><b>Variatie (CV)</b> — hoe grillig je waarden zijn. Lager = vlakker en voorspelbaarder, en meestal de grootste winst. Streef ≤ 36%.</div>
-        <div><b>GMI</b> — een schatting van je HbA1c uit je gemiddelde glucose. Een langetermijn-indicatie, geen labwaarde.</div>
-      </div>
-    </details>
     <div id="secWatch" hidden><div id="watch" style="margin-top:.6rem"></div></div>
     <span id="l24sub" hidden></span>
 
@@ -916,7 +933,6 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
     <span id="epWeek" hidden><span id="weekSub"></span></span>
     <div id="findWeek"></div>
 
-    <div class="tolink" data-goto="anaGrid" data-i18n="home.allAnalyses">Alle analyses →</div>
 
   </div>
   </div>
@@ -969,10 +985,11 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
 
   <div class="h3" data-i18n="an.insulinBasal">Insuline &amp; basaal</div>
 
+  <details class="fold" id="mvsFold" hidden><summary><span>Gemeten vs. ingesteld</span> <span class="foldhint">ISF, basaal, piek en prebolus</span></summary><div class="foldbody">
     <div class="card" id="mvsCard" style="margin-top:.6rem" hidden>
       <div class="mvshead"><span data-i18n="home.mvsSetting">instelling</span><span data-i18n="home.mvsMeasured">gemeten · ingesteld</span></div>
       <div id="tune"></div>
-    </div>
+    </div></div></details>
   <details class="deep" data-an="geheugen"><summary><span data-i18n="an.memory">Maaltijdgeheugen</span> <span class="foldhint">jouw eigen uitkomst per product</span></summary><div class="body"><div class="loading">…</div></div></details>
   <details class="deep" data-an="maand"><summary><span>Maandtrend</span> <span class="foldhint">tijd in bereik per maand</span></summary><div class="body"><div class="loading">…</div></div></details>
   <details class="deep" data-an="uur"><summary><span data-i18n="an.hours">Per uur</span> <span class="foldhint">spreiding, hypo's &amp; hoogtes per uur</span></summary><div class="body"><div class="loading">…</div></div></details>
@@ -1231,7 +1248,6 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
   <div class="view" data-view="consult" hidden>
   <h1 class="ititle" data-i18n="tab.consult">Team</h1>
   <div id="teamTop"></div>
-  <h2 class="ihead" data-i18n="team.details">Details en consult</h2>
   <div class="h3" style="margin-top:.2rem">Voorstellen &amp; effect</div>
   <details class="fold" id="secProposals" hidden open>
     <summary><span data-i18n="an.proposals">Bespreekwaarden</span> <span class="foldhint" data-i18n="an.proposalsHint">per dagdeel</span></summary>
@@ -1250,6 +1266,13 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
       <button class="ghost" id="btnShare" style="font-size:.78rem" data-i18n="consult.share">📋 Samenvatting delen</button>
     </div>
   </section>
+  </div>
+
+  <!-- DETAIL — één onderwerp per pagina -->
+  <div class="view" data-view="detail" hidden>
+  <div class="dethead"><button class="iback" id="detBack" aria-label="Terug"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>
+  <h1 class="ititle" id="detTitle"></h1></div>
+  <div id="detailBody"></div>
   </div>
 
   </div>
@@ -3027,7 +3050,7 @@ applyTheme(document.documentElement.dataset.theme||"auto");
 
 // Drie lagen: Overzicht (verhaal) · Analyses (bibliotheek) · Consult
 function showTab(tab){
-  const navTab = tab==="profiel" ? "consult" : tab;
+  const navTab = tab==="profiel" ? "consult" : tab==="detail" ? ((typeof _det!=="undefined"&&_det)?_det.prev:"analyses") : tab;
   document.querySelectorAll("#tabbar .tab").forEach(b=>{ const on=b.dataset.tab===navTab;
     b.classList.toggle("on",on); if(on) b.setAttribute("aria-current","page"); else b.removeAttribute("aria-current"); });
   document.querySelectorAll(".view").forEach(v=>v.hidden = v.dataset.view!==tab);
@@ -3529,5 +3552,6 @@ snapshotI18n(); applyStaticI18n();   // NL vastleggen, daarna vaste teksten in d
   });
 })();
 </script>
+<script src="js/ida3.js"></script>
 </body>
 </html>

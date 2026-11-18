@@ -1005,7 +1005,7 @@ function render(glucose, treatments, timeline){
   if (!g.length){
     document.getElementById("findToday").innerHTML =
       `<div class="f"><div class="fh"><span class="fdot n"></span><span class="ftxt">${TL("Nog te weinig dagen met voldoende sensordekking (≥70%) voor betrouwbare cijfers. Synchroniseer meer historie.","Still too few days with enough sensor coverage (≥70%) for reliable figures. Sync more history.","Ainda poucos dias com cobertura de sensor suficiente (≥70%) para números fiáveis. Sincronize mais histórico.")}</span></div></div>`;
-    for (const id of ["secDay","secAware","secTrend","secLog","secWatch","mvsCard","secAgp","secSafety","secInsulin","secProfile","askBox"]) document.getElementById(id).hidden = true;
+    for (const id of ["secDay","secAware","secTrend","secLog","secWatch","mvsCard","mvsFold","secAgp","secSafety","secInsulin","secProfile","askBox"]) document.getElementById(id).hidden = true;
     document.getElementById("kpis").innerHTML = "";
     return;
   }
@@ -1159,8 +1159,8 @@ function render(glucose, treatments, timeline){
   if (!pi){ document.getElementById("secProfile").hidden = true; }
   else { document.getElementById("secProfile").hidden = false;
     document.getElementById("profile").innerHTML = profileHtml(pi, oi, ins, MR); }
-  if (!treatments.length){ document.getElementById("mvsCard").hidden = true; }
-  else { document.getElementById("mvsCard").hidden = false;
+  if (!treatments.length){ document.getElementById("mvsCard").hidden = true; document.getElementById("mvsFold").hidden = true; }
+  else { document.getElementById("mvsCard").hidden = false; document.getElementById("mvsFold").hidden = false;
     document.getElementById("tune").innerHTML = fineTune(drift, oi, MR, stack, pi); }
   { const sp=document.getElementById("secProposals");
     if(!pi || !treatments.length){ if(sp) sp.hidden = true; }
@@ -1206,9 +1206,9 @@ function limitFindings(n){
   cards.forEach((c,i)=>{ c.hidden=false; });
   if(cards.length<=n) return;
   cards.slice(n).forEach(c=>{ c.hidden=true; });
-  const b=document.createElement("button"); b.id="fmore"; b.className="ghost fmore";
-  b.textContent=TL(`Toon alle ${cards.length} aandachtspunten`,`Show all ${cards.length} points`,`Mostrar todos os ${cards.length} pontos`);
-  b.onclick=()=>{ cards.forEach(c=>{c.hidden=false;}); b.remove(); };
+  const b=document.createElement("button"); b.id="fmore"; b.type="button"; b.className="irow";
+  b.innerHTML=`<span class="irt"><b>${TL("Alle meldingen","All notices","Todos os avisos")}</b><i>${TL(`${cards.length} punten`,`${cards.length} items`,`${cards.length} pontos`)}</i></span><span class="irc" aria-hidden="true">›</span>`;
+  b.onclick=()=>{ if(typeof openAllFindings==="function") openAllFindings(); else { cards.forEach(c=>{c.hidden=false;}); b.remove(); } };
   document.getElementById("findWeek").after(b);
 }
 function findingCard(f, st){
