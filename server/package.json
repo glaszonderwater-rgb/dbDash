@@ -1,0 +1,9 @@
+{
+  "name": "ida-push",
+  "private": true,
+  "type": "module",
+  "description": "IDA meldingenserver: leest Nightscout, stuurt Web Push vóór het moment",
+  "scripts": { "check": "node push.mjs", "serve": "node push.mjs --serve" },
+  "dependencies": { "web-push": "^3.6.7" },
+  "engines": { "node": ">=20" }
+}

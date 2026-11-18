@@ -1,0 +1,33 @@
+# IDA meldingen via GitHub Actions — gratis, zonder eigen server.
+# Draait elke 10 minuten (GitHub kan dat 5–20 min vertragen). Doet niets zolang de geheimen niet zijn ingesteld.
+# Geheimen (Settings › Secrets and variables › Actions): NS_URL, NS_TOKEN, VAPID_PUBLIC, VAPID_PRIVATE, VAPID_SUBJECT, PUSH_SUBSCRIPTIONS
+name: IDA meldingen
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: ida-push
+  cancel-in-progress: true
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install --omit=dev --no-audit --no-fund
+        working-directory: server
+      - run: node server/push.mjs
+        env:
+          NS_URL: ${{ secrets.NS_URL }}
+          NS_TOKEN: ${{ secrets.NS_TOKEN }}
+          VAPID_PUBLIC: ${{ secrets.VAPID_PUBLIC }}
+          VAPID_PRIVATE: ${{ secrets.VAPID_PRIVATE }}
+          VAPID_SUBJECT: ${{ secrets.VAPID_SUBJECT }}
+          PUSH_SUBSCRIPTIONS: ${{ secrets.PUSH_SUBSCRIPTIONS }}
+          INTERVAL_MIN: '10'

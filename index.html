@@ -869,6 +869,11 @@ details.irowsrc{display:none!important}
 #detailBody details details>summary span:not(:first-child){display:none}
 .view[data-view="eten"] #cbMe{display:none}
 details.mini{display:none}
+/* Moment bovenaan Vandaag */
+.imoment{margin:0 0 .7rem;padding:.9rem 1rem;border-radius:20px;background:var(--ink,#141518);color:var(--bg,#F6F5F2)}
+.imoment .imk{display:block;font-size:.68rem;font-weight:800;letter-spacing:.08em;color:#F2B455;margin-bottom:.3rem}
+.imoment b{display:block;font-size:1.05rem;line-height:1.3}
+.imoment p{margin:.3rem 0 0;font-size:.85rem;line-height:1.45;opacity:.85}
 </style>
 </head>
 <body>
@@ -1368,6 +1373,14 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
   <label class="aitog"><input type="checkbox" id="inNsWrite"> <span data-i18n="cfg.nsWriteOn">Logs ook naar Nightscout sturen</span></label>
   <label for="inNsWriteTok" data-i18n="cfg.nsWriteTok">Token met schrijfrechten</label>
   <input id="inNsWriteTok" type="password" autocomplete="off" spellcheck="false" placeholder="careportal-…">
+  <label style="margin-top:1.1rem" data-i18n="cfg.notifyL">Meldingen vóór het moment</label>
+  <div class="hint" data-i18n="cfg.notifyHint">Bijvoorbeeld vóór het avondeten als je al daalt. Zonder server komt een melding alleen als IDA open is of net op de achtergrond staat. Met een meldingenserver ook als IDA dicht is.</div>
+  <label class="aitog"><input type="checkbox" id="inNotify"> <span data-i18n="cfg.notifyOn">Meldingen aan</span></label>
+  <label for="inPushUrl" data-i18n="cfg.pushUrl">Meldingenserver (optioneel)</label>
+  <input id="inPushUrl" type="url" placeholder="https://…" autocomplete="off" spellcheck="false">
+  <label for="inPushKey" data-i18n="cfg.pushKey">Publieke sleutel van de server (VAPID)</label>
+  <input id="inPushKey" type="text" placeholder="B…" autocomplete="off" spellcheck="false">
+  <button type="button" class="ghost" id="btnPushCopy" style="margin-top:.5rem;font-size:.8rem" data-i18n="cfg.pushCopy">Aanmelden en aanmelding kopiëren</button>
   <label class="aitog" style="margin-top:.8rem"><input type="checkbox" id="inProtect"> <span>Token en sleutel met wachtwoord beveiligen</span></label>
   <input id="inPass" type="password" placeholder="wachtwoord (nodig bij elke keer opslaan)" autocomplete="new-password" hidden>
   <div class="hint">Aanrader op GitHub Pages: andere pagina's op dezelfde herkomst kunnen anders je token lezen. Vergeet je het wachtwoord, dan vul je het token opnieuw in.</div>
@@ -1540,6 +1553,12 @@ Object.assign(I18N, {
   "cfg.nsWriteL":{ nl:"Logboek naar Nightscout (optioneel)", en:"Logbook to Nightscout (optional)", pt:"Diário para o Nightscout (opcional)" },
   "cfg.nsWriteHint":{ nl:"Zet je logs (sport, ziek, rijden…) ook als notitie in Nightscout, zodat ze in AAPS staan en bewaard blijven als je van telefoon wisselt. Hiervoor is een token met schrijfrechten nodig. IDA schrijft alleen notities, nooit instellingen of insuline.", en:"Also save your logs (exercise, illness, driving…) as notes in Nightscout, so they show in AAPS and survive a phone change. Needs a token with write access. IDA only writes notes, never settings or insulin.", pt:"Guarde também os registos como notas no Nightscout. Precisa de um token com escrita. O IDA só escreve notas, nunca definições ou insulina." },
   "cfg.nsWriteOn":{ nl:"Logs ook naar Nightscout sturen", en:"Also send logs to Nightscout", pt:"Enviar registos também para o Nightscout" },
+  "cfg.notifyL":{ nl:"Meldingen vóór het moment", en:"Heads-up notifications", pt:"Avisos antes do momento" },
+  "cfg.notifyHint":{ nl:"Bijvoorbeeld vóór het avondeten als je al daalt. Zonder server komt een melding alleen als IDA open is of net op de achtergrond staat. Met een meldingenserver ook als IDA dicht is.", en:"For example before dinner when you're already falling. Without a server you only get one while IDA is open or just in the background. With a notification server also when IDA is closed.", pt:"Por exemplo antes do jantar se já estiver a descer. Sem servidor só chega com a IDA aberta ou acabada de ir para segundo plano. Com um servidor de notificações também com a IDA fechada." },
+  "cfg.notifyOn":{ nl:"Meldingen aan", en:"Notifications on", pt:"Notificações ligadas" },
+  "cfg.pushUrl":{ nl:"Meldingenserver (optioneel)", en:"Notification server (optional)", pt:"Servidor de notificações (opcional)" },
+  "cfg.pushKey":{ nl:"Publieke sleutel van de server (VAPID)", en:"Server public key (VAPID)", pt:"Chave pública do servidor (VAPID)" },
+  "cfg.pushCopy":{ nl:"Aanmelden en aanmelding kopiëren", en:"Subscribe and copy subscription", pt:"Subscrever e copiar subscrição" },
   "cfg.nsWriteTok":{ nl:"Token met schrijfrechten", en:"Token with write access", pt:"Token com escrita" },
   "ai.label":{ nl:"Je vraag", en:"Your question", pt:"A sua pergunta" },
   "ai.ph":{ nl:"Stel een vraag…", en:"Ask a question…", pt:"Faça uma pergunta…" },
@@ -1747,6 +1766,8 @@ Object.assign(I18N, { "meth.body":{
 <script src="js/core.js"></script>
 <script src="js/ida.js"></script>
 <script src="js/ida2.js"></script>
+<script src="js/moments.js"></script>
+<script src="js/push.js"></script>
 <script>
 
 /* ── Fase 3: besluiten bij voorstellen ──────────────────────────────────────
@@ -2306,6 +2327,7 @@ async function _refresh(){
   try{ _penKeys = penDayKeys(await DB.all("annotations")); }catch(_){ _penKeys=new Set(); }
   render(glucose, treatments, timeline);
   try{ await renderIda(); }catch(e){ console.error(e); }
+  try{ renderMoment(); }catch(e){ console.error(e); }
 }
 // Hertekent alles in de huidige taal (na een taalwissel), zonder opnieuw te syncen.
 function rerender(){
@@ -2331,6 +2353,7 @@ document.getElementById("btnCfg").onclick = ()=>{
   document.getElementById("inLang").value=LANG;
   document.getElementById("inAiOn").checked=!!cfg.aiOn;
   document.getElementById("inNsWrite").checked=!!cfg.nsWrite; document.getElementById("inNsWriteTok").value=cfg.nsWriteToken||"";
+  document.getElementById("inNotify").checked=!!cfg.notify; document.getElementById("inPushUrl").value=cfg.pushUrl||""; document.getElementById("inPushKey").value=cfg.pushKey||"";
   document.getElementById("inAiUrl").value=cfg.aiUrl||""; document.getElementById("inAiModel").value=cfg.aiModel||""; document.getElementById("inAiKey").value=cfg.aiKey||"";
   document.getElementById("cfgErr").hidden=true; openDlg(); };
 document.getElementById("inLang").onchange=e=>setLang(e.target.value);   // direct effect, geen "Bewaren" nodig
@@ -2361,6 +2384,8 @@ document.getElementById("btnSave").onclick = async ()=>{
   cfg.aiUrl=document.getElementById("inAiUrl").value.trim().replace(/\/+$/,"");
   cfg.aiModel=document.getElementById("inAiModel").value.trim();
   cfg.nsWrite=document.getElementById("inNsWrite").checked; cfg.nsWriteToken=document.getElementById("inNsWriteTok").value.trim();
+  { const was=!!cfg.notify; cfg.notify=document.getElementById("inNotify").checked; cfg.pushUrl=document.getElementById("inPushUrl").value.trim().replace(/\/+$/,""); cfg.pushKey=document.getElementById("inPushKey").value.trim();
+    if(cfg.notify && !was){ try{ notifyEnable(); }catch(_){} } }
   cfg.aiKey=document.getElementById("inAiKey").value.trim();
   const prot=document.getElementById("inProtect").checked, pw=document.getElementById("inPass").value;
   if(prot){ if(!pw){ err.textContent=TL("Vul een wachtwoord in om te beveiligen.","Enter a password to protect.","Introduza uma palavra-passe."); err.hidden=false; return; } await encryptSecrets(pw); }
@@ -3525,7 +3550,8 @@ snapshotI18n(); applyStaticI18n();   // NL vastleggen, daarna vaste teksten in d
   try { await refresh(); } catch(e){ console.error(e); }
   // Automatisch synchroniseren: bij openen, elke 5 minuten en als je terugkomt in de app.
   setTimeout(()=>{ try{ autoSync(); }catch(_){} }, 1500);
-  setInterval(()=>{ try{ autoSync(); }catch(_){} }, 5*60e3);
+  setInterval(()=>{ try{ autoSync(); }catch(_){} try{ notifyCheck(); }catch(_){} }, 5*60e3);
+  document.getElementById("btnPushCopy").onclick=()=>{ cfg.pushUrl=document.getElementById("inPushUrl").value.trim().replace(/\/+$/,""); cfg.pushKey=document.getElementById("inPushKey").value.trim(); pushCopy(); };
   document.addEventListener("visibilitychange",()=>{ if(!document.hidden){ try{ autoSync(); }catch(_){} } });
 })();
 

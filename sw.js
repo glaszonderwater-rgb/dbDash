@@ -2,9 +2,9 @@
    Cachet alleen de eigen app-bestanden (schil). Verzoeken naar je Nightscout
    (cross-origin) worden NOOIT onderschept of bewaard: die gaan altijd live en
    blijven buiten deze cache. Data zelf leeft in IndexedDB, niet hier. */
-const VERSION = 'v30';
+const VERSION = 'v31';
 const CACHE = 'diametric-shell-' + VERSION;
-const SHELL = ['./', './index.html', './js/core.js', './js/ida.js', './js/ida2.js', './js/ida3.js', './manifest.json', './icon.svg', './icon-180.png', './icon-512.png'];
+const SHELL = ['./', './index.html', './js/core.js', './js/ida.js', './js/ida2.js', './js/ida3.js', './js/moments.js', './js/push.js', './manifest.json', './icon.svg', './icon-180.png', './icon-512.png'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(
@@ -59,4 +59,23 @@ self.addEventListener('fetch', (e) => {
       return cached || network;
     })
   );
+});
+
+// Meldingen van een meldingenserver (Web Push). De server stuurt { title, body, tag, url }.
+self.addEventListener('push', (e) => {
+  let d = {};
+  try { d = e.data ? e.data.json() : {}; } catch (_) { d = { title: 'IDA', body: e.data ? e.data.text() : '' }; }
+  e.waitUntil(self.registration.showNotification(d.title || 'IDA', {
+    body: d.body || '', tag: d.tag || 'ida', icon: 'icon-180.png', badge: 'icon-180.png', data: { url: d.url || './' }
+  }));
+});
+
+// Tik op een melding: open IDA (of breng hem naar voren)
+self.addEventListener('notificationclick', (e) => {
+  e.notification.close();
+  const url = new URL((e.notification.data && e.notification.data.url) || './', self.registration.scope).href;
+  e.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
+    for (const c of list) { if (c.url.startsWith(self.registration.scope) && 'focus' in c) return c.focus(); }
+    return self.clients.openWindow(url);
+  }));
 });
