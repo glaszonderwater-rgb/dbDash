@@ -28,6 +28,18 @@ function unloggedRise(glucose, treatments){
     if(rise>=3 && !carbs.some(c=>c>g[i].ts-45*60e3 && c<g[j].ts) && (!best||rise>best.rise)) best={rise, t0:g[i].ts, t1:g[j].ts, b0:g[i].bg, b1:g[j].bg}; } }
   return best;
 }
+/* Schatting van de gemiste koolhydraten: de stijging zelf (gedeeld door wat 1 g bij jou doet: ISF ÷ KH-ratio)
+   plus wat de loop er al tegenaan gaf (SMB's/bolussen tijdens en tot 1 uur na de stijging × KH-ratio).
+   Afgerond op 5 g. Zonder profiel: geen schatting. */
+function riseCarbEstimate(c, r){
+  try{
+    const p=profileAt(c.timeline, r.t0); if(!p||!(p.isf>0)||!(p.ic>0)) return null;
+    const csf=p.isf/p.ic;                                         // mmol/L per gram
+    const ins=c.treatments.filter(t=>t.insulin>0&&t.ts>=r.t0&&t.ts<=r.t1+3600e3).reduce((a,t)=>a+t.insulin,0);
+    const g=r.rise/csf + ins*p.ic;
+    return { grams:Math.min(150,Math.max(5,Math.round(g/5)*5)), fromRise:r.rise/csf, fromIns:ins*p.ic, ins, isf:p.isf, ic:p.ic };
+  }catch(_){ return null; }
+}
 function idaVandaag(c){
   const g=c.glucose, last=g[g.length-1], age=Math.round((Date.now()-last.ts)/60000);
   _idaEl("idaDate").textContent = new Date().toLocaleDateString(LOCALE(),{weekday:"long",day:"numeric",month:"long"}).replace(/^./,m=>m.toUpperCase());
@@ -59,9 +71,10 @@ function idaVandaag(c){
   }
   const r=unloggedRise(g, c.treatments);
   if(r && !_idaAnns.some(x=>x.id==="rise-"+r.t0)){
+    const est=riseCarbEstimate(c, r);
     const hm=ts=>fmtMin(todMin(ts));
     cards.push(`<article class="icard" id="riseCard"><div class="icrow"><span class="icic p">${_idaIcon("food")}</span><span class="ictxt"><b>${TL("Heb je iets gegeten?","Did you eat something?","Comeu alguma coisa?")}</b> ${TL(`Tussen ${hm(r.t0)} en ${hm(r.t1)} steeg je van ${_idaN(r.b0)} naar ${_idaN(r.b1)}, zonder gelogde koolhydraten.`,`Between ${hm(r.t0)} and ${hm(r.t1)} you rose from ${_idaN(r.b0)} to ${_idaN(r.b1)} without logged carbs.`,`Entre ${hm(r.t0)} e ${hm(r.t1)} subiu de ${_idaN(r.b0)} para ${_idaN(r.b1)} sem hidratos registados.`)}</span></div>
-      <div class="icacts" id="riseActs"><button class="ibtn dark" data-rise="30" data-t="${r.t0}">${TL("Ja, ~30 g","Yes, ~30 g","Sim, ~30 g")}</button><button class="ibtn" data-rise="ander" data-t="${r.t0}">${TL("Andere hoeveelheid","Other amount","Outra quantidade")}</button><button class="ibtn" data-rise="0" data-t="${r.t0}">${TL("Nee","No","Não")}</button></div></article>`);
+      <div class="icacts" id="riseActs">${est?`<button class="ibtn" data-rise="${est.grams}" data-t="${r.t0}" title="${TL(`Geschat: stijging ${_idaN(r.rise)} ÷ (ISF ${_idaN(est.isf)} ÷ KH ${_idaN(est.ic)}) + ${_idaN(est.ins)} E van de loop × ${_idaN(est.ic)}`,`Estimate from rise and loop insulin`,`Estimativa pela subida e insulina do loop`)}">${TL(`Ja, ~${est.grams} g`,`Yes, ~${est.grams} g`,`Sim, ~${est.grams} g`)}</button>`:""}<button class="ibtn" data-rise="ander" data-t="${r.t0}">${est?TL("Andere hoeveelheid","Other amount","Outra quantidade"):TL("Ja, hoeveel?","Yes, how much?","Sim, quanto?")}</button><button class="ibtn" data-rise="0" data-t="${r.t0}">${TL("Nee","No","Não")}</button></div>${est?`<div class="ihint">${TL(`~${est.grams} g geschat uit je stijging (${_idaN(r.rise)}) en ${_idaN(est.ins)} E die de loop gaf.`,`~${est.grams} g estimated from your rise (${_idaN(r.rise)}) and ${_idaN(est.ins)} U the loop gave.`,`~${est.grams} g estimado pela subida (${_idaN(r.rise)}) e ${_idaN(est.ins)} U do loop.`)}</div>`:""}</article>`);
   }
   // Weekoverzicht: op zondag en maandag als kaart
   const wd=new Date().getDay();
