@@ -72,7 +72,7 @@
     for (let i = idx(T, now - 3 * H); i < glucose.length; i++) {
       const a = glucose[i]; const j = idx(T, a.ts + 60 * MIN); if (j >= glucose.length) break;
       let pk = a, pi = i; for (let k = i; k <= j && k < glucose.length; k++) if (glucose[k].bg > pk.bg) { pk = glucose[k]; pi = k; }
-      if (pk.bg - a.bg >= 3 && pk.bg > HIGH && !treatments.some(t => t.carbs > 0 && t.ts > a.ts - 90 * MIN && t.ts < pk.ts)) {
+      if (pk.bg - a.bg >= 3 && pk.bg > HIGH && !treatments.some(t => t.carbs > 0 && t.ts > a.ts - 2 * H && t.ts < pk.ts)) {
         out.push({ key: `stijging-${day}-${hm(tod(a.ts, off))}`, kind: "vraag", prio: 2,
           title: `Gestegen naar ${fmt(pk.bg)} zonder eten`,
           body: `Tussen ${hm(tod(a.ts, off))} en ${hm(tod(pk.ts, off))} van ${fmt(a.bg)} naar ${fmt(pk.bg)}. Wat at je?`, since: pk.ts });

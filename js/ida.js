@@ -21,11 +21,16 @@ async function renderIda(keep){
 function _heroColor(bg){ return bg<LO_T ? "#FF9E97" : bg>HI_T ? "#F2B455" : "#7FD1C8"; }
 function unloggedRise(glucose, treatments){
   const end=glucose[glucose.length-1].ts, from=end-24*3600e3;
-  const g=glucose.filter(x=>x.ts>=from), carbs=treatments.filter(t=>t.carbs>0&&t.ts>=from-3600e3).map(t=>t.ts);
+  // Gelogd eten telt tot 2 uur vóór de stijging mee: jouw maaltijden worden traag opgenomen
+  // (de stijging begint soms pas een uur na het eten). Ook als AAPS nog koolhydraten aan boord ziet (COB) is het geen "ongelogd eten".
+  const g=glucose.filter(x=>x.ts>=from), carbs=treatments.filter(t=>t.carbs>0&&t.ts>=from-5*3600e3).map(t=>t.ts);
+  const ds=(typeof _dsAll!=="undefined"&&_dsAll)||[];
+  const cobAt=ts=>{ let best=null; for(const d of ds){ if(d.cob==null||Math.abs(d.ts-ts)>10*60e3) continue; if(!best||Math.abs(d.ts-ts)<Math.abs(best.ts-ts)) best=d; } return best?best.cob:null; };
   let best=null;
   for(let i=0;i<g.length;i++){ for(let j=i+1;j<g.length&&g[j].ts-g[i].ts<=60*60e3;j++){
     const rise=g[j].bg-g[i].bg;
-    if(rise>=3 && !carbs.some(c=>c>g[i].ts-45*60e3 && c<g[j].ts) && (!best||rise>best.rise)) best={rise, t0:g[i].ts, t1:g[j].ts, b0:g[i].bg, b1:g[j].bg}; } }
+    if(rise>=3 && !carbs.some(c=>c>g[i].ts-2*3600e3 && c<g[j].ts) && (!best||rise>best.rise)) best={rise, t0:g[i].ts, t1:g[j].ts, b0:g[i].bg, b1:g[j].bg}; } }
+  if(best){ const cb=cobAt(best.t0); if(cb!=null&&cb>=5) return null; }
   return best;
 }
 /* Schatting van de gemiste koolhydraten: de stijging zelf (gedeeld door wat 1 g bij jou doet: ISF ÷ KH-ratio)
