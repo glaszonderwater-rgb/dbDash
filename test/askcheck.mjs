@@ -23,6 +23,7 @@ async function ask(q){ await page.evaluate(()=>showTab('analyses')); await page.
 
 const boxShown=await page.evaluate(()=>!document.getElementById('askBox').hidden);
 const examples=await page.evaluate(()=>document.querySelectorAll('#askExamples .chip').length);
+await page.waitForFunction(()=>{const t=document.getElementById('connTxt')?.textContent||'';return typeof _ctx!=='undefined'&&_ctx&&_ctx.glucose&&!/aanvullen|Berekenen|metingen|behandelingen|loopstatus/.test(t);},{timeout:60000}).catch(()=>{}); await page.waitForTimeout(400);
 const tir=await ask("Hoe is mijn tijd in bereik?");
 const night=await ask("Hoe ging mijn nacht?");
 const carbs=await ask("Tel ik mijn koolhydraten goed?");

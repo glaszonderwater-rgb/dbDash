@@ -1374,6 +1374,8 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
   <label class="aitog"><input type="checkbox" id="inNsWrite"> <span data-i18n="cfg.nsWriteOn">Logs ook naar Nightscout sturen</span></label>
   <label for="inNsWriteTok" data-i18n="cfg.nsWriteTok">Token met schrijfrechten</label>
   <input id="inNsWriteTok" type="password" autocomplete="off" spellcheck="false" placeholder="careportal-…">
+  <label class="aitog" style="margin-top:1.1rem"><input type="checkbox" id="inCarbsOk"> <span data-i18n="cfg.carbsOk">Ik tel mijn koolhydraten nauwkeurig (wegen of etiket)</span></label>
+  <div class="hint" data-i18n="cfg.carbsOkHint">Dan mag IDA je KH-ratio sterker maken als je na het eten structureel hoger uitkomt dan je invoer verklaart. Zonder dit vinkje gaat IDA ervan uit dat je dan te weinig hebt geteld.</div>
   <label style="margin-top:1.1rem" data-i18n="cfg.notifyL">Meldingen vóór het moment</label>
   <div class="hint" data-i18n="cfg.notifyHint">Bijvoorbeeld vóór het avondeten als je al daalt. Zonder server komt een melding alleen als IDA open is of net op de achtergrond staat. Met een meldingenserver ook als IDA dicht is.</div>
   <label class="aitog"><input type="checkbox" id="inNotify"> <span data-i18n="cfg.notifyOn">Meldingen aan</span></label>
@@ -1554,6 +1556,8 @@ Object.assign(I18N, {
   "cfg.nsWriteL":{ nl:"Logboek naar Nightscout (optioneel)", en:"Logbook to Nightscout (optional)", pt:"Diário para o Nightscout (opcional)" },
   "cfg.nsWriteHint":{ nl:"Zet je logs (sport, ziek, rijden…) ook als notitie in Nightscout, zodat ze in AAPS staan en bewaard blijven als je van telefoon wisselt. Hiervoor is een token met schrijfrechten nodig. IDA schrijft alleen notities, nooit instellingen of insuline.", en:"Also save your logs (exercise, illness, driving…) as notes in Nightscout, so they show in AAPS and survive a phone change. Needs a token with write access. IDA only writes notes, never settings or insulin.", pt:"Guarde também os registos como notas no Nightscout. Precisa de um token com escrita. O IDA só escreve notas, nunca definições ou insulina." },
   "cfg.nsWriteOn":{ nl:"Logs ook naar Nightscout sturen", en:"Also send logs to Nightscout", pt:"Enviar registos também para o Nightscout" },
+  "cfg.carbsOk":{ nl:"Ik tel mijn koolhydraten nauwkeurig (wegen of etiket)", en:"I count my carbs accurately (weighing or labels)", pt:"Conto os hidratos com rigor (pesar ou rótulo)" },
+  "cfg.carbsOkHint":{ nl:"Dan mag IDA je KH-ratio sterker maken als je na het eten structureel hoger uitkomt dan je invoer verklaart. Zonder dit vinkje gaat IDA ervan uit dat je dan te weinig hebt geteld.", en:"Then IDA may strengthen your carb ratio when you consistently rise more after meals than your entries explain. Without this, IDA assumes you under-counted.", pt:"Assim a IDA pode reforçar o rácio quando sobe mais do que os hidratos explicam. Sem isto, a IDA assume que contou a menos." },
   "cfg.notifyL":{ nl:"Meldingen vóór het moment", en:"Heads-up notifications", pt:"Avisos antes do momento" },
   "cfg.notifyHint":{ nl:"Bijvoorbeeld vóór het avondeten als je al daalt. Zonder server komt een melding alleen als IDA open is of net op de achtergrond staat. Met een meldingenserver ook als IDA dicht is.", en:"For example before dinner when you're already falling. Without a server you only get one while IDA is open or just in the background. With a notification server also when IDA is closed.", pt:"Por exemplo antes do jantar se já estiver a descer. Sem servidor só chega com a IDA aberta ou acabada de ir para segundo plano. Com um servidor de notificações também com a IDA fechada." },
   "cfg.notifyOn":{ nl:"Meldingen aan", en:"Notifications on", pt:"Notificações ligadas" },
@@ -2354,7 +2358,7 @@ document.getElementById("btnCfg").onclick = ()=>{
   document.getElementById("inLang").value=LANG;
   document.getElementById("inAiOn").checked=!!cfg.aiOn;
   document.getElementById("inNsWrite").checked=!!cfg.nsWrite; document.getElementById("inNsWriteTok").value=cfg.nsWriteToken||"";
-  document.getElementById("inNotify").checked=!!cfg.notify; document.getElementById("inPushUrl").value=cfg.pushUrl||""; document.getElementById("inPushKey").value=cfg.pushKey||"";
+  document.getElementById("inCarbsOk").checked=!!cfg.carbsAccurate; document.getElementById("inNotify").checked=!!cfg.notify; document.getElementById("inPushUrl").value=cfg.pushUrl||""; document.getElementById("inPushKey").value=cfg.pushKey||"";
   document.getElementById("inAiUrl").value=cfg.aiUrl||""; document.getElementById("inAiModel").value=cfg.aiModel||""; document.getElementById("inAiKey").value=cfg.aiKey||"";
   document.getElementById("cfgErr").hidden=true; openDlg(); };
 document.getElementById("inLang").onchange=e=>setLang(e.target.value);   // direct effect, geen "Bewaren" nodig
@@ -2385,6 +2389,7 @@ document.getElementById("btnSave").onclick = async ()=>{
   cfg.aiUrl=document.getElementById("inAiUrl").value.trim().replace(/\/+$/,"");
   cfg.aiModel=document.getElementById("inAiModel").value.trim();
   cfg.nsWrite=document.getElementById("inNsWrite").checked; cfg.nsWriteToken=document.getElementById("inNsWriteTok").value.trim();
+  cfg.carbsAccurate=document.getElementById("inCarbsOk").checked;
   { const was=!!cfg.notify; cfg.notify=document.getElementById("inNotify").checked; cfg.pushUrl=document.getElementById("inPushUrl").value.trim().replace(/\/+$/,""); cfg.pushKey=document.getElementById("inPushKey").value.trim();
     if(cfg.notify && !was){ try{ notifyEnable(); }catch(_){} } }
   cfg.aiKey=document.getElementById("inAiKey").value.trim();

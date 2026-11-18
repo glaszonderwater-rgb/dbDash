@@ -90,7 +90,16 @@ function expStats(ms, c){
   for(const r of ms){ let lo=0,hi=T.length; while(lo<hi){const m=(lo+hi)>>1; if(T[m]<r.ts)lo=m+1;else hi=m;}
     for(let j=lo;j<T.length&&T[j]<=r.ts+4*_H;j++){ n++; if(c.glucose[j].bg<=HI_T&&c.glucose[j].bg>=LO_T) inr++; } }
   const offs=ms.map(r=>r.bolusOffset).filter(x=>x!=null);
-  return { n:ms.length, rise:_pMed(ms.map(r=>r.peakRise)), tir:n?inr/n:null, off:offs.length?_pMed(offs):null, early:offs.length?offs.filter(o=>o<=-8).length/offs.length:null };
+  const t50s=ms.map(r=>r.t50).filter(x=>x!=null);
+  return { n:ms.length, t50:t50s.length>=4?_pMed(t50s):null, rise:_pMed(ms.map(r=>r.peakRise)), tir:n?inr/n:null, off:offs.length?_pMed(offs):null, early:offs.length?offs.filter(o=>o<=-8).length/offs.length:null };
+}
+/* Hoe ver vooruit bolussen: hangt af van hoe snel jóuw avondeten wordt opgenomen (t50 = half opgenomen). */
+function expPre(S){
+  const t=S&&S.t50;
+  if(t==null) return { lo:10, hi:15, why:"" };
+  if(t>90) return { lo:5, hi:10, why:TL(`Je avondeten wordt traag opgenomen (half na ${Math.round(t)} min), dus niet te vroeg.`,`Your dinner absorbs slowly (half after ${Math.round(t)} min), so not too early.`,`O jantar é absorvido devagar (metade após ${Math.round(t)} min).`) };
+  if(t<60) return { lo:15, hi:20, why:TL(`Je avondeten wordt snel opgenomen (half na ${Math.round(t)} min).`,`Your dinner absorbs quickly (half after ${Math.round(t)} min).`,`O jantar é absorvido depressa (metade após ${Math.round(t)} min).`) };
+  return { lo:10, hi:15, why:TL(`Half opgenomen na ${Math.round(t)} min.`,`Half absorbed after ${Math.round(t)} min.`,`Metade absorvida após ${Math.round(t)} min.`) };
 }
 function expCardHtml(c){
   const ex=_expActive(), now=Date.now();
@@ -99,8 +108,9 @@ function expCardHtml(c){
     const ms=expMeals(c, now-60*_D, now, 16, 22), S=expStats(ms,c); const hs=_hourStats(c);
     const eve=_pMean(hs.slice(18,22).map(h=>h.hi));
     if(!S||S.n<6) return "";
+    const PR=expPre(S);
     return `<section class="itile wide"><b class="ittl">${TL("Experiment voor je avonden","Experiment for your evenings","Experiência para as noites")}</b>
-      <span class="its big">${TL(`Na het avondeten zit je ${_idaPct(eve)} van de tijd boven 10. Je bolust nu ${S.off!=null?(S.off<-5?Math.round(-S.off)+" min vóór":S.off>5?Math.round(S.off)+" min ná":"rond"):"rond"} het eten. Probeer 14 dagen 10–15 minuten vóór het avondeten te bolussen.`,`After dinner you're above 10 for ${_idaPct(eve)} of the time. You now bolus ${S.off!=null&&S.off<-5?Math.round(-S.off)+" min before":"around"} eating. Try bolusing 10–15 minutes before dinner for 14 days.`,`Depois do jantar está acima de 10 em ${_idaPct(eve)} do tempo. Experimente 14 dias o bólus 10–15 min antes do jantar.`)}</span>
+      <span class="its big">${TL(`Na het avondeten zit je ${_idaPct(eve)} van de tijd boven 10. Je bolust nu ${S.off!=null?(S.off<-5?Math.round(-S.off)+" min vóór":S.off>5?Math.round(S.off)+" min ná":"rond"):"rond"} het eten. Probeer 14 dagen ${PR.lo}–${PR.hi} minuten vóór het avondeten te bolussen, behalve als je al daalt. ${PR.why}`,`After dinner you're above 10 for ${_idaPct(eve)} of the time. You now bolus ${S.off!=null&&S.off<-5?Math.round(-S.off)+" min before":"around"} eating. Try bolusing ${PR.lo}–${PR.hi} minutes before dinner for 14 days, unless you're already falling. ${PR.why}`,`Depois do jantar está acima de 10 em ${_idaPct(eve)} do tempo. Experimente 14 dias o bólus ${PR.lo}–${PR.hi} min antes do jantar, exceto se já estiver a descer. ${PR.why}`)}</span>
       <span class="its">${TL(`Uitgangspunt (laatste 60 dagen, ${S.n} maaltijden): stijging ${_idaN(S.rise)} mmol/L, ${_idaPct(S.tir)} in bereik in de 4 uur erna.`,`Baseline (last 60 days, ${S.n} meals): rise ${_idaN(S.rise)} mmol/L, ${_idaPct(S.tir)} in range in the 4 h after.`,`Base: subida ${_idaN(S.rise)}, ${_idaPct(S.tir)} no alvo.`)}</span>
       <div class="icacts"><button class="ibtn acc" id="expStart">${TL("Start experiment","Start experiment","Iniciar experiência")}</button></div></section>`;
   }
@@ -121,9 +131,9 @@ function expCardHtml(c){
     <div class="icacts"><button class="ibtn" id="expStop">${done?TL("Afsluiten","Close","Fechar"):TL("Stoppen","Stop","Parar")}</button></div></section>`;
 }
 async function expStart(c){
-  const now=Date.now(), base=expStats(expMeals(c, now-60*_D, now, 16, 22),c);
-  const an={ id:"exp-"+now, ts:now, type:"experiment", note:TL("Experiment: bolus 10–15 min vóór het avondeten","Experiment: bolus 10–15 min before dinner","Experiência: bólus antes do jantar"), created:now, base };
-  await DB.putMany("annotations",[an]); _idaAnns.push(an); toast(TL("Experiment gestart. Bolus de komende 14 dagen 10–15 min vóór het avondeten.","Experiment started.","Experiência iniciada.")); idaExtrasTeam(c);
+  const now=Date.now(), base=expStats(expMeals(c, now-60*_D, now, 16, 22),c), PR=expPre(base);
+  const an={ id:"exp-"+now, ts:now, type:"experiment", note:TL(`Experiment: bolus ${PR.lo}–${PR.hi} min vóór het avondeten`,`Experiment: bolus ${PR.lo}–${PR.hi} min before dinner`,`Experiência: bólus ${PR.lo}–${PR.hi} min antes do jantar`), created:now, base, pre:PR };
+  await DB.putMany("annotations",[an]); _idaAnns.push(an); toast(TL(`Experiment gestart. Bolus de komende 14 dagen ${PR.lo}–${PR.hi} min vóór het avondeten, behalve als je al daalt.`,"Experiment started.","Experiência iniciada.")); idaExtrasTeam(c);
 }
 async function expStop(){ const ex=_expActive(); if(!ex) return; await DB.delRow("annotations",ex.id); _idaAnns=_idaAnns.filter(a=>a.id!==ex.id);
   const done={ id:"expdone-"+ex.id, ts:Date.now(), type:"notitie", note:TL("Experiment afgesloten: avondbolus","Experiment closed: dinner bolus","Experiência fechada"), created:Date.now() };
@@ -257,7 +267,7 @@ function idaExtrasPatronen(c){
       <div class="imrow"><span>${TL("Glucose onder 7 en dalend bij de bolus","Glucose under 7 and falling at bolus","Abaixo de 7 e a descer")}</span><span><b>${_idaPct(rf)}</b> <i>${TL(`hypo erna (${MB.fall.hypo}/${MB.fall.n})`,`low after (${MB.fall.hypo}/${MB.fall.n})`,`hipo depois (${MB.fall.hypo}/${MB.fall.n})`)}</i></span></div>
       <div class="imrow"><span>${TL("Anders","Otherwise","Caso contrário")}</span><span><b>${_idaPct(ro)}</b> <i>${TL(`hypo erna (${MB.ok.hypo}/${MB.ok.n})`,`low after (${MB.ok.hypo}/${MB.ok.n})`,`hipo depois`)}</i></span></div>
       ${MB.alc.n?`<div class="imrow"><span>${TL("Met alcohol erbij","With alcohol","Com álcool")}</span><span><b>${_idaPct(MB.alc.hypo/MB.alc.n)}</b> <i>${TL(`hypo erna (${MB.alc.hypo}/${MB.alc.n})`,`low after (${MB.alc.hypo}/${MB.alc.n})`,`hipo depois`)}</i></span></div>`:""}
-      <span class="its">${TL("De bolus-calculator kijkt niet naar je trend. Zak je al vóór het eten, bolus dan pas bij het eten of iets minder. Alcohol remt je lever, dus bolus niet volledig voor de koolhydraten in bier of wijn.","The bolus calculator ignores your trend. If you're already falling before eating, bolus at the meal or a bit less. Alcohol slows your liver, so don't fully bolus for beer or wine carbs.","A calculadora ignora a tendência. Se já está a descer, faça o bólus à refeição ou um pouco menos. O álcool trava o fígado: não faça bólus completo para cerveja ou vinho.")}</span></article>`); }
+      <span class="its">${TL(`De bolus-calculator kijkt niet naar je trend. Zak je al vóór het eten, bolus dan pas bij het eten of iets minder. Alcohol remt je lever, dus bolus niet volledig voor de koolhydraten in bier of wijn.${MB.alc.n&&MB.alc.n<5?` (Met alcohol pas ${MB.alc.n}× gezien: nog geen vast patroon.)`:""}`,"The bolus calculator ignores your trend. If you're already falling before eating, bolus at the meal or a bit less. Alcohol slows your liver, so don't fully bolus for beer or wine carbs.","A calculadora ignora a tendência. Se já está a descer, faça o bólus à refeição ou um pouco menos. O álcool trava o fígado: não faça bólus completo para cerveja ou vinho.")}</span></article>`); }
   const L=loopLimits(c);
   if(L && !L.few) tiles.push(`<article class="itile"><span class="itl">${TL("Loop wil meer dan hij mag","Loop wants more than allowed","Loop quer mais do que pode")}</span><b class="itn hi">${_idaPct(L.heldFrac)}</b>
     <span class="its">${TL(`van de momenten boven 10 waarop de loop insuline wilde, kwam er geen SMB.${L.ceiling?` Je actieve insuline stopte dan rond ${_idaN(L.ceiling)} E: waarschijnlijk je max IOB.`:""}`,`of moments above 10 where the loop wanted insulin, no SMB followed.${L.ceiling?` Active insulin topped out near ${_idaN(L.ceiling)} U: probably your max IOB.`:""}`,`dos momentos acima de 10, o loop não deu SMB.`)}</span></article>`);
@@ -306,7 +316,8 @@ function idaExtrasTeam(c){
   html+=`<div class="igrid2 ix"><button class="itile sm tap" id="csvBtn"><b class="ittl">${TL("Export (CSV)","Export (CSV)","Exportar (CSV)")}</b><span class="its">${TL("cijfers per dag","figures per day","valores por dia")}</span></button><button class="itile sm tap" id="bkBtn"><b class="ittl">${TL("Back-up","Backup","Cópia")}</b><span class="its">${TL("logboek downloaden","download logbook","descarregar diário")}</span></button></div>`;
   host.insertAdjacentHTML("beforeend",html);
   const trip=()=>{ const n=Math.max(1,Math.min(120,parseInt(_idaEl("tripDays").value,10)||14)), x=1.5;   // 50% reserve
-    const pods=Math.ceil(n/3*x+1), sens=S.sensMonth!=null?Math.ceil(n/14*x+1):null, ins=S.tdd?Math.ceil(S.tdd*n*x/100)*100:null;
+    const podDays=S.podsMonth>0.5?30/S.podsMonth:3, sensDays=S.sensMonth>0.3?30/S.sensMonth:14;   // jouw eigen wisselritme
+    const pods=Math.ceil(n/podDays*x+1), sens=S.sensMonth!=null?Math.ceil(n/sensDays*x+1):null, ins=S.tdd?Math.ceil(S.tdd*n*x/100)*100:null;
     _idaEl("tripList").innerHTML=TL(`Neem mee (met 50% reserve): <b>${pods} pods</b>${sens!=null?`, <b>${sens} sensoren</b>`:""}${ins!=null?`, <b>${ins} E insuline</b>`:""}, een insulinepen met naalden als back-up, hypo-snacks en ketonstrips.`,`Take (with 50% spare): <b>${pods} pods</b>${sens!=null?`, <b>${sens} sensors</b>`:""}${ins!=null?`, <b>${ins} U insulin</b>`:""}, a backup insulin pen with needles, hypo snacks and ketone strips.`,`Leve (com 50% de reserva): <b>${pods} pods</b>${sens!=null?`, <b>${sens} sensores</b>`:""}${ins!=null?`, <b>${ins} U de insulina</b>`:""}, caneta de reserva, snacks e tiras de cetonas.`); };
   _idaEl("tripDays").oninput=trip; trip();
   const st=_idaEl("expStart"); if(st) st.onclick=()=>expStart(c);

@@ -2384,22 +2384,23 @@ function aapsProfile(glucose, treatments, timeline, q, ds){
       const c3=sse(A)+sse(B2)+sse(C)+1.8; if(c3<bestCost){ bestCost=c3; bestSplit=[0,b1,b2,24]; } } }
   const ic=[]; for(let i=0;i+1<bestSplit.length;i++){ const f=bestSplit[i], t=bestSplit[i+1];
     const ms=meals.filter(m=>m.min>=f*60&&m.min<t*60).map(m=>m.cr), nowB=_pMed(icNow.slice(f,t));
-    const med=ms.length?_pMed(ms):null; let v=nowB, why="weinig";
-    if(ms.length>=8){ why="gelijk"; if(Math.abs(med-nowB)/nowB>0.10){ v=Math.min(Math.max(med,nowB*0.8),nowB*1.2); why="gemeten"; } }
-    // Zie je na het eten duidelijk meer stijging dan je ingevoerde koolhydraten verklaren (meer dan 115%),
-    // dan ligt het waarschijnlijk aan het tellen, niet aan de ratio: niet sterker maken.
-    if(v<nowB && mfrac!=null && mfrac>1.15){ v=nowB; why="tellen"; }
-    // Vangrail: geen zwakkere ratio waar je na het eten vaak hoog zit, geen sterkere waar je vaak laag zit.
-    // (gemeten in de 4 uur na de maaltijden van dit blok)
+    const med=ms.length?_pMed(ms):null;
+    // Vangrail-gegevens: in de 4 uur na de maaltijden van dit blok vaak hoog of laag?
     let pn=0,ph=0,pl=0; const GT=glucose.map(x=>x.ts);
     for(const m of meals.filter(m=>m.min>=f*60&&m.min<t*60)){ let lo=0,hi=GT.length; while(lo<hi){const k=(lo+hi)>>1; if(GT[k]<m.ts)lo=k+1;else hi=k;}
       for(let j=lo;j<GT.length&&GT[j]<=m.ts+4*3600e3;j++){ pn++; if(glucose[j].bg>HI_T)ph++; if(glucose[j].bg<LO_T)pl++; } }
     const hiF=pn?ph/pn:0, loF=pn?pl/pn:0;
-    if(v>nowB && hiF>0.30){ v=nowB; why="hoog"; } else if(v<nowB && loF>0.04){ v=nowB; why="laag"; }
-    if(why==="gemeten"){ ic.push({ from:_hhmm(f*60), to:t, now:_r1(nowB), nowAll:[...new Set(icNow.slice(f,t).map(_r1))], value:_r1(v), measured:med, n:ms.length, why }); continue; }
-    // Niet aanpassen = je huidige blokken binnen dit stuk precies laten staan.
+    // Per huidig blok binnen dit stuk beoordelen: de ±20%-grens en de vangrails gelden t.o.v. wat je nú hebt staan,
+    // zodat een samengevoegd blok nooit verder afwijkt dan 20% van jouw eigen waarde op dat uur.
     for(let h=f;h<t;){ let e=h; while(e<t && _r1(icNow[e])===_r1(icNow[h])) e++;
-      ic.push({ from:_hhmm(h*60), to:e, now:_r1(icNow[h]), nowAll:[_r1(icNow[h])], value:_r1(icNow[h]), measured:med, n:ms.length, why }); h=e; } }
+      const cb=icNow[h]; let v=cb, why="weinig";
+      if(ms.length>=8){ why="gelijk"; if(Math.abs(med-nowB)/nowB>0.10){ v=Math.min(Math.max(med,cb*0.8),cb*1.2); why="gemeten"; } }
+      // Meer stijging dan je ingevoerde koolhydraten verklaren (>115%): ligt het aan het tellen of aan de ratio?
+      // Zonder "ik tel nauwkeurig" gaat IDA uit van tellen en maakt de ratio dan niet sterker.
+      if(v<cb && mfrac!=null && mfrac>1.15 && !(typeof cfg!=="undefined" && cfg.carbsAccurate)){ v=cb; why="tellen"; }
+      if(v>cb && hiF>0.30){ v=cb; why="hoog"; } else if(v<cb && loF>0.04){ v=cb; why="laag"; }
+      if(Math.abs(v-cb)<0.05 && why==="gemeten") why="gelijk";
+      ic.push({ from:_hhmm(h*60), to:e, now:_r1(cb), nowAll:[_r1(cb)], value:_r1(v), measured:med, n:ms.length, why, hiF, loF }); h=e; } }
   // aaneengesloten gelijke blokken samenvoegen
   for(let i=ic.length-1;i>0;i--){ if(ic[i].value===ic[i-1].value && ic[i].now===ic[i-1].now){ ic[i-1].to=ic[i].to; ic.splice(i,1); } }
   const maxBasal=Math.max(...basal.map(b=>b.value));

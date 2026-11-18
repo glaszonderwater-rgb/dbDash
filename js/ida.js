@@ -417,7 +417,7 @@ function weekReview(c){
   let focus;
   if(A.tbr>0.04||A.vlow>0.01) focus=TL("Minder laagtes: kijk bij Patronen wanneer ze vallen.","Fewer lows: check Patterns for when they happen.","Menos baixas.");
   else if(_P&&_P.changed&&!_idaActivation()) focus=TL("Zet je nieuwe profiel in AAPS en tik op 'Ik heb het profiel geactiveerd'.","Set your new profile in AAPS and tap 'I've activated the profile'.","Ative o novo perfil.");
-  else if(_P&&_P.mfrac>1.15) focus=TL("Tel je koolhydraten nauwkeuriger: weeg deze week een paar maaltijden af.","Count carbs more precisely: weigh a few meals this week.","Conte os hidratos com mais rigor.");
+  else if(_P&&_P.mfrac>1.15) focus=TL(`Na het eten stijg je meer dan je ingevoerde koolhydraten verklaren (${_idaPct(_P.mfrac)}). Klopt je telling, dan is je KH-ratio waarschijnlijk te zwak: vraag IDA bij Profiel om hem te toetsen.`,`After meals you rise more than your entered carbs explain (${_idaPct(_P.mfrac)}). If your counting is right, your carb ratio is probably too weak: ask IDA in Profile to check it.`,`Depois de comer sobe mais do que os hidratos explicam (${_idaPct(_P.mfrac)}).`);
   else if(A.tar>0.25) focus=TL("Minder hoog: kijk bij Patronen in welke uren je het vaakst boven 10 zit.","Fewer highs: check Patterns for your high hours.","Menos altas.");
   else focus=TL("Zo doorgaan; log sport en ziek zijn met de +-knop.","Keep going; log exercise and illness with the + button.","Continue assim.");
   return { A, B, better, worse, focus };
