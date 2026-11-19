@@ -7,6 +7,11 @@ Laatste stand: v35 (19 nov 2026), branch `main`, GitHub Pages: https://glaszonde
 Persoonlijke offline PWA voor één gebruiker (Focko) met AAPS closed loop + Omnipod Dash, Libre via xDrip+, data uit Nightscout.
 IDA leest Nightscout, analyseert en stelt concrete AAPS-profielwaarden voor (basaal, ISF, KH-ratio) in AAPS-blokvorm.
 
+## Hosting
+- App: alleen GitHub Pages (https://glaszonderwater-rgb.github.io/dbDash/).
+- Netlify (`diametric.netlify.app`) stuurt door naar GitHub Pages via `netlify.toml`; builds op Netlify staan **gestopt** (credits).
+- Meldingenserver: Railway, zie open punt 3.
+
 ## Harde afspraken
 - Antwoorden in het Nederlands, direct, weinig uitleg. Geen "bespreek met je team" toevoegen.
 - Concrete profielcijfers geven, klaar om over te nemen in AAPS (Lokaal profiel).
