@@ -59,7 +59,7 @@ async function pushSubscribe(){
   return json;
 }
 async function pushCopy(){
-  try{ const j=await pushSubscribe(); await navigator.clipboard.writeText(JSON.stringify(j));
+  try{ cfg.notify=true; saveCfg(); const j=await pushSubscribe(); await navigator.clipboard.writeText(JSON.stringify(j));
     toast(TL("Aanmelding gekopieerd. Zet hem als geheim PUSH_SUBSCRIPTIONS bij je server.","Subscription copied. Store it as the PUSH_SUBSCRIPTIONS secret on your server.","Subscrição copiada. Guarde-a como segredo PUSH_SUBSCRIPTIONS no servidor."));
   }catch(e){ toast(e.message); }
 }
@@ -72,6 +72,7 @@ async function notifyEnable(){
 // Testmelding via de server (controleert de hele keten: server → pushdienst → telefoon)
 async function pushTest(){
   try{
+    cfg.notify=true; saveCfg(); const nc=document.getElementById("inNotify"); if(nc) nc.checked=true;
     if(!cfg.pushUrl) throw new Error(TL("Vul eerst het adres van de meldingenserver in.","Enter the notification server address first.","Introduza primeiro o endereço do servidor."));
     await pushSubscribe();
     const r=await fetch(cfg.pushUrl.replace(/\/+$/,"")+"/test",{ method:"POST" });
@@ -80,3 +81,10 @@ async function pushTest(){
     toast(j.ok?TL(`Testmelding verstuurd naar ${j.ok} apparaat/apparaten.`,`Test sent to ${j.ok} device(s).`,`Teste enviado para ${j.ok} aparelho(s).`):TL("Server bereikt, maar geen apparaat kreeg de melding.","Server reached, but no device received it.","Servidor alcançado, mas nenhum aparelho recebeu."));
   }catch(e){ toast(e.message); }
 }
+
+// Meldingenvelden meteen bewaren (niet pas bij "Bewaren", dat ook Nightscout controleert)
+(function(){
+  const sync=()=>{ const n=document.getElementById("inNotify"), u=document.getElementById("inPushUrl"), k=document.getElementById("inPushKey"); if(!n) return;
+    cfg.notify=n.checked; cfg.pushUrl=u.value.trim().replace(/\/+$/,""); cfg.pushKey=k.value.trim(); saveCfg(); };
+  for(const id of ["inNotify","inPushUrl","inPushKey"]){ const el=document.getElementById(id); if(el) el.addEventListener("change", sync); }
+})();

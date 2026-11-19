@@ -78,6 +78,16 @@ const store = {
     if (SB) return sb('/ida_push_subscriptions?endpoint=eq.' + encodeURIComponent(endpoint), { method: 'DELETE' });
     if (file && existsSync(file)) try { writeFileSync(file, JSON.stringify(JSON.parse(readFileSync(file, 'utf8')).filter(x => x.endpoint !== endpoint), null, 1)); } catch (_) { }
   },
+  // Back-up van de app (instellingen + logboek): één document
+  async getState(file) {
+    if (SB) { const r = await sb('/ida_state?select=data,updated_at&id=eq.main'); return r && r[0] ? { ...r[0].data, serverAt: r[0].updated_at } : null; }
+    const f = (file || 'subscriptions.json').replace(/[^/]+$/, 'state.json');
+    return existsSync(f) ? JSON.parse(readFileSync(f, 'utf8')) : null;
+  },
+  async putState(data, file) {
+    if (SB) return sb('/ida_state?on_conflict=id', { method: 'POST', headers: { prefer: 'resolution=merge-duplicates' }, body: JSON.stringify({ id: 'main', data, updated_at: new Date().toISOString() }) });
+    writeFileSync((file || 'subscriptions.json').replace(/[^/]+$/, 'state.json'), JSON.stringify(data));
+  },
   async wasSent(key, mem) {
     if (mem.has(key)) return true;
     if (SB) { try { const r = await sb('/ida_push_sent?select=key&key=eq.' + encodeURIComponent(key)); if (r && r.length) { mem.add(key); return true; } } catch (e) { console.error(e.message); } }
@@ -122,13 +132,27 @@ if (process.argv.includes('--serve')) {
   const file = env.SUBS_FILE || 'subscriptions.json', sent = new Set();
   console.log('Opslag:', SB ? 'Supabase' : 'bestand ' + file);
   createServer((req, res) => {
-    const cors = { 'access-control-allow-origin': '*', 'access-control-allow-headers': 'content-type', 'access-control-allow-methods': 'POST, OPTIONS' };
+    const cors = { 'access-control-allow-origin': '*', 'access-control-allow-headers': 'content-type', 'access-control-allow-methods': 'GET, PUT, POST, OPTIONS' };
     if (req.method === 'OPTIONS') { res.writeHead(204, cors); return res.end(); }
     if (req.method === 'POST' && req.url === `/${env.SUBSCRIBE_PATH}/subscribe`) {
       let b = ''; req.on('data', c => { b += c; if (b.length > 1e4) req.destroy(); });
       req.on('end', async () => {
         let s; try { s = JSON.parse(b); if (!s.endpoint || !/^https:\/\//.test(s.endpoint) || !s.keys) throw 0; } catch (_) { res.writeHead(400, cors); return res.end('ongeldig'); }
         try { await store.addSub(s, file); res.writeHead(201, cors); res.end('ok'); } catch (e) { console.error(e.message); res.writeHead(500, cors); res.end('opslaan mislukt'); }
+      });
+      return;
+    }
+    if (req.url === `/${env.SUBSCRIBE_PATH}/state` && (req.method === 'GET' || req.method === 'PUT')) {
+      if (req.method === 'GET') {
+        store.getState(file).then(d => { res.writeHead(200, { ...cors, 'content-type': 'application/json', 'cache-control': 'no-store' }); res.end(JSON.stringify(d || {})); })
+          .catch(e => { console.error(e.message); res.writeHead(500, cors); res.end('lezen mislukt'); });
+        return;
+      }
+      let b = ''; req.on('data', c => { b += c; if (b.length > 5e6) req.destroy(); });
+      req.on('end', async () => {
+        let d; try { d = JSON.parse(b); if (!d || typeof d !== 'object' || d.app !== 'IDA') throw 0; } catch (_) { res.writeHead(400, cors); return res.end('ongeldig'); }
+        try { await store.putState(d, file); res.writeHead(200, { ...cors, 'content-type': 'application/json' }); res.end(JSON.stringify({ ok: true })); }
+        catch (e) { console.error(e.message); res.writeHead(500, cors); res.end('opslaan mislukt'); }
       });
       return;
     }

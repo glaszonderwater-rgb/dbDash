@@ -93,15 +93,18 @@ document.getElementById("detBack").onclick=()=>closeDetail();
 idaLayout();
 
 // Instellink voor meldingen: …/dbDash/#meldingen&server=<url>&key=<publieke sleutel>
-// Vult de velden in en opent de instellingen; er wordt pas iets verstuurd als je zelf op "Stuur testmelding" tikt.
-(function(){
+// Vult de velden in, haalt je back-up van de server op en opent de instellingen.
+function idaSetupLink(){
   try{
     const h=location.hash.slice(1); if(!/^meldingen(&|$)/.test(h)) return;
     const p=new URLSearchParams(h.replace(/^meldingen&?/,"")), server=(p.get("server")||"").replace(/\/+$/,""), key=p.get("key")||"";
     history.replaceState(null,"",location.pathname+location.search);
     if(!/^https:\/\/[^\s]+$/.test(server) || !/^[A-Za-z0-9_-]{80,100}$/.test(key)) { toast(TL("Deze instellink is ongeldig.","This setup link is invalid.","Ligação inválida.")); return; }
     cfg.pushUrl=server; cfg.pushKey=key; cfg.notify=true; saveCfg();
+    try{ if(typeof stateStart==="function") setTimeout(()=>stateStart().catch(()=>{}),300); }catch(_){}
     setTimeout(()=>{ try{ document.getElementById("btnCfg").click(); const el=document.getElementById("btnPushTest"); if(el) el.scrollIntoView({block:"center"});
       toast(TL("Meldingen ingevuld. Tik op 'Stuur testmelding' en sta meldingen toe.","Notifications filled in. Tap 'Send test notification' and allow notifications.","Notificações preenchidas. Toque em 'Enviar notificação de teste'.")); }catch(_){} }, 600);
   }catch(e){ console.error(e); }
-})();
+}
+idaSetupLink();
+window.addEventListener("hashchange", idaSetupLink);

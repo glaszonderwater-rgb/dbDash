@@ -2,9 +2,9 @@
    Cachet alleen de eigen app-bestanden (schil). Verzoeken naar je Nightscout
    (cross-origin) worden NOOIT onderschept of bewaard: die gaan altijd live en
    blijven buiten deze cache. Data zelf leeft in IndexedDB, niet hier. */
-const VERSION = 'v36';
+const VERSION = 'v37';
 const CACHE = 'diametric-shell-' + VERSION;
-const SHELL = ['./', './index.html', './js/core.js', './js/ida.js', './js/ida2.js', './js/ida3.js', './js/moments.js', './js/push.js', './manifest.json', './icon.svg', './icon-180.png', './icon-512.png'];
+const SHELL = ['./', './index.html', './js/core.js', './js/ida.js', './js/ida2.js', './js/ida3.js', './js/moments.js', './js/push.js', './js/state.js', './manifest.json', './icon.svg', './icon-180.png', './icon-512.png'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(
