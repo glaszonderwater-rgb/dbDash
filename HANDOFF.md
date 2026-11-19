@@ -51,7 +51,7 @@ Playwright-core wordt gebruikt; `CHROME_PATH` naar een Chromium. Nightly data-ar
    - Vastleggen: lijst (sport, alcohol met aantal, ziek, stress, pen), wanneer, opslaan als Nightscout-notitie.
    - Melding op vergrendelscherm vóór het moment.
    Het ontwerp-canvas staat als privé artefact op het oorspronkelijke account.
-3. **Meldingenserver** nog niet gekoppeld. Plan: Railway (root `server/`, `railway.json`) + Supabase (`server/supabase.sql`). **Draaiboek: `DEPLOY.md`** (stap voor stap, ook voor de Chrome-extensie). Sleutels maken: `tools/vapid.html`. Controle: `GET /status`, testmelding via IDA › Instellingen. `server/moments.cjs` is een kopie van `js/moments.js` en moet gelijk blijven (momentcheck bewaakt dat).
+3. **Meldingenserver LIVE (19 nov 2026):** Railway-project `empathetic-clarity`, service `dbDash` (root `/server`), https://dbdash-production.up.railway.app (`/status`). Supabase-project `ida` (avvznjndzfzrsopizcgl, eu-west-1, gratis), tabellen aangemaakt. Nightscout-onderwerp `ida-server` (readable). Telefoon nog aanmelden via IDA › Instellingen › Meldingen. Eerder plan: Plan: Railway (root `server/`, `railway.json`) + Supabase (`server/supabase.sql`). **Draaiboek: `DEPLOY.md`** (stap voor stap, ook voor de Chrome-extensie). Sleutels maken: `tools/vapid.html`. Controle: `GET /status`, testmelding via IDA › Instellingen. `server/moments.cjs` is een kopie van `js/moments.js` en moet gelijk blijven (momentcheck bewaakt dat).
 4. Bekende beperking: `riseCarbEstimate` telt tijdelijke basaalverhogingen niet mee.
 
 ## Werkwijze
