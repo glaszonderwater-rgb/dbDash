@@ -28,7 +28,17 @@ Je krijgt een publieke en een geheime sleutel. De publieke sleutel vul je in IDA
 
 Let op: GitHub start geplande taken soms 5–20 minuten later, en zet ze stil na 60 dagen zonder activiteit in de repo.
 
-### B · Eigen server (sneller, elke 5 minuten)
+### B · Railway + Supabase (aanrader: elke 5 minuten, blijft bewaard)
+
+1. **Supabase:** maak een project, open *SQL Editor* en voer `server/supabase.sql` uit. Noteer onder *Project Settings › API* de *Project URL* en de *service_role*-sleutel (geheim; nooit in de app of in een chat).
+2. **Railway:** *New Project › Deploy from GitHub repo* › `dbDash`. Zet bij de service *Settings › Root Directory* op `server`. Railway leest `server/railway.json` en start `node push.mjs --serve`.
+3. Zet bij *Variables*: `NS_URL`, `NS_TOKEN` (alleen lezen), `VAPID_PUBLIC`, `VAPID_PRIVATE`, `VAPID_SUBJECT`, `SUBSCRIBE_PATH` (lang willekeurig woord), `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`.
+4. Maak onder *Settings › Networking* een publiek domein aan.
+5. In IDA › Instellingen › Meldingen: server `https://<jouw-railway-domein>/<SUBSCRIBE_PATH>`, publieke sleutel = `VAPID_PUBLIC`, vink *Meldingen aan* en tik **Aanmelden**.
+
+Supabase bewaart alleen de aanmelding van je telefoon en welke meldingen al verstuurd zijn, geen glucosewaarden.
+
+### C · Eigen server zonder Supabase
 
 Op een kleine server met Node 20 (bijvoorbeeld een gratis Fly.io-, Render- of Raspberry Pi-machine):
 

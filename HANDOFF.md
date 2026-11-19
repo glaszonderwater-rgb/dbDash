@@ -51,7 +51,7 @@ Playwright-core wordt gebruikt; `CHROME_PATH` naar een Chromium. Nightly data-ar
    - Vastleggen: lijst (sport, alcohol met aantal, ziek, stress, pen), wanneer, opslaan als Nightscout-notitie.
    - Melding op vergrendelscherm vóór het moment.
    Het ontwerp-canvas staat als privé artefact op het oorspronkelijke account.
-3. **Meldingenserver** nog niet gekoppeld (zie `server/README.md`).
+3. **Meldingenserver** nog niet gekoppeld. Plan: Railway (root `server/`, `railway.json`) + Supabase (`server/supabase.sql`) — zie `server/README.md`. `server/moments.cjs` is een kopie van `js/moments.js` en moet gelijk blijven (momentcheck bewaakt dat).
 4. Bekende beperking: `riseCarbEstimate` telt tijdelijke basaalverhogingen niet mee.
 
 ## Werkwijze

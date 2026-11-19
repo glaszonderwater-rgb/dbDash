@@ -1,5 +1,5 @@
 // IDA meldingenserver — leest Nightscout en stuurt een melding vóór het moment.
-// Gebruikt exact dezelfde regels als de app (js/moments.js). Schrijft nooit iets naar Nightscout.
+// Gebruikt exact dezelfde regels als de app: server/moments.cjs is een kopie van js/moments.js (test/momentcheck.mjs bewaakt dat). Schrijft nooit iets naar Nightscout.
 //
 // Twee manieren om te draaien:
 //   node server/push.mjs           → één controle (voor GitHub Actions of cron; geen geheugen nodig)
@@ -14,6 +14,8 @@
 //   PUSH_SUBSCRIPTIONS  JSON-lijst met aanmeldingen (uit IDA › Instellingen › "Aanmelden en kopiëren")
 //   TZ_OFFSET_MIN     optioneel: vaste tijdzone in minuten (bv. 60); anders wordt de offset uit Nightscout gelezen
 //   INTERVAL_MIN      hoe vaak er gecontroleerd wordt (standaard 10; zelfde als je cron)
+//   SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY  optioneel: aanmeldingen en verstuurde meldingen bewaren in Supabase
+//                     (tabellen: zie server/supabase.sql). Aanrader op Railway: daar verdwijnen lokale bestanden bij elke herstart.
 //   PORT, SUBS_FILE   alleen voor --serve
 //   SUBSCRIBE_PATH    alleen voor --serve, verplicht: een lang willekeurig woord. In IDA vul je als server
 //                     https://jouw-server/<SUBSCRIBE_PATH> in. Zo kan niet iedereen zich aanmelden voor jouw meldingen.
@@ -22,7 +24,7 @@ import { createRequire } from 'node:module';
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { createServer } from 'node:http';
 const require = createRequire(import.meta.url);
-const { idaMoments, newMoments } = require('../js/moments.js');
+const { idaMoments, newMoments } = require('./moments.cjs');
 
 const env = process.env, MIN = 60e3, DAY = 864e5;
 const MG = 18.0182;
@@ -52,28 +54,60 @@ async function loadData(now) {
   return { glucose, treatments: tr, off };
 }
 
-function subs(file) {
-  let list = [];
-  try { list = JSON.parse(env.PUSH_SUBSCRIPTIONS || '[]'); if (!Array.isArray(list)) list = [list]; } catch (_) { }
-  if (file && existsSync(file)) try { list = list.concat(JSON.parse(readFileSync(file, 'utf8'))); } catch (_) { }
-  const seen = new Set(); return list.filter(s => s && s.endpoint && !seen.has(s.endpoint) && seen.add(s.endpoint));
+// ── Opslag: Supabase (blijft bewaard bij herstart op Railway) of een lokaal bestand ──
+const SB = env.SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY ? env.SUPABASE_URL.replace(/\/+$/, '') + '/rest/v1' : null;
+async function sb(path, init) {
+  const r = await fetch(SB + path, { ...init, headers: { apikey: env.SUPABASE_SERVICE_ROLE_KEY, authorization: 'Bearer ' + env.SUPABASE_SERVICE_ROLE_KEY, 'content-type': 'application/json', ...(init && init.headers) } });
+  if (!r.ok) throw new Error(`Supabase ${path}: ${r.status} ${await r.text()}`);
+  return r.status === 204 ? null : r.json().catch(() => null);
 }
+const store = {
+  async subs(file) {
+    let list = [];
+    try { list = JSON.parse(env.PUSH_SUBSCRIPTIONS || '[]'); if (!Array.isArray(list)) list = [list]; } catch (_) { }
+    if (SB) { try { list = list.concat((await sb('/ida_push_subscriptions?select=sub')).map(r => r.sub)); } catch (e) { console.error(e.message); } }
+    else if (file && existsSync(file)) try { list = list.concat(JSON.parse(readFileSync(file, 'utf8'))); } catch (_) { }
+    const seen = new Set(); return list.filter(s => s && s.endpoint && !seen.has(s.endpoint) && seen.add(s.endpoint));
+  },
+  async addSub(s, file) {
+    if (SB) return sb('/ida_push_subscriptions?on_conflict=endpoint', { method: 'POST', headers: { prefer: 'resolution=merge-duplicates' }, body: JSON.stringify({ endpoint: s.endpoint, sub: s }) });
+    const l = (await this.subs(file)).filter(x => x.endpoint !== s.endpoint && !(env.PUSH_SUBSCRIPTIONS || '').includes(x.endpoint)); l.push(s);
+    writeFileSync(file, JSON.stringify(l, null, 1));
+  },
+  async dropSub(endpoint, file) {
+    if (SB) return sb('/ida_push_subscriptions?endpoint=eq.' + encodeURIComponent(endpoint), { method: 'DELETE' });
+    if (file && existsSync(file)) try { writeFileSync(file, JSON.stringify(JSON.parse(readFileSync(file, 'utf8')).filter(x => x.endpoint !== endpoint), null, 1)); } catch (_) { }
+  },
+  async wasSent(key, mem) {
+    if (mem.has(key)) return true;
+    if (SB) { try { const r = await sb('/ida_push_sent?select=key&key=eq.' + encodeURIComponent(key)); if (r && r.length) { mem.add(key); return true; } } catch (e) { console.error(e.message); } }
+    return false;
+  },
+  async markSent(key, mem) {
+    mem.add(key);
+    if (SB) try { await sb('/ida_push_sent', { method: 'POST', headers: { prefer: 'resolution=ignore-duplicates' }, body: JSON.stringify({ key }) }); } catch (e) { console.error(e.message); }
+  },
+};
 
 async function check({ stateless, sent, file }) {
   const now = Date.now();
   const { glucose, treatments, off } = await loadData(now);
   const opts = { now, tzOffsetMin: off };
   const iv = (+env.INTERVAL_MIN || 10) * MIN;
-  const list = stateless ? newMoments(glucose, treatments, opts, iv) : idaMoments(glucose, treatments, opts).filter(m => !sent.has(m.key));
+  let list = stateless ? newMoments(glucose, treatments, opts, iv) : idaMoments(glucose, treatments, opts);
+  if (!stateless) { const keep = []; for (const m of list) if (!(await store.wasSent(m.key, sent))) keep.push(m); list = keep; }
   if (!list.length) { console.log('Geen nieuw moment.'); return; }
   const webpush = (await import('web-push')).default;
   webpush.setVapidDetails(env.VAPID_SUBJECT || 'mailto:ida@example.invalid', env.VAPID_PUBLIC, env.VAPID_PRIVATE);
+  const targets = await store.subs(file);
   for (const m of list) {
-    for (const s of subs(file)) {
-      try { await webpush.sendNotification(s, JSON.stringify({ title: m.title, body: m.body, tag: m.key, url: './' }), { TTL: 1800, urgency: 'high' }); }
-      catch (e) { console.error('Melding mislukt:', e.statusCode || e.message); }
+    let ok = 0;
+    for (const s of targets) {
+      try { await webpush.sendNotification(s, JSON.stringify({ title: m.title, body: m.body, tag: m.key, url: './' }), { TTL: 1800, urgency: 'high' }); ok++; }
+      catch (e) { console.error('Melding mislukt:', e.statusCode || e.message); if (e.statusCode === 404 || e.statusCode === 410) await store.dropSub(s.endpoint, file); }
     }
-    sent && sent.add(m.key); console.log('Verstuurd:', m.key);
+    if (sent) await store.markSent(m.key, sent);
+    console.log(`Verstuurd: ${m.key} (${ok}/${targets.length})`);
   }
 }
 
@@ -83,19 +117,22 @@ if (missing.length) { console.log('Meldingenserver niet ingesteld (ontbreekt: ' 
 if (process.argv.includes('--serve')) {
   if (!env.SUBSCRIBE_PATH || env.SUBSCRIBE_PATH.length < 16) { console.error('Zet SUBSCRIBE_PATH (minstens 16 tekens).'); process.exit(1); }
   const file = env.SUBS_FILE || 'subscriptions.json', sent = new Set();
-  const save = s => { const l = subs(file).filter(x => x.endpoint !== s.endpoint); l.push(s); writeFileSync(file, JSON.stringify(l.filter(x => !(env.PUSH_SUBSCRIPTIONS || '').includes(x.endpoint)), null, 1)); };
+  console.log('Opslag:', SB ? 'Supabase' : 'bestand ' + file);
   createServer((req, res) => {
     const cors = { 'access-control-allow-origin': '*', 'access-control-allow-headers': 'content-type', 'access-control-allow-methods': 'POST, OPTIONS' };
     if (req.method === 'OPTIONS') { res.writeHead(204, cors); return res.end(); }
     if (req.method === 'POST' && req.url === `/${env.SUBSCRIBE_PATH}/subscribe`) {
       let b = ''; req.on('data', c => { b += c; if (b.length > 1e4) req.destroy(); });
-      req.on('end', () => { try { const s = JSON.parse(b); if (!s.endpoint || !/^https:\/\//.test(s.endpoint)) throw 0; save(s); res.writeHead(201, cors); res.end('ok'); } catch (_) { res.writeHead(400, cors); res.end('ongeldig'); } });
+      req.on('end', async () => {
+        let s; try { s = JSON.parse(b); if (!s.endpoint || !/^https:\/\//.test(s.endpoint) || !s.keys) throw 0; } catch (_) { res.writeHead(400, cors); return res.end('ongeldig'); }
+        try { await store.addSub(s, file); res.writeHead(201, cors); res.end('ok'); } catch (e) { console.error(e.message); res.writeHead(500, cors); res.end('opslaan mislukt'); }
+      });
       return;
     }
     res.writeHead(200, { ...cors, 'content-type': 'text/plain' }); res.end('IDA meldingenserver');
   }).listen(+env.PORT || 8787, () => console.log('Luistert op poort', +env.PORT || 8787));
   const tick = () => check({ stateless: false, sent, file }).catch(e => console.error(e.message));
-  tick(); setInterval(tick, 5 * MIN);
+  tick(); setInterval(tick, (+env.INTERVAL_MIN || 5) * MIN);
   setInterval(() => sent.clear(), DAY);
 } else {
   await check({ stateless: true }).catch(e => { console.error(e.message); process.exit(1); });

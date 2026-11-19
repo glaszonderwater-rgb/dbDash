@@ -43,4 +43,5 @@ const n1 = newMoments(glucose, tr, { now, tzOffsetMin: 0, stats: null }, 10 * MI
 const steady = glucose.map(x => x.ts > now - 15 * MIN ? x : x);
 t('newMoments levert een moment op zodra het begint of niets dubbel', n1 <= 1);
 t('fallStats geeft null bij te weinig data', fallStats(glucose.slice(0, 20), tr.slice(0, 2)) === null);
+{ const fs = require('node:fs'); t('server/moments.cjs is gelijk aan js/moments.js', fs.readFileSync(new URL('../js/moments.js', import.meta.url),'utf8') === fs.readFileSync(new URL('../server/moments.cjs', import.meta.url),'utf8')); }
 console.log('RESULTAAT:', ok ? 'OK' : 'FOUT'); console.log('errors: geen'); process.exit(ok ? 0 : 1);
