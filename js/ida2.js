@@ -144,8 +144,10 @@ function travelStats(c){
   if(!_tzT||_tzT.length<2) return null;
   const segs=[]; for(let i=0;i<_tzT.length;i++) segs.push({ off:_tzO[i], from:_tzT[i], to:i+1<_tzT.length?_tzT[i+1]:Date.now() });
   // Thuis = de tijdzone van Amsterdam op dat moment (zomer- én wintertijd); afwijkend = op reis.
-  const amsOff=ts=>{ const d=new Date(ts), p=new Intl.DateTimeFormat("en-GB",{timeZone:"Europe/Amsterdam",hour:"2-digit",minute:"2-digit",hour12:false,day:"2-digit"}).formatToParts(d);
-    const g=k=>+p.find(x=>x.type===k).value; let diff=(g("hour")*60+g("minute"))-(d.getUTCHours()*60+d.getUTCMinutes()); if(g("day")!==d.getUTCDate()) diff+= (diff<0?1440:-1440); return diff; };
+  // één formatter, en per uur onthouden (scheelt seconden: dit wordt voor elke meting gevraagd)
+  const F=new Intl.DateTimeFormat("en-GB",{timeZone:"Europe/Amsterdam",hour:"2-digit",minute:"2-digit",hour12:false,day:"2-digit"}), memo=new Map();
+  const amsOff=ts=>{ const k=Math.floor(ts/36e5); let v=memo.get(k); if(v!==undefined) return v; const d=new Date(k*36e5), p=F.formatToParts(d);
+    const g=t=>+p.find(x=>x.type===t).value; let diff=(g("hour")%24*60+g("minute"))-(d.getUTCHours()*60+d.getUTCMinutes()); if(g("day")!==d.getUTCDate()) diff+= (diff<0?1440:-1440); memo.set(k,diff); return diff; };
   const isHome=s=>s.off===amsOff((s.from+s.to)/2);
   const dur=new Map(); for(const s of segs) if(!isHome(s)) dur.set(s.off,(dur.get(s.off)||0)+(s.to-s.from));
   const home=null;
@@ -337,9 +339,9 @@ function idaReportHtml(){
   const M=maxIobAdvice(c); if(M) h+=`<p class="rp">Max IOB: ${TL("minstens","at least","pelo menos")} ${_idaN(M.v)} ${TL("E","U","U")} (${M.why}).</p>`;
   return h;
 }
-// Automatisch synchroniseren bij openen en elke 5 minuten zolang de app open is
+// Automatisch synchroniseren bij openen en elke minuut zolang de app open is
 async function autoSync(){
   if(!cfg.url || document.hidden) return; const b=document.getElementById("btnSync"); if(!b||b.disabled) return;
   let last=0; try{ last=+(await DB.meta("sync.at"))||0; }catch(_){}
-  if(Date.now()-last>4.5*60e3){ try{ await doSync(); }catch(_){} }
+  if(Date.now()-last>50e3){ try{ await doSync(); }catch(_){} }
 }

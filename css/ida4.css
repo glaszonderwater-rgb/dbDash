@@ -384,3 +384,8 @@ dialog::backdrop{background:rgba(30,20,10,.42)}
 .hmono,.dfacts,.irow .irt i,.mrow .mt i{font-size:.8rem!important}
 .ichart text,.bchart text{font-size:9.5px}
 .heat .hax{font-size:.68rem}
+
+.mwhy ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:.45rem}
+.mwhy li{position:relative;padding-left:1.1rem;font-size:.9rem;line-height:1.4}
+.mwhy li::before{content:"";position:absolute;left:0;top:.5em;width:8px;height:8px;border-radius:50%;background:var(--line-2)}
+.mwhy li.big::before{background:var(--hi)} .mwhy li.mid::before{background:color-mix(in srgb,var(--hi) 55%,var(--line-2))} .mwhy li.pos::before{background:var(--ok)}

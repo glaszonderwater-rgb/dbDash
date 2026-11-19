@@ -301,7 +301,8 @@ function idaDag(){
   let verdict=diff==null?TL("Je dag in cijfers.","Your day in numbers.","O seu dia em números."):diff>=0.05?TL("Beter dan je gemiddelde.","Better than your average.","Melhor do que a sua média."):diff<=-0.05?TL("Minder dan je gemiddelde.","Below your average.","Abaixo da sua média."):TL("Zoals je gemiddelde.","Like your average.","Como a sua média.");
   if(isToday&&diff!=null) verdict=TL("Tot nu toe: ","So far: ","Até agora: ")+verdict.charAt(0).toLowerCase()+verdict.slice(1);
   const mx=rd.length?rd.reduce((a,b)=>b.bg>a.bg?b:a):null;
-  const M=dayMoments(c,from,to), nLo=M.filter(m=>m.k==="lo").length;
+  const M=dayMoments(c,from,to).filter(m=>localDayKey(m.ts)===key), nLo=M.filter(m=>m.k==="lo").length;
+  M.forEach((m,i)=>m.n=i+1);
   const facts=[`<span><b>${tir!=null?pct0(tir):"—"}</b> ${TL("in bereik","in range","no alvo")}</span>`];
   if(avg!=null) facts.push(`<span>${TL("30 dagen","30 days","30 dias")} <b>${pct0(avg)}</b></span>`);
   facts.push(`<span><b>${nLo}</b>× ${TL("laag","low","baixa")}</span>`);
@@ -325,6 +326,106 @@ function idaDag(){
   host.querySelectorAll("[data-go]").forEach(b=>b.onclick=()=>showTab(b.dataset.go));
   host.querySelectorAll("[data-mom]").forEach(b=>b.onclick=()=>{ const m=M.find(x=>x.n===+b.dataset.mom); if(m) openMoment(c,m,from); });
 }
+
+/* ── Wat meespeelde: per moment meerdere factoren, vergeleken met je eigen gewone waarden ──
+   Elke factor: { w (gewicht), txt (wat er was), tip (volgende keer, optioneel), pos (gunstig) }.
+   "Volgende keer" komt uit de zwaarste factoren, zodat het advies per moment verschilt. */
+const _DP4=m=>m<360?0:m<660?1:m<1020?2:3;   // nacht, ochtend, middag, avond
+const _DPN4=()=>[TL("'s nachts","at night","à noite"),TL("bij je ontbijt","at breakfast","ao pequeno-almoço"),TL("bij je lunch","at lunch","ao almoço"),TL("bij je avondeten","at dinner","ao jantar")];
+function _med4(a){ if(!a.length) return null; const s=[...a].sort((x,y)=>x-y), k=s.length>>1; return s.length%2?s[k]:(s[k-1]+s[k])/2; }
+function _dsAt4(ts,tol){ const A=(typeof _dsAll!=="undefined"&&_dsAll)||[]; let lo=0,hi=A.length; while(lo<hi){const k=(lo+hi)>>1; if(A[k].ts<ts)lo=k+1; else hi=k;}
+  let best=null; for(const i of [lo-1,lo]){ const d=A[i]; if(d&&Math.abs(d.ts-ts)<=(tol||10*_M4)&&(!best||Math.abs(d.ts-ts)<Math.abs(best.ts-ts))) best=d; } return best; }
+function _base4(c){
+  if(c._base4) return c._base4;
+  const T=c.treatments||[], B={ rise:[[],[],[],[]], t50:[[],[],[],[]], iobMeal:[], iobHour:Array.from({length:24},()=>[]), ioMax:null };
+  let R=[]; try{ R=(c._mr4||(c._mr4=mealResults(c.glucose,c.treatments,c.timeline))).results||[]; }catch(_){}
+  for(const r of R){ const dp=_DP4(todMin(r.ts)); if(r.peakRise!=null) B.rise[dp].push(r.peakRise); if(r.t50!=null) B.t50[dp].push(r.t50);
+    const d=_dsAt4(r.ts); if(d&&d.iob!=null) B.iobMeal.push(d.iob); }
+  const A=(typeof _dsAll!=="undefined"&&_dsAll)||[], step=Math.max(1,Math.floor(A.length/6000)); const io=[];
+  for(let i=0;i<A.length;i+=step){ const d=A[i]; if(d.iob==null) continue; B.iobHour[Math.floor(todMin(d.ts)/60)%24].push(d.iob); io.push(d.iob); }
+  io.sort((a,b)=>a-b); B.ioP95=io.length?io[Math.floor(io.length*0.95)]:null;
+  B.rise=B.rise.map(_med4); B.t50=B.t50.map(_med4); B.iobMeal=_med4(B.iobMeal); B.iobHour=B.iobHour.map(_med4);
+  B.sites=T.filter(t=>/site change|cannula/i.test(t.type||"")).map(t=>t.ts).sort((a,b)=>a-b);
+  B.sensors=T.filter(t=>/sensor (change|start)/i.test(t.type||"")).map(t=>t.ts).sort((a,b)=>a-b);
+  return (c._base4=B);
+}
+function _lastBefore4(arr,ts){ let r=null; for(const x of arr){ if(x<=ts) r=x; else break; } return r; }
+function _momFactors(c, m){
+  const B=_base4(c), F=[], E=TL("E","U","U"), G=c.glucose, T=c.treatments||[], dp=_DP4(todMin(m.ts)), dpn=_DPN4()[dp];
+  const win=(a,b)=>G.filter(x=>x.ts>=a&&x.ts<=b);
+  const ann=(type,a,b)=>(_idaAnns||[]).find(x=>x.type===type&&x.ts>=a&&x.ts<=b);
+  const site=_lastBefore4(B.sites,m.ts), podAgeH=site!=null?(m.ts-site)/_H4:null;
+  const sens=_lastBefore4(B.sensors,m.ts), sensAgeH=sens!=null?(m.ts-sens)/_H4:null;
+  const P=_P&&_P.basal?_P:null, newBasal=h=>{ if(!P) return null; let v=P.basal[0].value; for(const b of P.basal) if(hhmmToMin(b.from)<=h*60) v=b.value; return v; };
+  const hr=Math.floor(todMin(m.ts)/60)%24;
+  // context uit je logboek en materiaal (voor alle soorten momenten)
+  const alc=ann("alcohol",m.ts-6*_H4,m.ts+_H4), sp=ann("sport",m.ts-5*_H4,m.ts+_H4), ill=ann("ziek",m.ts-48*_H4,m.ts), str=ann("stress",m.ts-12*_H4,m.ts);
+  if(alc) F.push({w:3,txt:TL(`Alcohol gelogd om ${_hm4(alc.ts)}.`,`Alcohol logged at ${_hm4(alc.ts)}.`,`Álcool registado às ${_hm4(alc.ts)}.`),tip:m.k==="hi"?null:TL("Alcohol remt je lever: bolus niet volledig voor bier of wijn, en eet iets voor de nacht.","Alcohol slows your liver: don't fully bolus for beer or wine, and eat something before bed.","O álcool trava o fígado: não faça bólus completo para cerveja ou vinho.")});
+  if(sp) F.push({w:3,txt:TL(`Sport gelogd om ${_hm4(sp.ts)}.`,`Exercise logged at ${_hm4(sp.ts)}.`,`Exercício às ${_hm4(sp.ts)}.`),tip:m.k==="hi"?null:TL("Zet ongeveer een uur vóór het sporten een tijdelijke streefwaarde, en bolus kleiner voor een maaltijd vlak ervoor of erna.","Set a temporary target about an hour before exercise, and bolus less for a meal just before or after.","Alvo temporário uma hora antes do exercício.")});
+  if(ill) F.push({w:2,txt:TL("Je had ziek gelogd.","You had logged being ill.","Tinha registado doença."),tip:m.k==="hi"?TL("Ziek zijn vraagt vaak meer insuline; meet ketonen boven 14.","Illness often needs more insulin; check ketones above 14.","Doença pede muitas vezes mais insulina."):null});
+  if(str) F.push({w:1,txt:TL("Stress gelogd.","Stress logged.","Stress registado.")});
+  if(podAgeH!=null&&podAgeH<3) F.push({w:m.k==="hi"?3:1,txt:TL(`Pod net gewisseld (${_hm4(site)}).`,`Pod just changed (${_hm4(site)}).`,`Pod acabado de trocar.`),tip:m.k==="hi"?TL("Een nieuwe pod neemt de eerste uren soms trager op. Wissel liever niet vlak voor eten of slapen.","A new pod sometimes absorbs slowly at first. Avoid changing right before a meal or sleep.","Um pod novo absorve por vezes mais devagar."):null});
+  else if(podAgeH!=null&&podAgeH>=60&&m.k!=="lo") F.push({w:1,txt:TL(`Pod op dag ${Math.floor(podAgeH/24)+1}.`,`Pod on day ${Math.floor(podAgeH/24)+1}.`,`Pod no dia ${Math.floor(podAgeH/24)+1}.`)});
+  if(sensAgeH!=null&&sensAgeH<24) F.push({w:m.k==="lo"?2:1,txt:TL(`Sensor pas ${Math.round(sensAgeH)} uur oud.`,`Sensor only ${Math.round(sensAgeH)} hours old.`,`Sensor com ${Math.round(sensAgeH)} h.`),tip:m.k==="lo"?TL("De eerste dag meet een sensor vaak te laag: prik ter controle voor je corrigeert.","On day one a sensor often reads low: fingerprick before treating.","No primeiro dia o sensor lê muitas vezes baixo."):null});
+  if(m.k==="meal"){
+    const prof=profileAt(c.timeline,m.ts), d0=_dsAt4(m.ts,15*_M4), iob0=d0&&d0.iob!=null?d0.iob:null;
+    const tHi=prof&&prof.targetHigh!=null?prof.targetHigh:6.5;
+    const exp=prof&&prof.ic>0?m.g/prof.ic+Math.max(0,((m.bg0||0)-tHi)/(prof.isf||3))-Math.max(0,iob0||0):null;
+    const rise=m.peak!=null&&m.bg0!=null?m.peak-m.bg0:null, bR=B.rise[dp], t50=B.t50[dp];
+    // timing
+    if(m.bolus>0&&m.bolOff>-5&&m.peak!=null&&m.peak>HI_T){ const lo=t50!=null?(t50>90?5:t50<60?15:10):10, hi=lo+5;
+      F.push({w:3,txt:TL(`Bolus ${m.bolOff>=5?m.bolOff+" min ná":"bij"} het eten; ${dpn} is je eten na ~${t50!=null?Math.round(t50):"?"} min half opgenomen.`,`Bolus ${m.bolOff>=5?m.bolOff+" min after":"at"} the meal; ${dpn} your food is half absorbed after ~${t50!=null?Math.round(t50):"?"} min.`,`Bólus ${m.bolOff>=5?m.bolOff+" min depois":"à refeição"}.`),tip:TL(`Bolus ${lo}–${hi} min vóór het eten.`,`Bolus ${lo}–${hi} min before eating.`,`Bólus ${lo}–${hi} min antes.`)}); }
+    else if(m.bolus>0&&m.bolOff<=-20&&m.lowAfter) F.push({w:2,txt:TL(`Bolus ${-m.bolOff} min vooraf, en daarna laag.`,`Bolus ${-m.bolOff} min ahead, then low.`,`Bólus ${-m.bolOff} min antes e depois baixa.`),tip:TL("Iets korter vooraf bolussen, zeker als je al onder 7 zit.","Bolus a bit closer to the meal, especially below 7.","Bólus um pouco mais perto da refeição.")});
+    if(!(m.bolus>0)) F.push({w:3,txt:TL("Geen bolus bij deze maaltijd.","No bolus for this meal.","Sem bólus nesta refeição."),tip:TL("Geef de bolus vóór of bij het eten; de loop haalt een gemiste bolus niet in.","Bolus before or at the meal; the loop can't make up a missed bolus.","Faça o bólus antes ou à refeição.")});
+    // dosis tegenover je ratio
+    if(exp!=null&&m.bolus>0&&exp>0.5){ const r=m.bolus/exp-1;
+      if(r<=-0.2) F.push({w:m.peak>HI_T?3:1,txt:TL(`Bolus ${_idaN(m.bolus)} ${E}; je ratio (${_idaN(prof.ic)}) zou ~${_idaN(exp)} ${E} geven (${Math.round(r*100)}%).`,`Bolus ${_idaN(m.bolus)} ${E}; your ratio (${_idaN(prof.ic)}) would give ~${_idaN(exp)} ${E} (${Math.round(r*100)}%).`,`Bólus ${_idaN(m.bolus)} ${E}; o rácio daria ~${_idaN(exp)} ${E}.`),tip:m.peak>HI_T?TL("Laat de bolus-calculator rekenen met de echte koolhydraten in plaats van zelf minder te geven.","Let the bolus calculator use the real carbs instead of giving less yourself.","Use a calculadora com os hidratos reais."):null});
+      else if(r>=0.2) F.push({w:m.lowAfter?3:1,txt:TL(`Bolus ${_idaN(m.bolus)} ${E}, meer dan je ratio (~${_idaN(exp)} ${E}, +${Math.round(r*100)}%).`,`Bolus ${_idaN(m.bolus)} ${E}, more than your ratio (~${_idaN(exp)} ${E}, +${Math.round(r*100)}%).`,`Bólus acima do rácio (+${Math.round(r*100)}%).`),tip:m.lowAfter?TL("Geef de berekende bolus, zonder extra erbovenop.","Give the calculated bolus, nothing extra on top.","Dê o bólus calculado, sem extra."):null});
+      else F.push({w:0,pos:true,txt:TL(`Bolus klopte met je ratio (${_idaN(m.bolus)} ${E}).`,`Bolus matched your ratio (${_idaN(m.bolus)} ${E}).`,`Bólus de acordo com o rácio.`)}); }
+    // start
+    if(m.bg0!=null&&m.bg0<7&&m.slope0!=null&&m.slope0<=-0.03) F.push({w:m.lowAfter?3:1,txt:TL(`Start ${_idaN(m.bg0)} en dalend.`,`Start ${_idaN(m.bg0)} and falling.`,`Início ${_idaN(m.bg0)} a descer.`),tip:TL("Zak je al bij het eten: bolus pas bij de eerste hap, of iets minder.","If you're already falling: bolus at the first bite, or a bit less.","Se já está a descer: bólus à primeira garfada.")});
+    else if(m.bg0!=null&&m.bg0>HI_T) F.push({w:2,txt:TL(`Je begon al hoog (${_idaN(m.bg0)}).`,`You started high (${_idaN(m.bg0)}).`,`Começou alto (${_idaN(m.bg0)}).`),tip:TL("Bij een hoge start eerder bolussen en wachten tot je daalt voor je eet.","With a high start, bolus earlier and wait until you're falling before eating.","Com início alto, bólus mais cedo.")});
+    if(iob0!=null&&B.iobMeal!=null&&iob0>=Math.max(1.5,B.iobMeal*1.8)) F.push({w:m.lowAfter?2:1,txt:TL(`Al ${_idaN(iob0)} ${E} actief bij het eten (meestal ${_idaN(B.iobMeal)}).`,`Already ${_idaN(iob0)} ${E} active at the meal (usually ${_idaN(B.iobMeal)}).`,`Já ${_idaN(iob0)} ${E} ativos (normalmente ${_idaN(B.iobMeal)}).`)});
+    // reactie tegenover gewoonlijk
+    if(rise!=null&&bR!=null){ if(rise>=bR+2) F.push({w:2,txt:TL(`Steeg ${_idaN(rise)}; ${dpn} meestal ${_idaN(bR)}.`,`Rose ${_idaN(rise)}; ${dpn} usually ${_idaN(bR)}.`,`Subiu ${_idaN(rise)}; normalmente ${_idaN(bR)}.`),tip:TL("Meer koolhydraat dan ingevoerd? Weeg het of lees het etiket.","More carbs than entered? Weigh it or read the label.","Mais hidratos do que registou?")});
+      else if(rise<=bR-1.5&&!m.lowAfter) F.push({w:0,pos:true,txt:TL(`Steeg maar ${_idaN(rise)}; ${dpn} meestal ${_idaN(bR)}.`,`Only rose ${_idaN(rise)}; ${dpn} usually ${_idaN(bR)}.`,`Subiu só ${_idaN(rise)}.`)}); }
+    if(m.g>=70) F.push({w:1,txt:TL(`Grote maaltijd (${m.g} g).`,`Large meal (${m.g} g).`,`Refeição grande (${m.g} g).`),tip:m.high&&m.high.dur>=120?TL("Bij grote of vette maaltijden een deel van de bolus 1–2 uur later.","With large or fatty meals give part of the bolus 1–2 hours later.","Parte do bólus 1–2 h depois."):null});
+    if(m.smb>=Math.max(1,0.25*(m.bolus||0))&&m.peak>HI_T) F.push({w:2,txt:TL(`De loop gaf daarna nog ${_idaN(m.smb)} ${E} extra.`,`The loop added ${_idaN(m.smb)} ${E} afterwards.`,`O loop deu mais ${_idaN(m.smb)} ${E}.`)});
+  } else if(m.k==="lo"){
+    const d0=_dsAt4(m.ts,15*_M4), iob=d0&&d0.iob!=null?d0.iob:null, bI=B.iobHour[hr];
+    if(m.meal){ const ml=m.meal, pr=profileAt(c.timeline,ml.ts), ex=pr&&pr.ic>0?ml.g/pr.ic:null, over=ex&&ml.bolus>ex*1.2, fall=ml.bg0!=null&&ml.bg0<7&&ml.slope0!=null&&ml.slope0<=-0.03;
+      F.push({w:3,txt:TL(`${Math.round((m.ts-ml.ts)/_M4)} min na je ${_mealName(ml.ts,ml.g).toLowerCase()} (${ml.g} g, ${_idaN(ml.bolus)} ${E}${fall?`, start ${_idaN(ml.bg0)} en dalend`:""}${over?`, meer dan je ratio (~${_idaN(ex)} ${E})`:""}).`,`${Math.round((m.ts-ml.ts)/_M4)} min after your ${_mealName(ml.ts,ml.g).toLowerCase()} (${ml.g} g, ${_idaN(ml.bolus)} ${E}).`,`${Math.round((m.ts-ml.ts)/_M4)} min após a refeição.`),
+        tip:fall?TL("Zak je al bij het eten: bolus pas bij de eerste hap, of iets minder.","If you're already falling: bolus at the first bite, or a bit less.","Se já está a descer: bólus à primeira garfada."):over?TL("Geef de berekende bolus, zonder extra erbovenop.","Give the calculated bolus, nothing extra on top.","Dê o bólus calculado."):TL("Klopten de koolhydraten? Te hoog ingevoerd geeft precies dit.","Were the carbs right? Entering too many gives exactly this.","Os hidratos estavam certos?")}); }
+    if(iob!=null&&bI!=null&&iob>=bI+1) F.push({w:2,txt:TL(`${_idaN(iob)} ${E} actief bij het begin; om deze tijd meestal ${_idaN(bI)}.`,`${_idaN(iob)} ${E} active at onset; usually ${_idaN(bI)} at this time.`,`${_idaN(iob)} ${E} ativos; normalmente ${_idaN(bI)}.`)});
+    const pre=win(m.ts-3*_H4,m.ts), mx=pre.length?pre.reduce((a,b)=>b.bg>a.bg?b:a):null;
+    if(mx&&mx.bg>=12&&!m.meal) F.push({w:3,txt:TL(`Je kwam van ${_idaN(mx.bg)} om ${_hm4(mx.ts)}.`,`You came from ${_idaN(mx.bg)} at ${_hm4(mx.ts)}.`,`Vinha de ${_idaN(mx.bg)} às ${_hm4(mx.ts)}.`),tip:TL("Na een piek werkt de correctie 3–4 uur door. Geef na een handmatige correctie geen tweede binnen 2 uur.","After a peak the correction keeps working for 3–4 hours. Don't add a second manual correction within 2 hours.","Após um pico a correção atua 3–4 h.")});
+    if(m.smb2>=1) F.push({w:2,txt:TL(`${_idaN(m.smb2)} ${E} SMB in de 2 uur ervoor.`,`${_idaN(m.smb2)} ${E} SMB in the 2 hours before.`,`${_idaN(m.smb2)} ${E} de SMB nas 2 h anteriores.`)});
+    const p30=win(m.ts-30*_M4,m.ts); if(p30.length>=3&&p30[0].bg-p30[p30.length-1].bg>=2) F.push({w:1,txt:TL(`Snelle daling: ${_idaN(p30[0].bg-p30[p30.length-1].bg)} in 30 min.`,`Fast drop: ${_idaN(p30[0].bg-p30[p30.length-1].bg)} in 30 min.`,`Descida rápida.`)});
+    const post=win(m.tMark,m.tMark+30*_M4); if(hr<7&&m.dur<=25&&post.length&&Math.max(...post.map(x=>x.bg))-m.min>=2.5) F.push({w:3,txt:TL("Snelle dip én snel herstel in de nacht: past bij op de sensor liggen.","Quick dip and quick recovery at night: fits lying on the sensor.","Queda e recuperação rápidas à noite: pressão no sensor."),tip:TL("Waarschijnlijk geen echte hypo; draag de sensor waar je niet op ligt.","Probably not a real low; wear the sensor where you don't lie on it.","Provavelmente não é hipo real.")});
+    if(!m.meal&&!(m.bolus3>0)&&m.smb2<1&&P){ const nb=newBasal(hr), cur=profileAt(c.timeline,m.ts); if(nb!=null&&cur&&cur.basal!=null) F.push({w:2,txt:TL(`Geen eten of bolus ervoor: dit is basaal (nu ${_idaN(cur.basal,2)} ${E}/u).`,`No food or bolus before: this is basal (now ${_idaN(cur.basal,2)} U/h).`,`Sem comida nem bólus: é a basal.`),tip:nb<cur.basal-0.02?TL(`Het voorstel bij Profiel verlaagt dit uur naar ${_idaN(nb,2)}.`,`The proposal under Profile lowers this hour to ${_idaN(nb,2)}.`,`A proposta baixa esta hora para ${_idaN(nb,2)}.`):TL("Het voorstel bij Profiel verlaagt dit uur niet; gebeurt dit vaker, dan zakt het blok mee.","The Profile proposal doesn't lower this hour; if it happens more often, the block will follow.","A proposta não baixa esta hora.")}); }
+    if(m.rebound!=null&&m.rebound>HI_T) F.push({w:2,txt:TL(`Daarna door naar ${_idaN(m.rebound)}${m.fix?` (${m.fix} g gelogd)`:""}.`,`Then up to ${_idaN(m.rebound)}${m.fix?` (${m.fix} g logged)`:""}.`,`Depois subiu a ${_idaN(m.rebound)}.`),tip:TL("Vuistregel bij een laagte: 15 g, 15 minuten wachten, dan pas meer.","Rule of thumb for a low: 15 g, wait 15 minutes, then more if needed.","Regra: 15 g, esperar 15 min.")});
+  } else {
+    const pre=win(m.ts-2*_H4,m.ts), mn=pre.length?Math.min(...pre.map(x=>x.bg)):null;
+    if(mn!=null&&mn<4) F.push({w:3,txt:TL(`Na een laagte (${_idaN(mn)}) in de 2 uur ervoor.`,`After a low (${_idaN(mn)}) in the 2 hours before.`,`Após uma baixa (${_idaN(mn)}).`),tip:TL("Vuistregel bij een laagte: 15 g, 15 minuten wachten, dan pas meer.","Rule of thumb for a low: 15 g, wait 15 minutes, then more if needed.","Regra: 15 g, esperar 15 min.")});
+    const late=T.filter(t=>t.carbs>=20&&t.ts<m.ts-3*_H4&&t.ts>=m.ts-7*_H4).pop();
+    if(late&&!(mn!=null&&mn<4)) F.push({w:2,txt:TL(`${Math.round((m.ts-late.ts)/_H4*10)/10} uur na ${Math.round(late.carbs)} g om ${_hm4(late.ts)}: een late stijging.`,`${Math.round((m.ts-late.ts)/_H4*10)/10} hours after ${Math.round(late.carbs)} g at ${_hm4(late.ts)}: a late rise.`,`Subida tardia após ${Math.round(late.carbs)} g.`),tip:TL("Vet of eiwitrijk eten (pizza, pasta met room, vlees) stijgt laat: geef een deel van de bolus 1–2 uur later.","Fatty or protein-rich food rises late: give part of the bolus 1–2 hours later.","Comida gorda sobe tarde: parte do bólus 1–2 h depois.")});
+    let est=null; if(!m.carbs3&&!late){ try{ est=riseCarbEstimate(c,{t0:m.ts,t1:m.tMark,rise:Math.max(0,m.peak-(pre.length?pre[pre.length-1].bg:m.peak-3))}); }catch(_){} }
+    if(!(mn!=null&&mn<4)&&!m.carbs3&&!late&&hr>=6&&est&&est.grams>=15){
+      F.push({w:2,txt:TL(`Geen koolhydraten gelogd${est?`; de stijging past bij ~${est.grams} g`:""}.`,`No carbs logged${est?`; the rise fits ~${est.grams} g`:""}.`,`Sem hidratos registados.`),tip:TL("Iets gegeten? Leg het vast met +, dan klopt je eetpatroon en je KH-berekening.","Did you eat? Log it with +, so your meal pattern and carb maths are right.","Comeu? Registe com +.")}); }
+    const dpk=_dsAt4(m.tMark,15*_M4); if(dpk&&dpk.iob!=null&&B.ioP95!=null&&dpk.iob>=B.ioP95*0.95) F.push({w:2,txt:TL(`Actieve insuline ${_idaN(dpk.iob)} ${E}, tegen je hoogste waarden aan.`,`Active insulin ${_idaN(dpk.iob)} ${E}, near your highest values.`,`Insulina ativa perto do máximo.`),tip:TL("De loop mocht waarschijnlijk niet meer geven: kijk bij Profiel naar Max IOB.","The loop probably wasn't allowed to give more: check Max IOB under Profile.","Veja o Max IOB em Perfil.")});
+    if(hr>=4&&hr<9&&!m.carbs3&&P){ const nb=newBasal(Math.max(0,hr-1)), cur=profileAt(c.timeline,m.ts-_H4); if(nb!=null&&cur) F.push({w:2,txt:TL("Ochtendstijging zonder eten (dawn).","Morning rise without food (dawn).","Subida matinal sem comida."),tip:nb>cur.basal+0.02?TL(`Het voorstel bij Profiel zet ${String(Math.max(0,hr-1)).padStart(2,"0")}:00 op ${_idaN(nb,2)} (nu ${_idaN(cur.basal,2)}).`,`The Profile proposal sets ${String(Math.max(0,hr-1)).padStart(2,"0")}:00 to ${_idaN(nb,2)} (now ${_idaN(cur.basal,2)}).`,`A proposta põe ${_idaN(nb,2)}.`):null}); }
+    if(hr<4&&!m.carbs3&&!late&&P&&!F.some(f=>f.w>=2&&f.tip)){ const nb=newBasal(hr), cur=profileAt(c.timeline,m.ts); if(nb!=null&&cur&&cur.basal!=null) F.push({w:2,txt:TL(`Hoog in de nacht zonder eten ervoor (basaal nu ${_idaN(cur.basal,2)} ${E}/u).`,`High at night without food before (basal now ${_idaN(cur.basal,2)} U/h).`,`Alta à noite sem comida.`),tip:nb>cur.basal+0.02?TL(`Het voorstel bij Profiel zet dit uur op ${_idaN(nb,2)}.`,`The Profile proposal sets this hour to ${_idaN(nb,2)}.`,`A proposta põe esta hora em ${_idaN(nb,2)}.`):TL("Gebeurt dit vaker op dit uur, dan gaat het basaalblok bij Profiel vanzelf mee omhoog.","If this happens more often at this hour, the basal block under Profile will follow.","Se acontecer mais vezes, a basal acompanha.")}); }
+    if(m.smb>=1) F.push({w:0,txt:TL(`De loop gaf ${_idaN(m.smb)} ${E} SMB tijdens deze hoogte.`,`The loop gave ${_idaN(m.smb)} ${E} SMB during this high.`,`O loop deu ${_idaN(m.smb)} ${E} de SMB.`)});
+  }
+  return F.sort((a,b)=>b.w-a.w);
+}
+function _momTips4(c,m,F){
+  if(m.k==="meal"&&!m.lowAfter&&!(m.peak>HI_T)) return [TL(`Goed gegaan: piek ${m.peak!=null?_idaN(m.peak):"—"}, niet laag erna. Zo houden.`,`Went well: peak ${m.peak!=null?_idaN(m.peak):"—"}, no low afterwards. Keep it this way.`,`Correu bem: pico ${m.peak!=null?_idaN(m.peak):"—"}.`)];
+  const tips=[]; for(const f of F){ if(f.tip&&!tips.includes(f.tip)) tips.push(f.tip); if(tips.length>=2) break; }
+  if(!tips.length) return _momNext(c,m);
+  return tips;
+}
+
 function openMoment(c, m, dayFrom){
   const hold=_e4("dagHold"); if(!hold) return;
   const a=m.k==="meal"?m.ts-_H4:m.ts-2*_H4, b=m.k==="meal"?m.ts+4*_H4:Math.max(m.end||m.ts,m.ts)+1.5*_H4;
@@ -350,7 +451,8 @@ function openMoment(c, m, dayFrom){
     F.push([TL("SMB tijdens","SMB during","SMB durante"),`${_idaN(m.smb)} ${E}`,""]);
     F.push([TL("Gelogd eten","Logged food","Comida registada"),m.carbs3?TL("ja","yes","sim"):TL("nee","no","não"),TL("3 uur ervoor","3 hours before","3 h antes")]);
   }
-  const next=_momNext(c,m);
+  let FX=[]; try{ FX=_momFactors(c,m); }catch(e){ console.error(e); }
+  const next=_momTips4(c,m,FX);
   // Laagte: dezelfde oorzaakbepaling als de meldingen op Vandaag (explainHypo), zodat beide hetzelfde zeggen
   let cause=null; if(m.k==="lo"){ try{ cause=explainHypo({start:m.ts}, c.glucose, c.treatments, c.timeline); }catch(_){} }
   const node=document.createElement("div"); node.className="momdet";
@@ -358,6 +460,7 @@ function openMoment(c, m, dayFrom){
     <section class="ibox">${idaCurveSvg(rd,ev,{from:a,to:b,marks:[{ts:m.tMark,bg:m.bg,n:m.n,k:m.k}],h:170})}</section>
     ${cause?`<p class="mcause"><span>${TL("Waarschijnlijke oorzaak","Likely cause","Causa provável")}</span><b>${cause.label.charAt(0).toUpperCase()+cause.label.slice(1)}</b><i>${TL("zekerheid","certainty","certeza")} ${cause.conf}</i></p>`:""}
     <div class="mfacts">${F.map(([k,v,s])=>`<div><i>${k}</i><b>${v}</b>${s?`<em>${s}</em>`:""}</div>`).join("")}</div>
+    ${FX.length?`<section class="ibox mwhy"><span class="ilabel">${TL("Wat meespeelde","What played a part","O que contribuiu")}</span><ul>${FX.slice(0,5).map(f=>`<li class="${f.pos?"pos":f.w>=3?"big":f.w>=2?"mid":"low"}">${esc(f.txt)}</li>`).join("")}</ul></section>`:""}
     <section class="nexttime"><span class="nk">${TL("VOLGENDE KEER","NEXT TIME","PRÓXIMA VEZ")}</span>${next.map(t=>`<p>${esc(t)}</p>`).join("")}</section>
     <button class="ibtn line" data-idaask="moment" style="align-self:flex-start">${TL("Vraag door","Ask more","Perguntar")} ›</button>`;
   hold.appendChild(node);

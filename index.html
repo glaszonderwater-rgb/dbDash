@@ -3573,9 +3573,9 @@ snapshotI18n(); applyStaticI18n();   // NL vastleggen, daarna vaste teksten in d
   if (!cfg.url){ setConn("",t("conn.unset")); openDlg(); }
   else { setConn("ok",t("conn.set")); document.getElementById("btnSync").disabled=false; }
   try { await refresh(); } catch(e){ console.error(e); }
-  // Automatisch synchroniseren: bij openen, elke 5 minuten en als je terugkomt in de app.
-  setTimeout(()=>{ try{ autoSync(); }catch(_){} }, 1500);
-  setInterval(()=>{ try{ autoSync(); }catch(_){} try{ notifyCheck(); }catch(_){} }, 5*60e3);
+  // Automatisch synchroniseren: direct bij openen, elke minuut zolang IDA open is, en als je terugkomt.
+  setTimeout(()=>{ try{ autoSync(); }catch(_){} }, 300);
+  setInterval(()=>{ try{ autoSync(); }catch(_){} try{ notifyCheck(); }catch(_){} }, 60e3);
   document.getElementById("btnPushTest").onclick=()=>{ cfg.pushUrl=document.getElementById("inPushUrl").value.trim().replace(/\/+$/,""); cfg.pushKey=document.getElementById("inPushKey").value.trim(); pushTest(); };
   document.getElementById("btnPushCopy").onclick=()=>{ cfg.pushUrl=document.getElementById("inPushUrl").value.trim().replace(/\/+$/,""); cfg.pushKey=document.getElementById("inPushKey").value.trim(); pushCopy(); };
   document.addEventListener("visibilitychange",()=>{ if(!document.hidden){ try{ autoSync(); }catch(_){} } });

@@ -1,7 +1,7 @@
 # IDA — overdracht voor een nieuwe sessie
 
 Lees dit eerst. Het beschrijft hoe de app werkt, welke afspraken gelden en wat er nog openstaat.
-Laatste stand: v40 (19 nov 2026), branch `main`, GitHub Pages: https://glaszonderwater-rgb.github.io/dbDash/
+Laatste stand: v41 (19 nov 2026), branch `main`, GitHub Pages: https://glaszonderwater-rgb.github.io/dbDash/
 
 ## Wat IDA is
 Persoonlijke offline PWA voor één gebruiker (Focko) met AAPS closed loop + Omnipod Dash, Libre via xDrip+, data uit Nightscout.
@@ -30,7 +30,7 @@ IDA leest Nightscout, analyseert en stelt concrete AAPS-profielwaarden voor (bas
 - `css/ida4.css` — ontwerp (licht en warm, donker variant), beweging alleen bij schermwissel. `fonts/` — Geist en Geist Mono (OFL).
 - `js/moments.js` — pure regels voor "advies vóór het moment" (gedeeld met server).
 - `js/push.js` — moment bovenaan Vandaag, lokale meldingen, Web Push-aanmelding.
-- `sw.js` — service worker; **VERSION ophogen bij elke release** (nu `v40`) en nieuwe bestanden (js, css, fonts) aan `SHELL` toevoegen.
+- `sw.js` — service worker; **VERSION ophogen bij elke release** (nu `v41`) en nieuwe bestanden (js, css, fonts) aan `SHELL` toevoegen.
 - `server/` — meldingenserver (`push.mjs`, README). `.github/workflows/ida-push.yml` doet niets zonder geheimen.
 
 Klassieke scripts (geen modules), zodat `file://` werkt. Globale staat: `_ctx`, `_dsAll`, `_dsRecent`, `_P` (profielvoorstel), `_idaAnns`, `cfg`.
@@ -61,7 +61,9 @@ Playwright-core wordt gebruikt; `CHROME_PATH` naar een Chromium. Nightly data-ar
 4. **Meldingen (v40, `js/moments.js` = `server/moments.cjs`):** "vraag" (stijging zonder eten) alleen terwijl de stijging loopt (piek ≤30 min geleden, ≥3 erbij tot >10), één keer per stijging (sleutel per 2-uursblok van het dal), niet tussen 23 en 7 uur en niet bij herstel na een laagte (dal <4,5). Vóór v40 kwam dezelfde stijging elke 5 minuten terug: simulatie over 60 dagen gaf 1242 vragen; nu 106. "eten" (bolus pas bij eerste hap): alleen als je in ≥4 van de laatste 7 dagen in dat dagdeel at, venster 30–70% van je eettijden, niet als je dat dagdeel al at of bolusde: 27 in 60 dagen. Simulatie: scratch `sim.cjs` (archief, elke 5 min, ontdubbelen op sleutel).
 5. **Verklaringen eenduidig:** `explainHypo` telt een bolus als maaltijdbolus als er ≥10 g koolhydraten bij staan (−30/+45 min), net als Dag. Dag toont bij een laagte dezelfde oorzaak.
 6. **Tijdzones:** de wisselingen in de data (+60/0/−60) zijn echte reizen (Kaapverdië 28 okt–18 nov); de afhandeling klopt.
-7. Bekende beperking: `riseCarbEstimate` telt tijdelijke basaalverhogingen niet mee.
+7. **Snelheid (v41):** `DB` houdt een geheugenspiegel per tabel (entries/treatments/devicestatus); syncs werken die direct bij, dus verversen leest niet steeds 90 dagen uit IndexedDB. `travelStats` maakte per meting een Intl-formatter (3,8 s) — nu één formatter + per uur onthouden. Verversen 6,3 s → 0,75 s (desktop). Automatisch syncen elke minuut zolang IDA open is.
+8. **Momenten in Dag (v41):** `_momFactors` weegt per moment meerdere factoren tegen je eigen gewone waarden (opname t50 en stijging per dagdeel, IOB bij maaltijden/per uur, bolus t.o.v. ratio incl. correctie, start en trend, grote maaltijd, SMB erna, alcohol/sport/ziek/stress, pod- en sensorleeftijd, piek ervoor, sensordruk, late stijging na eten, basaal uit het profielvoorstel, max IOB). "Volgende keer" komt uit de zwaarste factoren; goed verlopen maaltijden krijgen geen correctie-advies.
+9. Bekende beperking: `riseCarbEstimate` telt tijdelijke basaalverhogingen niet mee.
 
 ## Werkwijze
 - Commit-berichten in het Nederlands; release = `sw.js` VERSION ophogen, tests draaien, pushen naar `main`.

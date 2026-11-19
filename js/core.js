@@ -118,12 +118,25 @@ const DB = {
         if(!db.objectStoreNames.contains("annotations")) db.createObjectStore("annotations",{keyPath:"id"}).createIndex("ts","ts"); };
       rq.onsuccess=()=>res(this.h=rq.result);
       rq.onerror=()=>rej(new Error("IndexedDB niet beschikbaar. In privémodus of een preview-iframe werkt de cache niet — open het bestand normaal.")); }); },
+  // Geheugenspiegel per tabel: na de eerste keer lezen we niet steeds 90 dagen opnieuw uit IndexedDB,
+  // nieuwe rijen uit een sync worden direct in de spiegel bijgewerkt. Scheelt seconden per verversing.
+  mem:{},
   async putMany(store, rows){ if(!rows.length) return 0; const db=await this.open();
     await new Promise((res,rej)=>{ const t=db.transaction(store,"readwrite"), os=t.objectStore(store);
-      for (const r of rows) os.put(r); t.oncomplete=res; t.onerror=()=>rej(t.error); }); return rows.length; },
-  async range(store, from, to){ const db=await this.open();
-    return new Promise((res,rej)=>{ const rq=db.transaction(store,"readonly").objectStore(store).index("ts").getAll(IDBKeyRange.bound(from,to));
-      rq.onsuccess=()=>res(rq.result); rq.onerror=()=>rej(rq.error); }); },
+      for (const r of rows) os.put(r); t.oncomplete=res; t.onerror=()=>rej(t.error); });
+    const m=this.mem[store]; if(m){ for(const r of rows) if(r&&r._id!=null&&r.ts>=m.from) m.map.set(r._id,r); m.sorted=null; }
+    return rows.length; },
+  async range(store, from, to){
+    const m=this.mem[store];
+    if(m && from>=m.from){ if(!m.sorted) m.sorted=[...m.map.values()].sort((a,b)=>a.ts-b.ts);
+      const A=m.sorted; let lo=0,hi=A.length; while(lo<hi){const k=(lo+hi)>>1; if(A[k].ts<from)lo=k+1; else hi=k;}
+      const out=[]; for(let i=lo;i<A.length&&A[i].ts<=to;i++) out.push(A[i]); return out; }
+    const db=await this.open();
+    const rows=await new Promise((res,rej)=>{ const rq=db.transaction(store,"readonly").objectStore(store).index("ts").getAll(IDBKeyRange.bound(from,to));
+      rq.onsuccess=()=>res(rq.result); rq.onerror=()=>rej(rq.error); });
+    if(["entries","treatments","devicestatus"].includes(store) && to>=Date.now()-6e4 && rows.every(r=>r._id!=null))
+      this.mem[store]={ from, map:new Map(rows.map(r=>[r._id,r])), sorted:null };
+    return rows; },
   async count(store){ const db=await this.open();
     return new Promise((res)=>{ const rq=db.transaction(store,"readonly").objectStore(store).count(); rq.onsuccess=()=>res(rq.result); rq.onerror=()=>res(0); }); },
   async all(store){ const db=await this.open();
@@ -133,8 +146,8 @@ const DB = {
       rq.onsuccess=()=>res(rq.result?.v ?? null); rq.onerror=()=>res(null); });
     return this.putMany("meta",[{k,v}]); },
   async delRow(store, key){ const db=await this.open();
-    return new Promise((res,rej)=>{ const t=db.transaction(store,"readwrite"); t.objectStore(store).delete(key); t.oncomplete=res; t.onerror=()=>rej(t.error); }); },
-  async wipe(){ if(this.h){this.h.close();this.h=null;}
+    return new Promise((res,rej)=>{ const t=db.transaction(store,"readwrite"); t.objectStore(store).delete(key); t.oncomplete=res; t.onerror=()=>rej(t.error); }).then(()=>{ const m=this.mem[store]; if(m){ m.map.delete(key); m.sorted=null; } }); },
+  async wipe(){ this.mem={}; if(this.h){this.h.close();this.h=null;}
     await new Promise(res=>{ const rq=indexedDB.deleteDatabase("dbdash2"); rq.onsuccess=rq.onerror=res; }); },
 };
 
