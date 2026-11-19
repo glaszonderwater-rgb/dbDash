@@ -182,7 +182,9 @@ function idaEten(c){
              : pct<=85 ? TL("Na het eten stijg je minder dan je invoert","After meals you rise less than you enter","Depois de comer sobe menos do que regista")
              : TL("Je koolhydraten kloppen goed","Your carbs match well","Os hidratos batem certo");
   let html=`<section class="ihero sm"><span class="itl">${lead}</span><div class="itv"><b style="color:#F2B455">${pct}%</b><span>${TL("van de koolhydraten die je invoert","of the carbs you enter","dos hidratos que regista")}${use30?TL(" (laatste 30 dagen)"," (last 30 days)"," (últimos 30 dias)"):""}</span></div>
-    <div class="ichips">${tpk!=null?`<span><i>${TL("piek na","peak after","pico após")}</i> <b>${tpk} min</b></span>`:""}${offTxt?`<span><i>${TL("bolus","bolus","bólus")}</i> <b>${offTxt}</b></span>`:""}<span><b>${n}</b> <i>${TL("maaltijden","meals","refeições")}</i></span></div>${pct>115?`<span class="its" style="color:#D7DADE;margin-top:.4rem">${TL("Waarschijnlijk tel je te weinig koolhydraten. Daarom past IDA je KH-ratio niet aan: weeg een paar maaltijden af of gebruik de schatter hieronder.","You probably under-count carbs, so IDA doesn't change your carb ratio: weigh a few meals or use the estimator below.","Provavelmente subestima os hidratos; por isso o IDA não altera o rácio.")}</span>`:""}</section>`;
+    <div class="ichips">${tpk!=null?`<span><i>${TL("piek na","peak after","pico após")}</i> <b>${tpk} min</b></span>`:""}${offTxt?`<span><i>${TL("bolus","bolus","bólus")}</i> <b>${offTxt}</b></span>`:""}<span><b>${n}</b> <i>${TL("maaltijden","meals","refeições")}</i></span></div>${pct>115?`<span class="its" style="margin-top:.4rem">${cfg.carbsAccurate
+      ? TL("Je hebt aangegeven dat je nauwkeurig telt. Dan wijst dit op een te zwakke KH-ratio: het voorstel bij Profiel houdt daar rekening mee.","You said you count accurately. Then this points to a carb ratio that is too weak: the proposal under Profile takes that into account.","Indicou que conta com precisão: isto aponta para um rácio fraco demais; a proposta em Perfil tem isso em conta.")
+      : TL("Twee verklaringen: je telt te weinig koolhydraten, of je KH-ratio is te zwak. Zolang dat niet duidelijk is, laat IDA je KH-ratio gelijk. Weeg je eten of lees je het etiket? Zet dan bij Instellingen 'Ik tel mijn koolhydraten nauwkeurig' aan.","Two explanations: you under-count carbs, or your carb ratio is too weak. Until that's clear, IDA keeps your carb ratio. Do you weigh food or read labels? Turn on 'I count my carbs accurately' in Settings.","Duas explicações: subestima os hidratos, ou o rácio é fraco demais. Até ficar claro, o IDA mantém o rácio. Pesa a comida? Ative 'Conto os hidratos com precisão' nas Definições.")}</span>${cfg.carbsAccurate?"":`<button class="ibtn" data-ida="carbsok" style="align-self:flex-start;margin-top:.5rem">${TL("Naar de instelling","Open the setting","Abrir a definição")}</button>`}`:""}</section>`;
   if(_P && _P.ic && _P.ic.length){
     html+=`<h2 class="ihead">${TL("Gemeten KH-ratio (g per E)","Measured carb ratio (g per U)","Rácio medido (g por U)")}</h2><div class="igrid3">`+
       _P.ic.map(b=>`<div class="itile sm"><span class="itl">${TL("vanaf","from","desde")} ${b.from}</span><b class="itn">${b.measured!=null?_idaN(b.measured):"—"}</b><span class="its">${TL(`nu ${_idaN(b.now)} · ${b.n} maaltijden`,`now ${_idaN(b.now)} · ${b.n} meals`,`agora ${_idaN(b.now)} · ${b.n} refeições`)}</span></div>`).join("")+`</div>`;
@@ -191,6 +193,7 @@ function idaEten(c){
   }
   host.innerHTML=html;
   host.querySelectorAll("[data-ida=profiel]").forEach(b=>b.onclick=()=>showTab("profiel"));
+  host.querySelectorAll("[data-ida=carbsok]").forEach(b=>b.onclick=()=>{ if(typeof idaOpenSetting==="function") idaOpenSetting("inCarbsOk"); });
 }
 
 /* ── Team: profiel + effectmeting ────────────────────────────────────────── */
@@ -209,12 +212,6 @@ function idaTeam(c){
   const hs=_hourStats(c), win={ lo:_worstWindow(hs.map(h=>h.lo),3), hi:_worstWindow(hs.map(h=>h.hi),4) };
   const act=_idaActivation(), now=Date.now();
   let html="";
-  if(_P && _P.basal){
-    const icCh=_P.ic.find(b=>Math.abs(b.value-b.now)>=0.1)||_P.ic[_P.ic.length-1];
-    html+=`<button class="ihero tap" data-ida="profiel"><span class="itl">${TL("Nieuw AAPS-profiel","New AAPS profile","Novo perfil AAPS")}</span><span class="iname">${_profName()}</span>
-      <div class="igrid3 dk"><div><i>${TL("Basaal/dag","Basal/day","Basal/dia")}</i><b>${_idaN(_P.dayNow)} → ${_idaN(_P.dayNew)}</b></div><div><i>ISF</i><b>${_idaN(_P.isfNow)} → ${_idaN(_pMed(_P.isf.map(b=>b.value)))}</b></div><div><i>${TL("KH vanaf","Carbs from","HC desde")} ${icCh?icCh.from:""}</i><b>${icCh?_idaN(icCh.now)+" → "+_idaN(icCh.value):"—"}</b></div></div>
-      <span class="ibtn acc">${TL("Bekijk blokken en kopieer","View blocks and copy","Ver blocos e copiar")}</span></button>`;
-  }
   const rows=[["low",TL(`Laag tussen ${win.lo} en ${(win.lo+3)%24} uur`,`Low between ${win.lo} and ${(win.lo+3)%24} h`,`Baixa ${win.lo}–${(win.lo+3)%24} h`),0.04,"var(--low)",0.10],
               ["high",TL(`Hoog tussen ${win.hi} en ${(win.hi+4)%24} uur`,`High between ${win.hi} and ${(win.hi+4)%24} h`,`Alta ${win.hi}–${(win.hi+4)%24} h`),0.30,"var(--high)",0.6],
               ["smax",TL("Autosens op maximum","Autosens at maximum","Autosens no máximo"),0.15,"var(--ida-acc)",0.6],
@@ -223,13 +220,13 @@ function idaTeam(c){
   if(act){ days=Math.floor((now-act.ts)/864e5); cur=_periodStats(c,act.ts,now,win); base=_periodStats(c,act.ts-14*864e5,act.ts,win); }
   else { cur=_periodStats(c,now-30*864e5,now,win); }
   const ring=Math.min(7,days), dash=(ring/7*151).toFixed(0);
-  html+=`<section class="itile wide dark row"><svg width="58" height="58" viewBox="0 0 58 58" role="img" aria-label="${ring}/7"><circle cx="29" cy="29" r="24" fill="none" stroke="#2F353C" stroke-width="7"/><circle cx="29" cy="29" r="24" fill="none" stroke="#F2B455" stroke-width="7" stroke-dasharray="${dash} 151" stroke-linecap="round" transform="rotate(-90 29 29)"/><text x="29" y="34" text-anchor="middle" font-size="15" font-weight="800" fill="#fff">${ring}/7</text></svg>
+  html+=`<section class="itile wide dark row"><svg width="58" height="58" viewBox="0 0 58 58" role="img" aria-label="${ring}/7"><circle cx="29" cy="29" r="24" fill="none" stroke="currentColor" stroke-opacity=".18" stroke-width="7"/><circle cx="29" cy="29" r="24" fill="none" stroke="var(--sun)" stroke-width="7" stroke-dasharray="${dash} 151" stroke-linecap="round" transform="rotate(-90 29 29)"/><text x="29" y="34" text-anchor="middle" font-size="15" font-weight="600" fill="currentColor">${ring}/7</text></svg>
     <div><b class="ittl">${TL("Effect van je nieuwe profiel","Effect of your new profile","Efeito do novo perfil")}</b><span class="its">${act?(days<7?TL(`Dag ${days} van 7. Na een week zie je hier de uitslag.`,`Day ${days} of 7. The result shows here after a week.`,`Dia ${days} de 7.`):TL("De meting is klaar. Vergelijk met de 14 dagen ervoor.","The measurement is done. Compared with the 14 days before.","Medição concluída.")):TL("De meting start zodra je het nieuwe profiel in AAPS activeert.","The measurement starts once you activate the new profile in AAPS.","A medição começa quando ativar o novo perfil no AAPS.")}</span></div></section>`;
   html+=`<section class="itile wide"><b class="ittl">${TL("Waar de meting naar kijkt","What the measurement looks at","O que a medição observa")}</b>`+
     rows.map(([k,lab,goal,col,scale])=>{ const v=cur[k], b=base&&base[k];
       const w=v==null?0:Math.min(100,v/scale*100), gw=Math.min(100,goal/scale*100);
       return `<div class="imeter"><div class="imrow"><span>${lab}</span><span><b>${v==null?"—":(k==="vlow"?_idaN(v*100):Math.round(v*100))+"%"}</b> <i>→ &lt;${k==="vlow"?_idaN(goal*100):Math.round(goal*100)}%</i>${b!=null&&act?` <i>(${TL("was","was","era")} ${k==="vlow"?_idaN(b*100):Math.round(b*100)}%)</i>`:""}</span></div><div class="imbar"><i style="width:${w.toFixed(0)}%;background:${col}"></i><em style="left:${gw.toFixed(0)}%"></em></div></div>`; }).join("")+
-    `<span class="its">${TL("De zwarte streep is het doel. Kom je in een blok vaker laag, dan zie je meteen welk blok het is.","The black line is the goal. If a block gets more lows, you see straight away which one.","A linha preta é o objetivo.")}</span></section>`;
+    `<span class="its">${TL("Het streepje is het doel. Kom je in een blok vaker laag, dan zie je meteen welk blok het is.","The marker is the goal. If a block gets more lows, you see straight away which one.","A marca é o objetivo.")}</span></section>`;
   const WR=weekReview(c);
   if(WR) html+=`<section class="itile wide" id="weekCard">${weekCardHtml(WR)}</section>`;
   html+=`<div class="igrid2"><button class="itile sm tap" id="idaWeek"><b class="ittl">${TL("Weektrend","Weekly trend","Tendência semanal")}</b><span class="its">${TL("tijd in bereik per week","time in range per week","tempo no alvo por semana")}</span></button><button class="itile sm tap" id="idaPdf"><b class="ittl">${TL("Consult-PDF","Consult PDF","PDF da consulta")}</b><span class="its">${TL("profiel, dagprofiel en meting","profile, daily profile and measurement","perfil, perfil diário e medição")}</span></button></div>`;
@@ -241,60 +238,7 @@ function idaTeam(c){
 }
 function _profName(){ const d=new Date(); return "IDA "+d.toLocaleDateString(LOCALE(),{month:"short",year:"numeric"}).replace(".",""); }
 
-/* ── Profiel (AAPS) ──────────────────────────────────────────────────────── */
-function idaProfiel(c){
-  const host=_idaEl("profBody"); if(!host) return;
-  if(!_P || !_P.basal){
-    const why = !_P ? TL("Nog geen berekening.","No calculation yet.","Ainda sem cálculo.")
-      : _P.none==="profiel" ? TL("Er is geen AAPS-profiel gevonden in je Nightscout.","No AAPS profile found in your Nightscout.","Nenhum perfil AAPS encontrado.")
-      : TL("Te weinig loop-data (temp-basaal) om een profiel te berekenen. Synchroniseer minstens 14 dagen.","Too little loop data to calculate a profile. Sync at least 14 days.","Poucos dados do loop.");
-    host.innerHTML=`<section class="itile wide"><b class="ittl">${TL("Nog geen profielvoorstel","No profile proposal yet","Ainda sem proposta")}</b><span class="its">${why}</span></section>`; return;
-  }
-  const P=_P, icCh=P.ic.find(b=>Math.abs(b.value-b.now)>=0.1)||P.ic[P.ic.length-1];
-  const isfNew=_pMed(P.isf.map(b=>b.value));
-  let html=`<section class="ihero"><span class="itl">${TL("Nieuw AAPS-profiel","New AAPS profile","Novo perfil AAPS")}</span><span class="iname big">${_profName()}</span>
-    <span class="its">${TL(`Berekend uit ${P.days} bruikbare dagen${P.name?` met je profiel '${esc(P.name)}'`:""}`,`Calculated from ${P.days} usable days${P.name?` with your profile '${esc(P.name)}'`:""}`,`Calculado a partir de ${P.days} dias`)}</span>
-    <div class="igrid3 dk"><div><i>${TL("Basaal/dag","Basal/day","Basal/dia")}</i><b>${_idaN(P.dayNew)} ${TL("E","U","U")}</b><em>${TL("was","was","era")} ${_idaN(P.dayNow)}</em></div><div><i>ISF</i><b>${_idaN(isfNew)}</b><em>${TL("was","was","era")} ${_idaN(P.isfNow)}</em></div><div><i>${TL("KH vanaf","Carbs from","HC desde")} ${icCh.from}</i><b>${_idaN(icCh.value)}</b><em>${TL("was","was","era")} ${_idaN(icCh.now)}</em></div></div></section>`;
-  // basaalgrafiek
-  const W=318, X=m=>m/1440*W, mx=Math.max(1.4,...P.basal.map(b=>b.value), ...P.basal.flatMap(b=>b.now))*1.05, Y=v=>96-v/mx*90;
-  let bars="", oldp="";
-  P.basal.forEach((b,i)=>{ const f=hhmmToMin(b.from), t=i+1<P.basal.length?hhmmToMin(P.basal[i+1].from):1440, nowAvg=b.now.reduce((s,x)=>s+x,0)/b.now.length;
-    const col = b.value<nowAvg-0.02 ? "var(--high)" : "var(--ida-acc)";
-    bars+=`<rect x="${(X(f)+0.5).toFixed(1)}" y="${Y(b.value).toFixed(1)}" width="${(X(t)-X(f)-1).toFixed(1)}" height="${(96-Y(b.value)).toFixed(1)}" rx="3" fill="${col}"/>`; });
-  for(let h=0;h<24;h++){ const p=profileAt(c.timeline, _hourTs(h, c.q.to||Date.now())); oldp+=(h?"L":"M")+X(h*60).toFixed(1)+" "+Y(p.basal).toFixed(1)+"H"+X((h+1)*60).toFixed(1); }
-  html+=`<section class="itile wide"><div class="imrow"><b class="ittl">${TL("Basaal over de dag","Basal over the day","Basal ao longo do dia")}</b><i>${TL("E/u","U/h","U/h")}</i></div>
-    <svg class="ibasal" viewBox="0 0 318 112" role="img" aria-label="${TL("Nieuwe basaalblokken, huidig profiel als stippellijn","New basal blocks, current profile dashed","Novos blocos basais")}">${bars}<path d="${oldp}" fill="none" stroke="var(--ida-ink)" stroke-width="1.6" stroke-dasharray="3 3"/>
-    <text x="0" y="110" font-size="10" fill="var(--ida-sub)">0u</text><text x="79.5" y="110" font-size="10" fill="var(--ida-sub)" text-anchor="middle">6u</text><text x="159" y="110" font-size="10" fill="var(--ida-sub)" text-anchor="middle">12u</text><text x="238.5" y="110" font-size="10" fill="var(--ida-sub)" text-anchor="middle">18u</text><text x="318" y="110" font-size="10" fill="var(--ida-sub)" text-anchor="end">24u</text></svg>
-    <div class="ileg"><span><i style="background:var(--ida-acc)"></i>${TL("hoger of gelijk","higher or same","maior ou igual")}</span><span><i style="background:var(--high)"></i>${TL("lager","lower","menor")}</span><span><i class="dash"></i>${TL("huidig profiel","current profile","perfil atual")}</span></div>
-    <span class="its">${TL("Elk blok begint een uur vóór het moment dat je de insuline nodig hebt, omdat basaal pas na ongeveer een uur werkt.","Each block starts an hour before you need the insulin, because basal takes about an hour to act.","Cada bloco começa uma hora antes de precisar da insulina.")}</span></section>`;
-  // tabs + rijen
-  const tabs=[["basal",TL("Basaal","Basal","Basal")],["isf","ISF"],["ic",TL("KH-ratio","Carb ratio","Rácio HC")],["target",TL("Streefwaarde","Target","Alvo")]];
-  const chip=(d,dec)=>{ if(Math.abs(d)<(dec===2?0.025:0.05)) return `<span class="ichip eq">${TL("gelijk","same","igual")}</span>`; return `<span class="ichip ${d>0?"up":"dn"}">${d>0?"+":"−"}${_idaN(Math.abs(d),dec)}</span>`; };
-  let rows="";
-  if(_profTab==="basal") rows=P.basal.map(b=>{ const n=b.now.length===1?b.now[0]:b.now.reduce((s,x)=>s+x,0)/b.now.length;
-      const why=b.why==="laag"?TL(`${_idaN(b.low*100)}% laag`,`${_idaN(b.low*100)}% low`,`${_idaN(b.low*100)}% baixa`):b.act?TL(`loop levert ${_idaN(b.act[0],2)}${b.act[1]-b.act[0]>0.05?"–"+_idaN(b.act[1],2):""}`,`loop delivers ${_idaN(b.act[0],2)}`,`loop entrega ${_idaN(b.act[0],2)}`):"";
-      return `<div class="iprow"><span class="ipt">${b.from}</span><span class="ipv">${_idaN(b.value,2)}</span><span class="ipw">${TL("was","was","era")} ${b.now.map(x=>_idaN(x,2)).join("/")}<br><em>${why}</em></span>${chip(b.value-n,2)}</div>`; }).join("");
-  if(_profTab==="isf") rows=P.isf.map(b=>`<div class="iprow"><span class="ipt">${b.from}</span><span class="ipv">${_idaN(b.value)}</span><span class="ipw">${TL("was","was","era")} ${_idaN(b.now)}<br><em>${b.why==="laag"?TL("gelijk: hier zit je vaak laag","same: you're often low here","igual: baixas aqui"):TL("uit autosens en dagdosis","from autosens and daily dose","de autosens e dose diária")}</em></span>${chip(b.value-b.now,1)}</div>`).join("");
-  if(_profTab==="ic") rows=P.ic.map(b=>`<div class="iprow"><span class="ipt">${b.from}</span><span class="ipv">${_idaN(b.value)}</span><span class="ipw">${TL("was","was","era")} ${_idaN(b.now)}<br><em>${b.why==="gemeten"?TL(`gemeten ${_idaN(b.measured)} (${b.n} maaltijden)`,`measured ${_idaN(b.measured)} (${b.n} meals)`,`medido ${_idaN(b.measured)}`):b.why==="gelijk"?TL(`gemeten ${_idaN(b.measured)}: klopt`,`measured ${_idaN(b.measured)}: matches`,`medido: certo`):b.why==="tellen"?TL(`gemeten ${_idaN(b.measured)}, maar je telt waarschijnlijk te weinig koolhydraten`,`measured ${_idaN(b.measured)}, but you probably under-count carbs`,`medido ${_idaN(b.measured)}, mas provavelmente subestima os hidratos`):b.why==="hoog"?TL(`gemeten ${_idaN(b.measured)}, maar je zit hierna vaak hoog`,`measured ${_idaN(b.measured)}, but you're often high afterwards`,`medido ${_idaN(b.measured)}, mas fica alto depois`):b.why==="laag"?TL(`gemeten ${_idaN(b.measured)}, maar je zit hier vaak laag`,`measured ${_idaN(b.measured)}, but you're often low here`,`medido ${_idaN(b.measured)}, mas baixa aqui`):TL(`te weinig maaltijden (${b.n})`,`too few meals (${b.n})`,`poucas refeições (${b.n})`)}</em></span>${chip(b.value-b.now,1)}</div>`).join("");
-  if(_profTab==="target") rows=`<div class="iprow"><span class="ipt">00:00</span><span class="ipv">${P.target.lo!=null?_idaN(P.target.lo)+"–"+_idaN(P.target.hi):"—"}</span><span class="ipw"><em>${TL("ongewijzigd","unchanged","inalterado")}</em></span><span class="ichip eq">${TL("gelijk","same","igual")}</span></div>`;
-  html+=`<section class="itile wide"><div class="itabs" role="tablist">${tabs.map(([k,l])=>`<button role="tab" aria-selected="${k===_profTab}" data-ptab="${k}">${l}</button>`).join("")}</div>${rows}</section>`;
-  const MA=(typeof maxIobAdvice==="function")?maxIobAdvice(c):null, iobMin=_idaN(MA?MA.v:P.maxIobMin+(P.mealBolus||0));
-  const why=MA?MA.why:TL("3× je hoogste basaal plus je gemiddelde maaltijdbolus","3× your highest basal plus your average meal bolus","3× o basal mais alto mais o bólus médio");
-  html+=`<section class="inote">${TL(`<b>Max IOB</b> (AAPS → SMB-instellingen): zet die op minstens ${iobMin} E, omdat ${why}.`,`<b>Max IOB</b> (AAPS → SMB settings): set it to at least ${iobMin} U, because ${why}.`,`<b>Max IOB</b>: pelo menos ${iobMin} U (${why}).`)}</section>
-    <button class="ibtn" id="profExplain" style="align-self:flex-start">${TL("Leg dit profiel uit","Explain this profile","Explicar este perfil")}</button>
-    <div class="iacts"><button class="ibtn big acc" id="profCopy">${TL("Kopieer voor AAPS","Copy for AAPS","Copiar para AAPS")}</button><button class="ibtn big" id="profAct">${TL("Ik heb het profiel geactiveerd","I've activated the profile","Ativei o perfil")}</button></div>`;
-  host.innerHTML=html;
-  host.querySelectorAll("[data-ptab]").forEach(b=>b.onclick=()=>{ _profTab=b.dataset.ptab; idaProfiel(c); });
-  _idaEl("profExplain").onclick=()=>openAI(TL("Uitleg bij je profiel","About your profile","Sobre o seu perfil"), _profileFacts(P), TL("Leg in gewone taal uit wat er in dit nieuwe profiel verandert en waarom.","Explain in plain words what changes in this new profile and why.","Explique em palavras simples o que muda neste novo perfil e porquê."));
-  _idaEl("profCopy").onclick=async()=>{ const txt=aapsProfileText(P);
-    try{ await navigator.clipboard.writeText(txt); toast(TL("Gekopieerd. Plak het naast AAPS → Profiel.","Copied.","Copiado.")); }
-    catch(_){ const ta=document.createElement("textarea"); ta.value=txt; document.body.appendChild(ta); ta.select(); try{ document.execCommand("copy"); toast(TL("Gekopieerd.","Copied.","Copiado.")); }catch(__){} ta.remove(); } };
-  _idaEl("profAct").onclick=async()=>{
-    const an={ id:"prof-"+Date.now(), ts:Date.now(), type:"wijziging", note:TL(`Profiel ${_profName()} geactiveerd`,`Profile ${_profName()} activated`,`Perfil ${_profName()} ativado`), created:Date.now(),
-      ida:{ basal:P.basal.map(b=>[b.from,b.value]), isf:P.isf.map(b=>[b.from,b.value]), ic:P.ic.map(b=>[b.from,b.value]) } };
-    try{ await DB.putMany("annotations",[an]); }catch(e){ toast(TL("Opslaan mislukt.","Save failed.","Falha ao guardar.")); return; }
-    _idaAnns.push(an); toast(TL("Vastgelegd. De meting loopt nu 7 dagen.","Saved. The 7-day measurement has started.","Guardado.")); idaTeam(_ctx); idaVandaag(_ctx); showTab("consult"); };
-}
+/* ── Profiel (AAPS): zie js/ida4.js (werkbank + overnemen) ─────────────── */
 
 /* ── Snel loggen ─────────────────────────────────────────────────────────── */
 const _LOGT_=()=>[["sport",TL("Sport","Exercise","Exercício"),'<circle cx="14" cy="4.5" r="1.8"/><path d="M8 21l3-6 3 2v4M6 12l3-3 4 1 3 4h3"/>'],

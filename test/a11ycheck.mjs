@@ -31,7 +31,7 @@ const r=await page.evaluate(()=>{
   };
 });
 // tap-target: chip-hoogte in de Eten-tab
-await page.click('#tabbar .tab[data-tab="eten"]'); await page.waitForTimeout(200);
+await page.evaluate(()=>showTab('eten')); await page.waitForTimeout(200);
 const chipH=await page.evaluate(()=>{const c=document.querySelector('#cbCats .chip');return c?Math.round(c.getBoundingClientRect().height):0;});
 
 console.log('verbindingsstatus is live-regio:', r.connLive?'JA':'NEE');

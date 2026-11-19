@@ -76,12 +76,12 @@ function openAllFindings(){
   };
 })();
 
-// Vandaag: nooit meer dan 3 kaarten; de rest achter "Alle meldingen"
+// Vandaag: nooit meer dan 2 kaarten onder "Let op"; de rest achter "Alle meldingen"
 let _capN=-1;
 function capHome(){
   if(_det) return;
   const a=[...document.querySelectorAll("#assist > *")].filter(x=>!x.hidden).length;
-  const n=Math.max(0,3-a);
+  const n=Math.max(0,2-a);
   const cards=[...document.querySelectorAll("#findToday .f, #findWeek .f")];
   const vis=cards.filter(c=>!c.hidden).length, want=Math.min(n,cards.length);
   if(n===_capN && vis===want) return; _capN=n; try{ limitFindings(n); }catch(_){}

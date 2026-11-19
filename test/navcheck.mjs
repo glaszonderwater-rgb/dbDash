@@ -28,7 +28,7 @@ const dayFold=await page.evaluate(()=>{const el=document.getElementById('secDay'
 // 3) Analyses-volgorde: eerste kop = Maaltijden (id anaGrid), Veiligheid vóór Insuline & basaal
 const order=await page.evaluate(()=>{const hs=[...document.querySelectorAll('.view[data-view="analyses"] .h3')].map(h=>h.textContent.trim());return{first:hs[0],firstId:document.getElementById('anaGrid').textContent.trim(),list:hs};});
 // 4) Eten-tab: opent de eigen view met de werkende schatter (categorie-chips gevuld)
-await page.click('#tabbar .tab[data-tab="eten"]');
+await page.evaluate(()=>showTab('dag')); await page.waitForTimeout(150); await page.click('#dagBody [data-go="eten"]');
 await page.waitForTimeout(200);
 const eten=await page.evaluate(()=>({
   shown:!document.querySelector('.view[data-view="eten"]').hidden,
@@ -38,7 +38,7 @@ const eten=await page.evaluate(()=>({
 const safety=order.list.indexOf('Veiligheid & bereik'), insulin=order.list.indexOf('Insuline & basaal');
 console.log('onderbalk-tabs:', tabs);
 console.log('  4 tabs met icoon+label:', (bar.length===4&&allIcons)?'JA':'NEE');
-console.log('  Eten-tab aanwezig:', bar.some(b=>b.tab==='eten')?'JA':'NEE');
+console.log('  Dag- en Profiel-tab aanwezig:', bar.some(b=>b.tab==='dag')&&bar.some(b=>b.tab==='profiel')?'JA':'NEE');
 console.log('dagcurve = fold onder Analyses:', (dayFold.tag==='DETAILS'&&!dayFold.open)?'JA':'NEE', `(${dayFold.tag}, open=${dayFold.open})`);
 console.log('analyses-volgorde:', order.list.join(' → '));
 console.log('  Maaltijden eerst:', order.first==='Maaltijden'&&order.firstId==='Maaltijden'?'JA':'NEE');
@@ -46,7 +46,7 @@ console.log('  Veiligheid vóór Insuline:', (safety>-1&&insulin>-1&&safety<insu
 console.log('Eten-tab → eigen view + schatter:', (eten.shown&&eten.hasSearch&&eten.cats>0)?'JA':'NEE', `(cats=${eten.cats})`);
 console.log('errors:', errors.length?errors:'geen');
 
-const ok = bar.length===4 && allIcons && tabs==='overzicht,analyses,eten,consult'
+const ok = bar.length===4 && allIcons && tabs==='overzicht,dag,profiel,consult'
   && dayFold.tag==='DETAILS' && !dayFold.open && order.first==='Maaltijden' && safety<insulin
   && eten.shown && eten.hasSearch && eten.cats>0 && !errors.length;
 console.log('\nRESULTAAT:', ok?'OK':'FOUT');

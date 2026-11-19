@@ -256,7 +256,7 @@ function idaExtrasPatronen(c){
   const tiles=[];
   const g=c.glucose.filter(x=>_usable(c,x.ts)), G=griOf(g);
   if(G) tiles.push(`<article class="itile"><span class="itl">${TL("Risico-index (GRI)","Risk index (GRI)","Índice de risco (GRI)")}</span><b class="itn">${Math.round(G.gri)} <span class="ism">${TL("zone","zone","zona")} ${G.zone}</span></b>
-    <svg class="ibars" viewBox="0 0 150 40" aria-hidden="true">${[0,1,2,3,4].map(i=>`<rect x="${2+i*29.6}" y="14" width="27" height="12" rx="3" fill="${["#2F9E72","#9CC9C4","#E8C36A","#E8A33D","#C2413B"][i]}" opacity="${"ABCDE"[i]===G.zone?1:0.35}"/>`).join("")}</svg>
+    <svg class="ibars" viewBox="0 0 150 40" aria-hidden="true">${[0,1,2,3,4].map(i=>`<rect x="${2+i*29.6}" y="14" width="27" height="12" rx="3" fill="${["var(--ok)","color-mix(in srgb,var(--ok) 45%,var(--hi))","var(--hi)","color-mix(in srgb,var(--hi) 50%,var(--lo))","var(--lo)"][i]}" opacity="${"ABCDE"[i]===G.zone?1:0.35}"/>`).join("")}</svg>
     <span class="its">${TL(`0 is perfect, 100 slechtst. Laag telt ${_idaN(G.hypo)} mee, hoog ${_idaN(G.hyper)}.`,`0 is perfect, 100 worst. Lows add ${_idaN(G.hypo)}, highs ${_idaN(G.hyper)}.`,`0 é perfeito, 100 o pior.`)}</span></article>`);
   const HD=hypoDeep(c);
   if(HD) tiles.push(`<article class="itile"><span class="itl">${TL("Rond je hypo's","Around your lows","À volta das hipos")}</span><b class="itn lo">${HD.stacked}/${HD.n}</b>
@@ -298,7 +298,7 @@ function idaExtrasVandaag(c){
   if(MB&&MB.last&&Date.now()-MB.last.ts<36*_H){ const hm=fmtMin(todMin(MB.last.ts));
     cards.push(`<article class="icard"><div class="icrow"><span class="icic p">${_idaIcon("food")}</span><span class="ictxt"><b>${TL(`Hypo na je bolus van ${hm}.`,`Low after your ${hm} bolus.`,`Hipo após o bólus das ${hm}.`)}</b> ${TL(`Je zat toen op ${_idaN(MB.last.bg)} en zakte al (${_idaN(MB.last.slope*15)} per kwartier). Daarna kwam je op ${_idaN(MB.last.min)}. Zak je vóór het eten, bolus dan pas bij het eten of iets minder.`,`You were at ${_idaN(MB.last.bg)} and already falling (${_idaN(MB.last.slope*15)} per 15 min). You then reached ${_idaN(MB.last.min)}. If you're falling before a meal, bolus at the meal or a bit less.`,`Estava a ${_idaN(MB.last.bg)} e a descer. Depois chegou a ${_idaN(MB.last.min)}.`)}</span></div><button class="iask" data-idaask="kaart">${TL("Vraag door","Ask more","Perguntar")} ›</button></article>`); }
   let lastExp=null; try{ lastExp=+localStorage.getItem("ida.lastBackup")||null; }catch(_){}
-  if((_idaAnns||[]).length>=5 && (!lastExp || Date.now()-lastExp>30*_D))
+  if((_idaAnns||[]).length>=5 && !cfg.pushUrl && (!lastExp || Date.now()-lastExp>30*_D))   // met eigen server staat de back-up daar al
     cards.push(`<article class="icard"><div class="icrow"><span class="icic t">${_idaIcon("trend")}</span><span class="ictxt"><b>${TL("Maak een back-up van je logboek.","Back up your logbook.","Faça cópia do diário.")}</b> ${TL("Je logs staan alleen op dit apparaat.","Your logs only live on this device.","Os registos só estão neste aparelho.")}</span></div><div class="icacts"><button class="ibtn acc" id="bkNow">${TL("Back-up downloaden","Download backup","Descarregar")}</button></div></article>`);
   if(cards.length){ host.insertAdjacentHTML("beforeend",cards.join("")); const b=_idaEl("bkNow"); if(b) b.onclick=()=>{ document.getElementById("btnExport").click(); try{ localStorage.setItem("ida.lastBackup",String(Date.now())); }catch(_){} b.closest(".icard").remove(); }; }
 }

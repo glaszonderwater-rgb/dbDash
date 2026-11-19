@@ -26,14 +26,14 @@ const home=await page.evaluate(()=>({
   heroArrow:document.getElementById('heroArrow').textContent.trim(),
   heroSide:document.getElementById('ringMeta').textContent.trim(),
   kpiCount:document.querySelectorAll('.chome .kpis .kpi').length,
-  aandacht:/Wat ik zie/i.test(document.getElementById('epVandaag').textContent),
+  aandacht:/Let op/i.test(document.getElementById('epVandaag').textContent),
   findings:document.querySelectorAll('#findToday .f, #findWeek .f').length,
   noRing:!document.getElementById('ringArc'),
   noActs:!document.getElementById('homeActs'),
   nuHidden:document.getElementById('secNow').classList.contains('hideOnHome'),
 }));
 // Nu-balk terug zichtbaar op een andere tab
-await page.click('#tabbar .tab[data-tab="analyses"]'); await page.waitForTimeout(120);
+await page.click('#tabbar .tab[data-tab="dag"]'); await page.waitForTimeout(120);
 const nuOnOther=await page.evaluate(()=>!document.getElementById('secNow').classList.contains('hideOnHome'));
 await page.click('#tabbar .tab[data-tab="overzicht"]'); await page.waitForTimeout(120);
 const backHidden=await page.evaluate(()=>document.getElementById('secNow').classList.contains('hideOnHome'));

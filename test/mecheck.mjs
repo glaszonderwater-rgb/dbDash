@@ -26,7 +26,7 @@ await page.goto(FILE,{waitUntil:'load'});
 await page.fill('#inUrl','https://mock.nightscout.test');await page.fill('#inTok','x');await page.fill('#inDays','40');
 await page.click('#btnSave');
 await page.waitForFunction(()=>!document.getElementById('tabbar').hidden,{timeout:40000}).catch(()=>{});
-await page.click('#tabbar .tab[data-tab="eten"]'); await page.waitForTimeout(200);
+await page.evaluate(()=>showTab('eten')); await page.waitForTimeout(200);
 
 const r=await page.evaluate(()=>{
   const me=document.getElementById('cbMe');

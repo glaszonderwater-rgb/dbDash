@@ -13,7 +13,7 @@ await page.goto(FILE,{waitUntil:'load'});
 await page.fill('#inUrl','https://mock.nightscout.test');await page.fill('#inTok','x');await page.fill('#inDays','7');
 await page.click('#btnSave');
 await page.waitForFunction(()=>!document.getElementById('tabbar').hidden,{timeout:40000}).catch(()=>{});
-await page.click('#tabbar .tab[data-tab="eten"]'); await page.waitForTimeout(150);
+await page.evaluate(()=>showTab('eten')); await page.waitForTimeout(150);
 
 async function pick(name){
   await page.fill('#cbSearch',name); await page.waitForTimeout(250);

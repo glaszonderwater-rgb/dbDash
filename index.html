@@ -4,8 +4,8 @@
 <meta charset="utf-8">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https: http://localhost:*; worker-src 'self'; manifest-src 'self'; base-uri 'none'; form-action 'none'; object-src 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#FFFFFF" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#0E1216" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#F5F0E8" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#15120E" media="(prefers-color-scheme: dark)">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
@@ -876,6 +876,7 @@ details.mini{display:none}
 .imoment p{margin:.3rem 0 0;font-size:.85rem;line-height:1.45;opacity:.85}
 .icard .ihint{margin-top:.5rem;font-size:.75rem;color:var(--muted)}
 </style>
+<link rel="stylesheet" href="css/ida4.css">
 </head>
 <body>
 
@@ -919,11 +920,14 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
   <div class="view" data-view="overzicht">
   <div class="chome ida">
     <div class="idate" id="idaDate"></div>
-    <section class="ihero" id="idaHero" hidden>
-      <div class="ihrow"><div class="ihnow"><span class="ihv" id="idaVal">—</span><span class="iha" id="idaArrow"></span></div>
-        <div class="ihpred" id="idaPredBox" hidden><span>AAPS verwacht</span><b id="idaPred">—</b></div></div>
-      <div class="ihmeta" id="idaMeta"></div>
+    <section class="ihero4" id="idaHero" data-st="ok" hidden>
+      <div class="hstat"><span class="hpill" id="idaPill"><i></i><span id="idaPillTxt">—</span></span><span class="hage" id="idaAge"></span></div>
+      <div class="hnow"><span class="ihv" id="idaVal">—</span><span class="hunit">mmol/L</span><span class="iha" id="idaArrow"></span></div>
+      <p class="hsay" id="idaSay"></p>
+      <div class="hmono" id="idaMeta"></div>
+      <div class="ihpred" id="idaPredBox" hidden><span>AAPS verwacht</span><b id="idaPred">—</b></div>
       <div id="last24" class="ih24"></div>
+      <div class="hfoot" id="idaFoot"></div>
     </section>
     <div class="greet" id="homeGreet" hidden><b id="greetHi"></b><span class="sub" id="greetSub"></span></div>
     <div class="hero" id="homeHero" hidden><span class="hv" id="ringVal">—</span><span class="hu">mmol/L</span><span class="harw" id="heroArrow"></span><span class="hside" id="ringMeta"></span></div>
@@ -933,7 +937,7 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
     <span id="l24sub" hidden></span>
 
 
-    <div class="chead" id="epVandaag"><span data-i18n="home.attention">Wat ik zie</span> <span class="sub" id="todaySub"></span></div>
+    <div class="chead" id="epVandaag"><span data-i18n="home.attention">Let op</span> <span class="sub" id="todaySub"></span></div>
     <div id="assist"></div>
     <div id="findToday"></div>
     <span id="epWeek" hidden><span id="weekSub"></span></span>
@@ -945,7 +949,7 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
 
   <!-- ANALYSES — de bibliotheek: alles bij naam, één tik -->
   <div class="view" data-view="analyses" hidden>
-  <h1 class="ititle" data-i18n="tab.analyses">Patronen</h1>
+  <div class="subhead"><button class="iback" data-back="dag" data-i18n-al="btn.back" aria-label="Terug"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button><h1 class="ititle" data-i18n="tab.analyses">Patronen</h1></div>
   <div class="ibento" id="bento"></div>
   <h2 class="ihead" data-i18n="an.all">Alle analyses</h2>
   <div class="scope" id="scope"><span><i>periode</i> <b>—</b></span></div>
@@ -1073,7 +1077,7 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
   <details class="fold" id="secMethode">
     <summary><span data-i18n="an.methode">Uitleg &amp; leren</span> <span class="foldhint" data-i18n="an.methodeHint">je diabetes begrijpen + hoe de app rekent</span></summary>
     <div class="foldbody meth" data-i18n="meth.body">
-      <p class="mlead">Nieuw met diabetes of een loop? Hieronder eerst de begrippen in gewone taal, daarna hoe de app elk getal berekent. Niets hiervan is een dosis of voorschrift — het helpt je begrijpen en het gesprek met je team voeren.</p>
+      <p class="mlead">Nieuw met diabetes of een loop? Hieronder eerst de begrippen in gewone taal, daarna hoe de app elk getal berekent. Elk getal komt uit je eigen data.</p>
 
       <div class="mpart">Diabetes in het kort</div>
       <p>De basis, in gewone taal. Ken je dit al, sla het gerust over.</p>
@@ -1092,7 +1096,7 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
       <p>Elk getal komt uit je eigen metingen. Hier staat per onderdeel precies hoe.</p>
 
       <h4 class="mh">1 · Privacy &amp; opzet</h4>
-      <p>Eén HTML-bestand, geen build, werkt offline. Je data staat <b>alleen op dit apparaat</b>: metingen in IndexedDB, je adres en token in localStorage. Er gaat niets naar een server behalve <b>lees</b>verzoeken aan je eigen Nightscout (met je token: <code>?token=…</code>). Na de eerste keer werkt alles uit de lokale cache; syncen haalt alleen het nieuwe stuk op.</p>
+      <p>Eén HTML-bestand, geen build, werkt offline. Je data staat <b>op dit apparaat</b>: metingen in IndexedDB, je adres en token in localStorage. Er gaat niets naar een server behalve <b>lees</b>verzoeken aan je eigen Nightscout (met je token: <code>?token=…</code>) en, als je een meldingenserver instelt, een back-up van je instellingen en logboek naar díe eigen server. Met wachtwoordbeveiliging gaan je tokens daar niet mee. Na de eerste keer werkt alles uit de lokale cache; syncen haalt alleen het nieuwe stuk op.</p>
 
       <h4 class="mh">2 · Glucose &amp; eenheden</h4>
       <p>Nightscout bewaart glucose in mg/dL; IDA rekent alles op precies één plek om naar <b>mmol/L</b> (÷ 18,018) en toont nooit mg/dL. Streefbereik <b>3,9–10,0</b> mmol/L (internationale consensus, Battelino 2019).</p>
@@ -1127,8 +1131,8 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
       <h4 class="mh">9 · Maaltijden</h4>
       <p>Een "maaltijd" = ≥ 30 g koolhydraten, geïsoleerd (geen andere koolhydraten in −2…+4 u) én <b>met een handmatige maaltijdbolus</b> eromheen. Koolhydraten zónder bolus (hypo-redding, losse invoer) tellen niet mee. Per maaltijd berekent de app de opname-curve door de <i>verwachte</i> insuline-daling van de gemeten glucosestijging af te trekken; daaruit volgen <b>t50</b> (na hoeveel minuten de helft is opgenomen), de <b>piek</b> en de <b>prebolus-timing</b> = je handmatige bolus t.o.v. je koolhydraat-invoer (negatief = ervóór). Let op: de invoertijd is je bolusmoment, niet per se wanneer je begon te eten.</p>
 
-      <h4 class="mh">10 · Bespreekwaarden</h4>
-      <p>Per dagdeel (nacht/ochtend/middag/avond) zet de app je <b>gemeten</b> waarde naast je <b>ingestelde</b>, en als die &gt; 20% afwijkt, een concreet <b>kandidaatgetal</b>: een behoudende halve stap én de volledige gemeten waarde. Het effect wordt doorgerekend met een eenvoudige simulatie op je eigen data (extra insuline × je gevoeligheid, via de werkingscurve van de insuline). Een <b class="lok">✓</b> = gemeten sluit aan; <b>—</b> = te weinig data (géén oordeel); de <b>pijl</b> = een bespreekwaarde. <span class="prisk">Rood</span> = de simulatie ziet meer laagtes. Dat je lichaam bij een dreigende hypo zelf tegenwerkt, zit er níét in — dus "laag" is een waarschuwing, geen exacte telling.</p>
+      <h4 class="mh">10 · Profielvoorstel</h4>
+      <p>IDA rekent je AAPS-profiel opnieuw uit je eigen data. <b>Basaal</b> per uur: wat je loop nuchter echt levert (temp-basaal + SMB), × 0,8, begrensd op 0,7–1,5× je huidige waarde en lager waar je vaak laag zit; elk blok begint een uur eerder omdat basaal pas na ongeveer een uur werkt. <b>ISF</b>: het midden van je profiel × autosens en 100 ÷ dagdosis, hooguit −20%/+15%. <b>KH-ratio</b>: gemeten uit je maaltijden, per blok hooguit 20% anders; niet sterker als je na het eten vaak laag zit, niet zwakker als je vaak hoog zit, en niet sterker als je stijging meer koolhydraten laat zien dan je invoerde (tenzij je "Ik tel mijn koolhydraten nauwkeurig" aanzet). Alles staat bij <b>Profiel</b>, klaar om over te nemen.</p>
 
       <h4 class="mh">11 · Voor/na een wijziging</h4>
       <p>Markeer je in het logboek een instelling-wijziging, dan vergelijkt de app 14 dagen ervóór met 14 dagen erná (alleen dagen met ≥ 70% dekking). <b>Kanttekening:</b> winst na een mindere periode kan deels terugveer naar het gemiddelde zijn — een vergelijking is geen bewijs van oorzaak.</p>
@@ -1139,8 +1143,8 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
       <h4 class="mh">13 · Tijdlijn &amp; bevindingen</h4>
       <p>Het Overzicht bouwt een verhaal: <b>Nu</b> (laatste waarde, IOB/COB) → <b>Vandaag</b> (de nacht, dagcurve) → <b>Deze week</b> (maaltijd-, basaal- en wijzigingspatronen; valt nooit leeg terug) → <b>Deze maand</b> (kerncijfers + gemeten-vs-ingesteld). Elke bevinding draagt zijn bewijs (n + kanttekening) en kun je op je <b>consultlijst</b> zetten voor het rapport.</p>
 
-      <h4 class="mh">14 · Wat dit uitdrukkelijk níét is</h4>
-      <p>Geen dosis, geen voorschrift, geen medisch advies. Alles is een <b>observatie</b> of een <b>bespreekpunt voor je behandelteam</b>. Reken zelf niets om op je pomp; wijzig instellingen alleen in overleg, en één ding tegelijk.</p>
+      <h4 class="mh">14 · Wat IDA niet doet</h4>
+      <p>IDA leest alleen: het schrijft nooit naar je pomp, loop of instellingen. Profielwaarden neem je zelf over in AAPS. Verander één ding tegelijk en kijk een week naar het effect (Team › Effect).</p>
 
       <p class="mnote" style="margin-top:1rem">Bron-drempels volgen de internationale consensus (Battelino e.a., 2019, <i>Diabetes Care</i>); het insulinemodel en de gevoeligheids-berekeningen volgen de oref/AndroidAPS-referentie.</p>
     </div>
@@ -1150,7 +1154,7 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
 
   <!-- ETEN — de koolhydraat-schatter als eigen, snel bereikbare bestemming -->
   <div class="view" data-view="eten" hidden>
-  <h1 class="ititle" data-i18n="tab.food">Eten</h1>
+  <div class="subhead"><button class="iback" data-back="dag" data-i18n-al="btn.back" aria-label="Terug"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button><h1 class="ititle" data-i18n="tab.food">Eten</h1></div>
   <div id="etenHero"></div>
   <section class="epoch" id="epEten" style="margin-left:0">
     <div class="eh"><h2 data-i18n="eten.title">Koolhydraten schatten</h2><span class="sub" data-i18n="eten.sub">kies eten + portie → gram</span></div>
@@ -1245,16 +1249,25 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
 </div></section>
   </div>
 
-  <!-- CONSULT -->
+  <!-- DAG — één dag, met momenten -->
+  <div class="view" data-view="dag" hidden>
+  <h1 class="ititle" data-i18n="tab.day">Dag</h1>
+  <div id="dagBody"></div>
+  <div id="dagHold" hidden></div>
+  </div>
+
+  <!-- PROFIEL — werkbank -->
   <div class="view" data-view="profiel" hidden>
-  <button class="iback" id="profBack" aria-label="Terug"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>
+  <button class="iback" id="profBack" aria-label="Terug" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>
+  <h1 class="ititle" data-i18n="tab.profile">Profiel</h1>
   <div id="profBody"></div>
+  <div id="profHold" hidden></div>
   </div>
 
   <div class="view" data-view="consult" hidden>
   <h1 class="ititle" data-i18n="tab.consult">Team</h1>
   <div id="teamTop"></div>
-  <div class="h3" style="margin-top:.2rem">Voorstellen &amp; effect</div>
+  <div class="h3" style="margin-top:.2rem">Effect</div>
   <details class="fold" id="secProposals" hidden open>
     <summary><span data-i18n="an.proposals">Bespreekwaarden</span> <span class="foldhint" data-i18n="an.proposalsHint">per dagdeel</span></summary>
     <div class="foldbody"><div id="proposals"></div></div>
@@ -1268,8 +1281,8 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
     <div class="eh" style="margin-top:0"><h2 hidden></h2><span class="sub" id="consultSub"></span></div>
     <div id="consultList"></div>
     <div id="shareRow" style="margin-top:.7rem;display:flex;gap:.5rem;flex-wrap:wrap">
-      <button id="btnReport" style="font-size:.8rem" data-i18n="consult.report">📄 Consultrapport samenstellen</button>
-      <button class="ghost" id="btnShare" style="font-size:.78rem" data-i18n="consult.share">📋 Samenvatting delen</button>
+      <button id="btnReport" style="font-size:.8rem" data-i18n="consult.report">Consultrapport samenstellen</button>
+      <button class="ghost" id="btnShare" style="font-size:.78rem" data-i18n="consult.share">Samenvatting delen</button>
     </div>
   </section>
   </div>
@@ -1288,9 +1301,9 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
 
 <nav id="tabbar" class="nav inav" hidden aria-label="Hoofdnavigatie">
   <button class="tab on" data-tab="overzicht"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 13c3-7 6-7 9 0s6 7 9 0"/></svg><span data-i18n="tab.overview">Vandaag</span></button>
-  <button class="tab" data-tab="analyses"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="9" rx="2"/><rect x="14" y="3" width="7" height="5" rx="2"/><rect x="14" y="12" width="7" height="9" rx="2"/><rect x="3" y="16" width="7" height="5" rx="2"/></svg><span data-i18n="tab.analyses">Patronen</span></button>
+  <button class="tab" data-tab="dag"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="4.5" width="17" height="16" rx="3"/><path d="M3.5 9.5h17M8 3v3M16 3v3"/><path d="M7 15.5l2.5-2 2.5 1.5 4.5-3"/></svg><span data-i18n="tab.day">Dag</span></button>
   <button class="iplus" id="btnPlus" data-i18n-al="log.open" aria-label="Loggen"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
-  <button class="tab" data-tab="eten"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3v8M5 3v5a2 2 0 0 0 4 0V3M7 11v10"/><path d="M17 3c-2 2-2 6 0 8v10"/></svg><span data-i18n="tab.food">Eten</span></button>
+  <button class="tab" data-tab="profiel"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg><span data-i18n="tab.profile">Profiel</span></button>
   <button class="tab" data-tab="consult"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M3 20c0-3.5 2.7-6 6-6s6 2.5 6 6M15 20c0-2.5 1-4.5 3.5-4.5S22 17.5 22 20"/></svg><span data-i18n="tab.consult">Team</span><span class="cbadge" id="consultBadge" hidden></span></button>
 </nav>
 <dialog id="logSheet" class="isheet" aria-labelledby="logTitle">
@@ -1313,7 +1326,7 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
   <input id="inUrl" type="url" placeholder="https://jouw-site.nightscout.example" autocomplete="off" spellcheck="false">
   <label for="inTok" data-i18n="cfg.token">Token</label>
   <input id="inTok" type="text" placeholder="dashboard-0123456789abcdef" autocomplete="off" spellcheck="false">
-  <div class="hint"><button type="button" id="btnLink" class="ghost">🔗 Kopieer koppellink voor een ander apparaat</button> <span id="linkMsg" class="muted"></span></div>
+  <div class="hint"><button type="button" id="btnLink" class="ghost">Kopieer koppellink voor een ander apparaat</button> <span id="linkMsg" class="muted"></span></div>
   <div class="hint" data-i18n="cfg.tokenHint">Maak in Nightscout via Admin Tools een subject met alleen de rol
     <b>readable</b>. Gebruik nooit je API_SECRET.</div>
   <label for="inDays" data-i18n="cfg.history">Historie ophalen (dagen)</label>
@@ -1338,7 +1351,7 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
     <option value="55" data-i18n="cfg.insFiasp">Ultrasnel — Fiasp</option>
     <option value="45" data-i18n="cfg.insLyumjev">Ultrasnel — Lyumjev</option>
   </select>
-  <div class="hint" data-i18n="cfg.insulinHint">Bepaalt de piektijd van het insulinemodel en verbetert alle insuline-analyses (IOB, waargenomen ISF, bespreekwaarden).</div>
+  <div class="hint" data-i18n="cfg.insulinHint">Bepaalt de piektijd van het insulinemodel en verbetert alle insuline-analyses (IOB, waargenomen ISF, profielvoorstel).</div>
   <div class="err" id="cfgErr" hidden></div>
   <div class="actions">
     <button id="btnSave" data-i18n="btn.save">Bewaren</button>
@@ -1490,7 +1503,7 @@ Object.assign(I18N, {
     pt:`<div><b>No alvo (TIR)</b> — que % do tempo a sua glicose esteve entre 3,9 e 10,0. A sua métrica mais importante: quanto maior, mais estável o seu dia. Meta &gt; 70%.</div><div><b>Hipo</b> — % de tempo demasiado baixo (&lt; 3,9). Isto é segurança — mantê-lo baixo pesa mais do que uns pontos percentuais extra no alvo. Meta &lt; 4%.</div><div><b>Variabilidade (CV)</b> — quão irregulares são os seus valores. Menor = mais plano e previsível, normalmente o maior ganho. Meta ≤ 36%.</div><div><b>GMI</b> — uma estimativa da sua HbA1c a partir da glicose média. Uma indicação de longo prazo, não um valor laboratorial.</div>` },
   "home.mvsSetting":{ en:"setting", pt:"parâmetro" },
   "home.mvsMeasured":{ en:"measured · set", pt:"medido · definido" },
-  "home.attention":{ en:"What I see", pt:"O que vejo" },
+  "home.attention":{ en:"Heads-up", pt:"Atenção" },
   "home.more":{ en:"More", pt:"Mais" },
   "home.dayCurve":{ en:"Day curve", pt:"Curva do dia" },
   "home.dayCurveHint":{ en:"your day by the hour — food, bolus, lows", pt:"o seu dia hora a hora — comida, bólus, hipos" },
@@ -1582,13 +1595,16 @@ Object.assign(I18N, {
   "eten.fatNote":{ en:"Pick a fatty or protein-rich item (pizza, fries, cheese, nuts…) and you'll get a short bolus tip with the portion.", pt:"Escolha um alimento gordo ou rico em proteína (pizza, batata frita, queijo, frutos secos…) e receberá uma dica curta de bólus com a porção." },
   // Consult
   "consult.title":{ en:"Toward your consult", pt:"Rumo à sua consulta" },
-  "consult.report":{ en:"📄 Build consult report", pt:"📄 Montar relatório de consulta" },
-  "consult.share":{ en:"📋 Share summary", pt:"📋 Partilhar resumo" },
+  "consult.report":{ en:"Build consult report", pt:"Montar relatório de consulta" },
+  "consult.share":{ en:"Share summary", pt:"Partilhar resumo" },
   // Tabbladen
   "tab.overview":{ en:"Today", pt:"Hoje" },
   "tab.food":{ en:"Food", pt:"Comida" },
   "tab.analyses":{ en:"Patterns", pt:"Padrões" },
   "tab.consult":{ en:"Team", pt:"Equipa" },
+  "tab.day":{ en:"Day", pt:"Dia" },
+  "tab.profile":{ en:"Profile", pt:"Perfil" },
+  "btn.back":{ en:"Back", pt:"Voltar" },
   // Instellingen
   "cfg.langLabel":{ nl:"Taal", en:"Language", pt:"Idioma" },
   "cfg.themeLabel":{ en:"Theme", pt:"Tema" },
@@ -1604,7 +1620,7 @@ Object.assign(I18N, {
   "cfg.insFast":{ en:"Rapid — Novorapid / Humalog / Apidra", pt:"Rápida — Novorapid / Humalog / Apidra" },
   "cfg.insFiasp":{ en:"Ultra-rapid — Fiasp", pt:"Ultrarrápida — Fiasp" },
   "cfg.insLyumjev":{ en:"Ultra-rapid — Lyumjev", pt:"Ultrarrápida — Lyumjev" },
-  "cfg.insulinHint":{ en:"Sets the peak time of the insulin model and improves all insulin analyses (IOB, observed ISF, discussion values).", pt:"Define o tempo de pico do modelo de insulina e melhora todas as análises de insulina (IOB, ISF observado, valores para discussão)." },
+  "cfg.insulinHint":{ en:"Sets the peak time of the insulin model and improves all insulin analyses (IOB, observed ISF, profile proposal).", pt:"Define o tempo de pico do modelo de insulina e melhora todas as análises de insulina (IOB, ISF observado, valores para discussão)." },
   "cfg.wipe":{ en:"Clear cache", pt:"Limpar cache" },
   "cfg.logBackup":{ en:"Logbook — backup", pt:"Diário — cópia de segurança" },
   "cfg.logBackupHint":{ en:"Your marks and hypo-awareness logs live only on this device. Export them as a backup (e.g. before clearing the cache or switching devices).", pt:"As suas marcas e registos de perceção de hipo existem apenas neste dispositivo. Exporte-os como cópia de segurança (ex. antes de limpar a cache ou mudar de dispositivo)." },
@@ -1615,7 +1631,7 @@ Object.assign(I18N, {
   "cfg.aiHint":{ en:"For free-form questions on top of the local answers. Works with your <b>own</b> key at an OpenAI-compatible service — or a local Ollama/LM Studio, keeping everything on your machine. Only the summary figures that are already on your screen are sent, never your raw sensor stream. Answers are generated (may contain errors) and never dosing advice. Your key is stored locally on this device.", pt:"Para perguntas livres além das respostas locais. Funciona com a sua <b>própria</b> chave num serviço compatível com OpenAI — ou um Ollama/LM Studio local, mantendo tudo na sua máquina. Só os números-resumo já visíveis no ecrã são enviados, nunca o seu fluxo de sensor em bruto. As respostas são geradas (podem conter erros) e nunca conselhos de dose. A sua chave fica guardada localmente neste dispositivo." },
   "cfg.aiEnable":{ en:"Enable AI assistant", pt:"Ativar assistente de IA" },
   // Ask-tab AI
-  "ask.aiBtn":{ nl:"🤖 Vraag de AI-assistent", en:"🤖 Ask the AI assistant", pt:"🤖 Perguntar ao assistente de IA" },
+  "ask.aiBtn":{ nl:"Vraag de AI-assistent", en:"Ask the AI assistant", pt:"Perguntar ao assistente de IA" },
   "ask.aiThinking":{ nl:"AI denkt na…", en:"AI is thinking…", pt:"A IA está a pensar…" },
   "ask.aiBadge":{ nl:"AI · gegenereerd, kan fouten bevatten · geen dosisadvies", en:"AI · generated, may contain errors · no dosing advice", pt:"IA · gerado, pode conter erros · sem conselho de dose" },
   "ask.aiWhatSent":{ nl:"Wat wordt er verstuurd?", en:"What is sent?", pt:"O que é enviado?" },
@@ -1625,7 +1641,7 @@ Object.assign(I18N, {
 // Uitleg-sectie ("Uitleg & leren") — één sleutel met de volledige HTML per taal.
 Object.assign(I18N, { "meth.body":{
   en:`
-      <p class="mlead">New to diabetes or a loop? Below, first the concepts in plain language, then how the app calculates each number. None of this is a dose or prescription — it helps you understand and have the conversation with your team.</p>
+      <p class="mlead">New to diabetes or a loop? Below, first the concepts in plain language, then how the app calculates each number. Every number comes from your own data.</p>
 
       <div class="mpart">Diabetes in short</div>
       <p>The basics, in plain language. Already know this? Feel free to skip.</p>
@@ -1644,7 +1660,7 @@ Object.assign(I18N, { "meth.body":{
       <p>Every number comes from your own measurements. Here's exactly how, per part.</p>
 
       <h4 class="mh">1 · Privacy &amp; setup</h4>
-      <p>One HTML file, no build, works offline. Your data lives <b>only on this device</b>: measurements in IndexedDB, your address and token in localStorage. Nothing goes to a server except <b>read</b> requests to your own Nightscout (with your token: <code>?token=…</code>). After the first time everything works from the local cache; syncing only fetches the new part.</p>
+      <p>One HTML file, no build, works offline. Your data lives <b>on this device</b>: measurements in IndexedDB, your address and token in localStorage. Nothing goes to a server except <b>read</b> requests to your own Nightscout (with your token: <code>?token=…</code>) and, if you set up a notification server, a backup of your settings and logbook to that server of your own. With password protection your tokens are not included. After the first time everything works from the local cache; syncing only fetches the new part.</p>
 
       <h4 class="mh">2 · Glucose &amp; units</h4>
       <p>Nightscout stores glucose in mg/dL; IDA converts everything in exactly one place to <b>mmol/L</b> (÷ 18.018) and never shows mg/dL. Target range <b>3.9–10.0</b> mmol/L (international consensus, Battelino 2019).</p>
@@ -1679,8 +1695,8 @@ Object.assign(I18N, { "meth.body":{
       <h4 class="mh">9 · Meals</h4>
       <p>A "meal" = ≥ 30 g carbs, isolated (no other carbs in −2…+4 h) and <b>with a manual meal bolus</b> around it. Carbs without a bolus (hypo rescue, loose entry) don't count. Per meal the app computes the absorption curve by subtracting the <i>expected</i> insulin fall from the measured glucose rise; from that follow <b>t50</b> (after how many minutes half is absorbed), the <b>peak</b> and the <b>prebolus timing</b> = your manual bolus relative to your carb entry (negative = before). Note: the entry time is your bolus moment, not necessarily when you started eating.</p>
 
-      <h4 class="mh">10 · Discussion values</h4>
-      <p>Per part of day (night/morning/afternoon/evening) the app puts your <b>measured</b> value next to your <b>set</b> one, and if that deviates &gt; 20%, a concrete <b>candidate number</b>: a conservative half step and the full measured value. The effect is computed with a simple simulation on your own data (extra insulin × your sensitivity, via the insulin's action curve). A <b class="lok">✓</b> = measured aligns; <b>—</b> = too little data (no judgment); the <b>arrow</b> = a discussion value. <span class="prisk">Red</span> = the simulation sees more lows. That your body counteracts a threatening hypo itself is not in it — so "low" is a warning, not an exact count.</p>
+      <h4 class="mh">10 · Profile proposal</h4>
+      <p>IDA recalculates your AAPS profile from your own data. <b>Basal</b> per hour: what your loop really delivers while fasting (temp basal + SMB), × 0.8, limited to 0.7–1.5× your current value and lower where you are often low; each block starts an hour earlier because basal takes about an hour to act. <b>ISF</b>: the middle of your profile × autosens and 100 ÷ daily dose, at most −20%/+15%. <b>Carb ratio</b>: measured from your meals, at most 20% different per block; not stronger if you are often low after meals, not weaker if you are often high, and not stronger if your rise shows more carbs than you entered (unless you turn on "I count accurately"). Everything is under <b>Profile</b>, ready to copy.</p>
 
       <h4 class="mh">11 · Before/after a change</h4>
       <p>If you mark a setting change in the logbook, the app compares 14 days before with 14 days after (only days with ≥ 70% coverage). <b>Note:</b> gains after a poorer period may partly be regression to the mean — a comparison is not proof of cause.</p>
@@ -1691,13 +1707,13 @@ Object.assign(I18N, { "meth.body":{
       <h4 class="mh">13 · Timeline &amp; findings</h4>
       <p>The Overview builds a story: <b>Now</b> (last value, IOB/COB) → <b>Today</b> (the night, day curve) → <b>This week</b> (meal, basal and change patterns; never falls back empty) → <b>This month</b> (key figures + measured-vs-set). Each finding carries its evidence (n + caveat) and you can put it on your <b>consult list</b> for the report.</p>
 
-      <h4 class="mh">14 · What this explicitly is not</h4>
-      <p>No dose, no prescription, no medical advice. Everything is an <b>observation</b> or a <b>discussion point for your care team</b>. Don't compute anything on your pump yourself; change settings only in consultation, and one thing at a time.</p>
+      <h4 class="mh">14 · What IDA does not do</h4>
+      <p>IDA only reads: it never writes to your pump, loop or settings. You copy profile values into AAPS yourself. Change one thing at a time and watch the effect for a week (Team › Effect).</p>
 
       <p class="mnote" style="margin-top:1rem">Source thresholds follow the international consensus (Battelino et al., 2019, <i>Diabetes Care</i>); the insulin model and sensitivity calculations follow the oref/AndroidAPS reference.</p>
     `,
   pt:`
-      <p class="mlead">Novo na diabetes ou num loop? Abaixo, primeiro os conceitos em linguagem simples, depois como a app calcula cada número. Nada disto é uma dose ou prescrição — ajuda-o a compreender e a conversar com a sua equipa.</p>
+      <p class="mlead">Novo na diabetes ou num loop? Abaixo, primeiro os conceitos em linguagem simples, depois como a app calcula cada número. Cada número vem dos seus próprios dados.</p>
 
       <div class="mpart">A diabetes em resumo</div>
       <p>O básico, em linguagem simples. Já sabe isto? Fique à vontade para saltar.</p>
@@ -1716,7 +1732,7 @@ Object.assign(I18N, { "meth.body":{
       <p>Cada número vem das suas próprias medições. Aqui está exatamente como, por secção.</p>
 
       <h4 class="mh">1 · Privacidade &amp; conceção</h4>
-      <p>Um único ficheiro HTML, sem build, funciona offline. Os seus dados existem <b>apenas neste dispositivo</b>: medições no IndexedDB, o seu endereço e token no localStorage. Nada vai para um servidor exceto pedidos de <b>leitura</b> ao seu próprio Nightscout (com o seu token: <code>?token=…</code>). Depois da primeira vez tudo funciona a partir da cache local; sincronizar só obtém a parte nova.</p>
+      <p>Um único ficheiro HTML, sem build, funciona offline. Os seus dados existem <b>neste dispositivo</b>: medições no IndexedDB, o seu endereço e token no localStorage. Nada vai para um servidor exceto pedidos de <b>leitura</b> ao seu próprio Nightscout (com o seu token: <code>?token=…</code>) e, se configurar um servidor de notificações, uma cópia das definições e do diário para esse servidor seu. Com proteção por palavra-passe os tokens não vão. Depois da primeira vez tudo funciona a partir da cache local; sincronizar só obtém a parte nova.</p>
 
       <h4 class="mh">2 · Glicose &amp; unidades</h4>
       <p>O Nightscout guarda a glicose em mg/dL; o IDA converte tudo num único sítio para <b>mmol/L</b> (÷ 18,018) e nunca mostra mg/dL. Alvo <b>3,9–10,0</b> mmol/L (consenso internacional, Battelino 2019).</p>
@@ -1751,8 +1767,8 @@ Object.assign(I18N, { "meth.body":{
       <h4 class="mh">9 · Refeições</h4>
       <p>Uma "refeição" = ≥ 30 g de hidratos, isolada (sem outros hidratos em −2…+4 h) e <b>com um bólus de refeição manual</b> à volta. Hidratos sem bólus (resgate de hipo, entrada solta) não contam. Por refeição a app calcula a curva de absorção subtraindo a descida <i>esperada</i> da insulina à subida medida da glicose; daí resultam <b>t50</b> (ao fim de quantos minutos metade é absorvida), o <b>pico</b> e o <b>timing de prebólus</b> = o seu bólus manual relativamente à entrada de hidratos (negativo = antes). Nota: a hora de entrada é o momento do bólus, não necessariamente quando começou a comer.</p>
 
-      <h4 class="mh">10 · Valores para discussão</h4>
-      <p>Por período do dia (noite/manhã/tarde/noite) a app põe o seu valor <b>medido</b> ao lado do <b>definido</b>, e se este se desviar &gt; 20%, um <b>número candidato</b> concreto: um meio passo conservador e o valor medido completo. O efeito é calculado com uma simulação simples nos seus próprios dados (insulina extra × a sua sensibilidade, via a curva de ação da insulina). Um <b class="lok">✓</b> = medido alinha; <b>—</b> = dados a menos (sem juízo); a <b>seta</b> = um valor para discussão. <span class="prisk">Vermelho</span> = a simulação vê mais valores baixos. Que o corpo contraria sozinho uma hipo iminente não está incluído — por isso "baixo" é um aviso, não uma contagem exata.</p>
+      <h4 class="mh">10 · Proposta de perfil</h4>
+      <p>O IDA recalcula o seu perfil AAPS a partir dos seus dados. <b>Basal</b> por hora: o que o loop realmente entrega em jejum (basal temporária + SMB), × 0,8, limitado a 0,7–1,5× o valor atual e mais baixo onde tem hipos frequentes; cada bloco começa uma hora antes porque a basal demora cerca de uma hora. <b>ISF</b>: o meio do perfil × autosens e 100 ÷ dose diária, no máximo −20%/+15%. <b>Rácio HC</b>: medido nas refeições, no máximo 20% diferente por bloco; não mais forte com hipos frequentes depois de comer, não mais fraco com altas frequentes, e não mais forte se a subida mostrar mais hidratos do que registou (a não ser que ative "Conto com precisão"). Tudo está em <b>Perfil</b>, pronto a copiar.</p>
 
       <h4 class="mh">11 · Antes/depois de uma alteração</h4>
       <p>Se marcar uma alteração de definição no diário, a app compara 14 dias antes com 14 dias depois (só dias com ≥ 70% de cobertura). <b>Nota:</b> ganhos após um período pior podem em parte ser regressão à média — uma comparação não é prova de causa.</p>
@@ -1763,8 +1779,8 @@ Object.assign(I18N, { "meth.body":{
       <h4 class="mh">13 · Cronologia &amp; achados</h4>
       <p>O Resumo constrói uma narrativa: <b>Agora</b> (último valor, IOB/COB) → <b>Hoje</b> (a noite, curva do dia) → <b>Esta semana</b> (padrões de refeição, basal e alterações; nunca recua para vazio) → <b>Este mês</b> (números-chave + medido-vs-definido). Cada achado traz a sua evidência (n + ressalva) e pode colocá-lo na sua <b>lista de consulta</b> para o relatório.</p>
 
-      <h4 class="mh">14 · O que isto explicitamente não é</h4>
-      <p>Sem dose, sem prescrição, sem aconselhamento médico. Tudo é uma <b>observação</b> ou um <b>ponto de discussão para a sua equipa de tratamento</b>. Não calcule nada por si na sua bomba; altere definições apenas em consulta, e uma coisa de cada vez.</p>
+      <h4 class="mh">14 · O que o IDA não faz</h4>
+      <p>O IDA só lê: nunca escreve na bomba, no loop ou nas definições. Os valores do perfil introduz você no AAPS. Mude uma coisa de cada vez e veja o efeito durante uma semana (Equipa › Efeito).</p>
 
       <p class="mnote" style="margin-top:1rem">Os limiares de referência seguem o consenso internacional (Battelino et al., 2019, <i>Diabetes Care</i>); o modelo de insulina e os cálculos de sensibilidade seguem a referência oref/AndroidAPS.</p>
     ` } });
@@ -1862,7 +1878,7 @@ async function renderEffects(){
     else if(dT<=-0.05||dB>=0.02){ out=TL("Verslechterd","Worse","Pior"); cls="dn"; }
     else if(dT>=0.05&&dB<=0.01){ out=r.dip?TL("Onduidelijk (terugval naar gemiddelde mogelijk)","Unclear (regression to the mean possible)","Pouco claro (regressão à média possível)"):TL("Verbeterd","Improved","Melhorado"); cls=r.dip?"":"up"; }
     else { out=TL("Gelijk","Unchanged","Igual"); cls=""; }
-    const rb=(cls==="dn")?`<div class="pgr block">${TL("Overweeg terug te draaien of bij te stellen. De app doet dat nooit zelf.","Consider rolling back or adjusting. The app never does this itself.","Discuta com a equipa se deve reverter ou ajustar. A app nunca o faz sozinha.")}</div>`:"";
+    const rb=(cls==="dn")?`<div class="pgr block">${TL("Overweeg terug te draaien of bij te stellen. De app doet dat nooit zelf.","Consider rolling back or adjusting. The app never does this itself.","Considere reverter ou ajustar. A app nunca o faz sozinha.")}</div>`:"";
     const d=(x,y,f)=>`${f(x)} → <b>${f(y)}</b>`;
     return `<div class="logentry">${head}<div class="ba"><div class="verdict ${cls}">${out}</div>
       <div class="bar"><span>${TL("In bereik","In range","No alvo")}</span><span>${d(b.tir,c.tir,pct0)}</span></div>
@@ -2057,7 +2073,7 @@ function anHours(glucose, q){
   const tr=rows.map(r=>`<div class="warow"><span>${String(r.h).padStart(2,"0")}:00</span><span>${nl1(r.p10)}–${nl1(r.p90)}</span><span style="${r.low>0.04?"color:var(--t-low);font-weight:600":""}">${pct0(r.low)}</span><span style="${r.high>0.25?"color:var(--t-high);font-weight:600":""}">${pct0(r.high)}</span><span>${r.ep}</span></div>`).join("");
   return `<div class="watable"><div class="warow head"><span>${TL("uur","hour","hora")}</span><span>p10–p90</span><span>&lt;3,9</span><span>&gt;10</span><span>${TL("hypo-starts","hypo starts","início hipo")}</span></div>${tr}</div>`+
     `<div class="obs" style="margin-top:.5rem">${TL(`Meeste tijd onder 3,9: <b>${String(worstLow.h).padStart(2,"0")}:00</b> (${pct0(worstLow.low)}). Meeste tijd boven 10: <b>${String(worstHigh.h).padStart(2,"0")}:00</b> (${pct0(worstHigh.high)}).`,`Most time below 3.9: <b>${String(worstLow.h).padStart(2,"0")}:00</b> (${pct0(worstLow.low)}). Most time above 10: <b>${String(worstHigh.h).padStart(2,"0")}:00</b> (${pct0(worstHigh.high)}).`,`Mais tempo abaixo de 3,9: <b>${String(worstLow.h).padStart(2,"0")}:00</b> (${pct0(worstLow.low)}). Mais tempo acima de 10: <b>${String(worstHigh.h).padStart(2,"0")}:00</b> (${pct0(worstHigh.high)}).`)}</div>`+
-(worstLow.low>0.04?`<div class="obs" style="margin-top:.4rem"><b>${TL("Idee","Idea","Ideia para a equipa (só texto)")}</b>: ${TL(`rond ${String(worstLow.h).padStart(2,"0")}:00 zit je boven de ATTD-grens voor laag. Bespreek of een tijdelijk hoger streefdoel of een Automation/profielschakeling in dat uur past. De app wijzigt nooit iets in AAPS of je pomp.`,`around ${String(worstLow.h).padStart(2,"0")}:00 you exceed the ATTD limit for lows. Discuss whether a temporary higher target or an Automation/profile switch fits that hour. The app never changes anything in AAPS or your pump.`,`por volta das ${String(worstLow.h).padStart(2,"0")}:00 excede o limite ATTD para hipos. Discuta um alvo temporário mais alto ou uma Automation. A app nunca altera nada no AAPS ou na bomba.`)}</div>`:"")+
+(worstLow.low>0.04?`<div class="obs" style="margin-top:.4rem"><b>${TL("Idee","Idea","Ideia")}</b>: ${TL(`rond ${String(worstLow.h).padStart(2,"0")}:00 zit je boven de ATTD-grens voor laag. Een tijdelijk hoger streefdoel of een Automation in dat uur kan helpen.`,`around ${String(worstLow.h).padStart(2,"0")}:00 you exceed the ATTD limit for lows. A temporary higher target or an Automation in that hour can help.`,`por volta das ${String(worstLow.h).padStart(2,"0")}:00 excede o limite ATTD para hipos. Um alvo temporário mais alto ou uma Automation nessa hora pode ajudar.`)}</div>`:"")+
     `<div class="muted" style="margin-top:.4rem">${TL(`${days} bruikbare dagen. Rood = boven de ATTD-grens (4% / 25%). Observatie, geen instelwaarde.`,`${days} usable days. Coloured = beyond ATTD limit (4% / 25%). Observation, not a setting.`,`${days} dias utilizáveis. Destacado = acima do limite ATTD (4% / 25%). Observação, não uma definição.`)}</div>`;
 }
 
@@ -2283,7 +2299,7 @@ async function buildReport(){
   const clHtml = clist.length
     ? `<h2>${TL("Door de patiënt aangevinkt","Flagged by the patient","Assinalado pelo paciente")}</h2><ul class="rlist">${clist.map(c=>`<li>${esc(c.title)}</li>`).join("")}</ul>` : "";
 
-  return `<div class="rtoolbar"><button class="ghost" id="btnRepPrint">🖨 ${TL("Opslaan als PDF","Save as PDF","Guardar como PDF")}</button><button class="ghost" id="btnRepClose">✕ ${TL("Sluiten","Close","Fechar")}</button></div>`+
+  return `<div class="rtoolbar"><button class="ghost" id="btnRepPrint">${TL("Opslaan als PDF","Save as PDF","Guardar como PDF")}</button><button class="ghost" id="btnRepClose">✕ ${TL("Sluiten","Close","Fechar")}</button></div>`+
     `<div class="rep"><h1>${TL("Consultrapport — IDA","Consult report — IDA","Relatório de consulta — IDA")}</h1>`+
     `<div class="rmeta">${TL("Periode","Period","Período")} ${fd(q.from)} – ${fd(q.to)} · ${q.usable.length}/${q.days.length} ${TL("dagen","days","dias")} · ${pct0(q.coverage)} ${TL("dekking","coverage","cobertura")} · ${TL("opgesteld","generated","gerado")} ${fd(Date.now())}</div>`+
     `<h2>${TL("Kernwaarden","Key values","Valores-chave")}</h2><table>${kern}</table>`+
@@ -3589,5 +3605,6 @@ snapshotI18n(); applyStaticI18n();   // NL vastleggen, daarna vaste teksten in d
 })();
 </script>
 <script src="js/ida3.js"></script>
+<script src="js/ida4.js"></script>
 </body>
 </html>

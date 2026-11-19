@@ -14,8 +14,10 @@ await page.fill('#inUrl','https://mock.nightscout.test');await page.fill('#inTok
 await page.click('#btnSave');
 await page.waitForFunction(()=>!document.getElementById('secInsulin').hidden,{timeout:40000}).catch(()=>{});
 await page.waitForTimeout(300);
-// 3-schermen-test: klik Analyses → view wisselt, tegels zichtbaar
-await page.click('#tabbar .tab[data-tab="analyses"]'); await page.waitForTimeout(300);
+// Dag-tab → eigen view; Patronen hangt onder Dag (rij), de onderbalk blijft op Dag staan
+await page.click('#tabbar .tab[data-tab="dag"]'); await page.waitForTimeout(300);
+const dag=await page.evaluate(()=>({vis:!document.querySelector('.view[data-view="dag"]').hidden, moments:document.querySelectorAll('#dagBody .mrow').length, week:document.querySelectorAll('#dagBody .wday').length}));
+await page.click('#dagBody [data-go="analyses"]'); await page.waitForTimeout(300);
 const r=await page.evaluate(()=>({
   aria:document.querySelector('#tabbar .tab[aria-current="page"]')?.dataset.tab,
   anaVis:!document.querySelector('.view[data-view="analyses"]').hidden,
@@ -23,5 +25,7 @@ const r=await page.evaluate(()=>({
   groepen:document.querySelectorAll('.view[data-view="analyses"] .h3').length,
   secties:document.querySelectorAll('.view[data-view="analyses"] details').length }));
 console.log('na klik analyses: aria=',r.aria,'| analyses zichtbaar:',r.anaVis,'| overzicht dicht:',r.ovHid,'| groepen:',r.groepen,'| secties:',r.secties);
-console.log('errors:',errors.length?errors:'geen');
+console.log('dag:',JSON.stringify(dag));
+const ok=dag.vis&&dag.week>=1&&r.aria==='dag'&&r.anaVis&&r.ovHid&&r.groepen>=3;
+console.log('errors:',errors.length?errors:'geen'); console.log('RESULTAAT:',ok?'OK':'FOUT');
 await browser.close();
