@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'">
+<meta name="robots" content="noindex">
+<title>IDA sleutels voor meldingen</title>
+<style>
+:root{--bg:#F6F5F2;--ink:#141518;--muted:#55595F;--line:#DEDCD7}
+@media (prefers-color-scheme:dark){:root{--bg:#141518;--ink:#F6F5F2;--muted:#A8AEB5;--line:#33363B}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:640px;margin:0 auto;padding:32px 16px 48px}
+h1{font-size:28px;letter-spacing:-.02em;margin:0 0 8px}
+p{color:var(--muted);margin:0 0 16px}
+label{display:block;font-size:13px;font-weight:600;margin:20px 0 6px}
+textarea{width:100%;min-height:64px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:transparent;color:var(--ink);font:13px/1.4 ui-monospace,Menlo,monospace;resize:vertical}
+button{height:44px;padding:0 18px;border:0;border-radius:10px;background:var(--ink);color:var(--bg);font:inherit;font-weight:600;cursor:pointer}
+button.ghost{background:transparent;color:var(--ink);border:1px solid var(--ink);height:36px;font-size:14px;margin-top:6px}
+.warn{border-top:1px solid var(--ink);padding-top:12px;margin-top:28px;font-size:14px;color:var(--ink)}
+</style>
+</head>
+<body>
+<main>
+  <h1>Sleutels voor meldingen</h1>
+  <p>Maakt een sleutelpaar (VAPID) voor de IDA-meldingenserver. Alles gebeurt in deze browser; er wordt niets verstuurd of bewaard.</p>
+  <button id="gen" type="button">Maak sleutels</button>
+
+  <label for="pub">Publieke sleutel → Railway <code>VAPID_PUBLIC</code> én IDA › Instellingen › Meldingen</label>
+  <textarea id="pub" readonly></textarea>
+  <button class="ghost" type="button" data-copy="pub">Kopieer publieke sleutel</button>
+
+  <label for="priv">Geheime sleutel → alleen Railway <code>VAPID_PRIVATE</code></label>
+  <textarea id="priv" readonly></textarea>
+  <button class="ghost" type="button" data-copy="priv">Kopieer geheime sleutel</button>
+
+  <label for="path">Geheim pad → Railway <code>SUBSCRIBE_PATH</code></label>
+  <textarea id="path" readonly></textarea>
+  <button class="ghost" type="button" data-copy="path">Kopieer pad</button>
+
+  <p class="warn">De geheime sleutel en het pad horen alleen in Railway. Niet in de app, niet in een chat, niet in GitHub. Sluit deze pagina als je klaar bent.</p>
+</main>
+<script>
+const b64u = buf => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+document.getElementById("gen").onclick = async () => {
+  const kp = await crypto.subtle.generateKey({ name: "ECDSA", namedCurve: "P-256" }, true, ["sign", "verify"]);
+  const raw = await crypto.subtle.exportKey("raw", kp.publicKey);
+  const jwk = await crypto.subtle.exportKey("jwk", kp.privateKey);
+  document.getElementById("pub").value = b64u(raw);
+  document.getElementById("priv").value = jwk.d;
+  document.getElementById("path").value = b64u(crypto.getRandomValues(new Uint8Array(24)));
+};
+document.querySelectorAll("[data-copy]").forEach(btn => btn.onclick = async () => {
+  const v = document.getElementById(btn.dataset.copy).value; if (!v) return;
+  const t0 = btn.textContent; try { await navigator.clipboard.writeText(v); btn.textContent = "Gekopieerd"; setTimeout(() => btn.textContent = t0, 1500); } catch (_) { document.getElementById(btn.dataset.copy).select(); }
+});
+</script>
+</body>
+</html>

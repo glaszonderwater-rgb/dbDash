@@ -57,7 +57,7 @@ async function loadData(now) {
 // ── Opslag: Supabase (blijft bewaard bij herstart op Railway) of een lokaal bestand ──
 const SB = env.SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY ? env.SUPABASE_URL.replace(/\/+$/, '') + '/rest/v1' : null;
 async function sb(path, init) {
-  const r = await fetch(SB + path, { ...init, headers: { apikey: env.SUPABASE_SERVICE_ROLE_KEY, authorization: 'Bearer ' + env.SUPABASE_SERVICE_ROLE_KEY, 'content-type': 'application/json', ...(init && init.headers) } });
+  const r = await fetch(SB + path, { ...init, headers: { apikey: env.SUPABASE_SERVICE_ROLE_KEY, ...(env.SUPABASE_SERVICE_ROLE_KEY.startsWith('eyJ') ? { authorization: 'Bearer ' + env.SUPABASE_SERVICE_ROLE_KEY } : {}), 'content-type': 'application/json', ...(init && init.headers) } });
   if (!r.ok) throw new Error(`Supabase ${path}: ${r.status} ${await r.text()}`);
   return r.status === 204 ? null : r.json().catch(() => null);
 }
@@ -89,9 +89,11 @@ const store = {
   },
 };
 
+const status = { started: new Date().toISOString(), lastCheck: null, lastError: null, lastSent: null, checks: 0 };
 async function check({ stateless, sent, file }) {
-  const now = Date.now();
+  const now = Date.now(); status.checks++;
   const { glucose, treatments, off } = await loadData(now);
+  status.lastCheck = new Date(now).toISOString(); status.lastGlucose = glucose.length ? new Date(glucose[glucose.length - 1].ts).toISOString() : null; status.lastError = null;
   const opts = { now, tzOffsetMin: off };
   const iv = (+env.INTERVAL_MIN || 10) * MIN;
   let list = stateless ? newMoments(glucose, treatments, opts, iv) : idaMoments(glucose, treatments, opts);
@@ -107,6 +109,7 @@ async function check({ stateless, sent, file }) {
       catch (e) { console.error('Melding mislukt:', e.statusCode || e.message); if (e.statusCode === 404 || e.statusCode === 410) await store.dropSub(s.endpoint, file); }
     }
     if (sent) await store.markSent(m.key, sent);
+    status.lastSent = { key: m.key, at: new Date().toISOString(), ok, of: targets.length };
     console.log(`Verstuurd: ${m.key} (${ok}/${targets.length})`);
   }
 }
@@ -129,9 +132,25 @@ if (process.argv.includes('--serve')) {
       });
       return;
     }
+    if (req.method === 'POST' && req.url === `/${env.SUBSCRIBE_PATH}/test`) {
+      (async () => {
+        const webpush = (await import('web-push')).default;
+        webpush.setVapidDetails(env.VAPID_SUBJECT || 'mailto:ida@example.invalid', env.VAPID_PUBLIC, env.VAPID_PRIVATE);
+        const targets = await store.subs(file); let ok = 0;
+        for (const s of targets) { try { await webpush.sendNotification(s, JSON.stringify({ title: 'IDA', body: 'Testmelding: meldingen werken.', tag: 'ida-test', url: './' }), { TTL: 600 }); ok++; } catch (e) { console.error('Test mislukt:', e.statusCode || e.message); } }
+        res.writeHead(200, { ...cors, 'content-type': 'application/json' }); res.end(JSON.stringify({ ok, of: targets.length }));
+      })().catch(e => { res.writeHead(500, cors); res.end(e.message); });
+      return;
+    }
+    if (req.method === 'GET' && req.url === '/status') {
+      (async () => { let subsN = null; try { subsN = (await store.subs(file)).length; } catch (_) { }
+        res.writeHead(200, { ...cors, 'content-type': 'application/json' });
+        res.end(JSON.stringify({ ok: !status.lastError, storage: SB ? 'supabase' : 'bestand', subscriptions: subsN, intervalMin: +env.INTERVAL_MIN || 5, ...status }, null, 1)); })();
+      return;
+    }
     res.writeHead(200, { ...cors, 'content-type': 'text/plain' }); res.end('IDA meldingenserver');
   }).listen(+env.PORT || 8787, () => console.log('Luistert op poort', +env.PORT || 8787));
-  const tick = () => check({ stateless: false, sent, file }).catch(e => console.error(e.message));
+  const tick = () => check({ stateless: false, sent, file }).catch(e => { status.lastError = e.message; console.error(e.message); });
   tick(); setInterval(tick, (+env.INTERVAL_MIN || 5) * MIN);
   setInterval(() => sent.clear(), DAY);
 } else {

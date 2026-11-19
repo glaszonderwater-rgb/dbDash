@@ -1384,6 +1384,7 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
   <label for="inPushKey" data-i18n="cfg.pushKey">Publieke sleutel van de server (VAPID)</label>
   <input id="inPushKey" type="text" placeholder="B…" autocomplete="off" spellcheck="false">
   <button type="button" class="ghost" id="btnPushCopy" style="margin-top:.5rem;font-size:.8rem" data-i18n="cfg.pushCopy">Aanmelden en aanmelding kopiëren</button>
+  <button type="button" class="ghost" id="btnPushTest" style="margin-top:.5rem;font-size:.8rem" data-i18n="cfg.pushTest">Stuur testmelding</button>
   <label class="aitog" style="margin-top:.8rem"><input type="checkbox" id="inProtect"> <span>Token en sleutel met wachtwoord beveiligen</span></label>
   <input id="inPass" type="password" placeholder="wachtwoord (nodig bij elke keer opslaan)" autocomplete="new-password" hidden>
   <div class="hint">Aanrader op GitHub Pages: andere pagina's op dezelfde herkomst kunnen anders je token lezen. Vergeet je het wachtwoord, dan vul je het token opnieuw in.</div>
@@ -1563,6 +1564,7 @@ Object.assign(I18N, {
   "cfg.notifyOn":{ nl:"Meldingen aan", en:"Notifications on", pt:"Notificações ligadas" },
   "cfg.pushUrl":{ nl:"Meldingenserver (optioneel)", en:"Notification server (optional)", pt:"Servidor de notificações (opcional)" },
   "cfg.pushKey":{ nl:"Publieke sleutel van de server (VAPID)", en:"Server public key (VAPID)", pt:"Chave pública do servidor (VAPID)" },
+  "cfg.pushTest":{ nl:"Stuur testmelding", en:"Send test notification", pt:"Enviar notificação de teste" },
   "cfg.pushCopy":{ nl:"Aanmelden en aanmelding kopiëren", en:"Subscribe and copy subscription", pt:"Subscrever e copiar subscrição" },
   "cfg.nsWriteTok":{ nl:"Token met schrijfrechten", en:"Token with write access", pt:"Token com escrita" },
   "ai.label":{ nl:"Je vraag", en:"Your question", pt:"A sua pergunta" },
@@ -3557,6 +3559,7 @@ snapshotI18n(); applyStaticI18n();   // NL vastleggen, daarna vaste teksten in d
   // Automatisch synchroniseren: bij openen, elke 5 minuten en als je terugkomt in de app.
   setTimeout(()=>{ try{ autoSync(); }catch(_){} }, 1500);
   setInterval(()=>{ try{ autoSync(); }catch(_){} try{ notifyCheck(); }catch(_){} }, 5*60e3);
+  document.getElementById("btnPushTest").onclick=()=>{ cfg.pushUrl=document.getElementById("inPushUrl").value.trim().replace(/\/+$/,""); cfg.pushKey=document.getElementById("inPushKey").value.trim(); pushTest(); };
   document.getElementById("btnPushCopy").onclick=()=>{ cfg.pushUrl=document.getElementById("inPushUrl").value.trim().replace(/\/+$/,""); cfg.pushKey=document.getElementById("inPushKey").value.trim(); pushCopy(); };
   document.addEventListener("visibilitychange",()=>{ if(!document.hidden){ try{ autoSync(); }catch(_){} } });
 })();

@@ -1,7 +1,7 @@
 # IDA — overdracht voor een nieuwe sessie
 
 Lees dit eerst. Het beschrijft hoe de app werkt, welke afspraken gelden en wat er nog openstaat.
-Laatste stand: v34 (19 nov 2026), branch `main`, GitHub Pages: https://glaszonderwater-rgb.github.io/dbDash/
+Laatste stand: v35 (19 nov 2026), branch `main`, GitHub Pages: https://glaszonderwater-rgb.github.io/dbDash/
 
 ## Wat IDA is
 Persoonlijke offline PWA voor één gebruiker (Focko) met AAPS closed loop + Omnipod Dash, Libre via xDrip+, data uit Nightscout.
@@ -23,7 +23,7 @@ IDA leest Nightscout, analyseert en stelt concrete AAPS-profielwaarden voor (bas
 - `js/ida3.js` — geen uitklapblokken: rijen + detailpagina's (`openDetail`, `closeDetail`), Vandaag max 3 kaarten.
 - `js/moments.js` — pure regels voor "advies vóór het moment" (gedeeld met server).
 - `js/push.js` — moment bovenaan Vandaag, lokale meldingen, Web Push-aanmelding.
-- `sw.js` — service worker; **VERSION ophogen bij elke release** (nu `v34`) en nieuwe js-bestanden aan `SHELL` toevoegen.
+- `sw.js` — service worker; **VERSION ophogen bij elke release** (nu `v35`) en nieuwe js-bestanden aan `SHELL` toevoegen.
 - `server/` — meldingenserver (`push.mjs`, README). `.github/workflows/ida-push.yml` doet niets zonder geheimen.
 
 Klassieke scripts (geen modules), zodat `file://` werkt. Globale staat: `_ctx`, `_dsAll`, `_dsRecent`, `_P` (profielvoorstel), `_idaAnns`, `cfg`.
@@ -51,7 +51,7 @@ Playwright-core wordt gebruikt; `CHROME_PATH` naar een Chromium. Nightly data-ar
    - Vastleggen: lijst (sport, alcohol met aantal, ziek, stress, pen), wanneer, opslaan als Nightscout-notitie.
    - Melding op vergrendelscherm vóór het moment.
    Het ontwerp-canvas staat als privé artefact op het oorspronkelijke account.
-3. **Meldingenserver** nog niet gekoppeld. Plan: Railway (root `server/`, `railway.json`) + Supabase (`server/supabase.sql`) — zie `server/README.md`. `server/moments.cjs` is een kopie van `js/moments.js` en moet gelijk blijven (momentcheck bewaakt dat).
+3. **Meldingenserver** nog niet gekoppeld. Plan: Railway (root `server/`, `railway.json`) + Supabase (`server/supabase.sql`). **Draaiboek: `DEPLOY.md`** (stap voor stap, ook voor de Chrome-extensie). Sleutels maken: `tools/vapid.html`. Controle: `GET /status`, testmelding via IDA › Instellingen. `server/moments.cjs` is een kopie van `js/moments.js` en moet gelijk blijven (momentcheck bewaakt dat).
 4. Bekende beperking: `riseCarbEstimate` telt tijdelijke basaalverhogingen niet mee.
 
 ## Werkwijze

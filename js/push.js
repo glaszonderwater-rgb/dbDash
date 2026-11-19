@@ -68,3 +68,15 @@ async function notifyEnable(){
   if(Notification.permission==="default") try{ await Notification.requestPermission(); }catch(_){}
   if(cfg.pushKey) try{ await pushSubscribe(); }catch(e){ toast(e.message); }
 }
+
+// Testmelding via de server (controleert de hele keten: server → pushdienst → telefoon)
+async function pushTest(){
+  try{
+    if(!cfg.pushUrl) throw new Error(TL("Vul eerst het adres van de meldingenserver in.","Enter the notification server address first.","Introduza primeiro o endereço do servidor."));
+    await pushSubscribe();
+    const r=await fetch(cfg.pushUrl.replace(/\/+$/,"")+"/test",{ method:"POST" });
+    if(!r.ok) throw new Error("Server: "+r.status);
+    const j=await r.json();
+    toast(j.ok?TL(`Testmelding verstuurd naar ${j.ok} apparaat/apparaten.`,`Test sent to ${j.ok} device(s).`,`Teste enviado para ${j.ok} aparelho(s).`):TL("Server bereikt, maar geen apparaat kreeg de melding.","Server reached, but no device received it.","Servidor alcançado, mas nenhum aparelho recebeu."));
+  }catch(e){ toast(e.message); }
+}
