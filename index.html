@@ -971,7 +971,7 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
       <div class="legend">
         <span><i style="background:var(--inRange)"></i><span data-i18n="legend.median">mediaan</span></span>
         <span><i style="background:#bfe6d6"></i><span data-i18n="legend.mid50">middelste 50%</span></span>
-        <span><i style="background:#e5f2ec"></i>10–90%</span>
+        <span><i style="background:#e5f2ec"></i>5–95%</span>
       </div>
       <div class="obs" id="agpObs"></div>
     </div>
@@ -1256,6 +1256,13 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
   <div id="dagHold" hidden></div>
   </div>
 
+  <!-- ANALYSES (32) — oorzaken en gevolgen -->
+  <div class="view" data-view="inzicht" hidden>
+  <div class="subhead"><button class="iback" data-back="dag" aria-label="Terug"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button><h1 class="ititle" data-i18n="tab.inzicht">Analyses</h1></div>
+  <div id="inzBody"></div>
+  <div id="inzHold" hidden></div>
+  </div>
+
   <!-- PROFIEL — werkbank -->
   <div class="view" data-view="profiel" hidden>
   <button class="iback" id="profBack" aria-label="Terug" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>
@@ -1388,6 +1395,7 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
   <label for="inNsWriteTok" data-i18n="cfg.nsWriteTok">Token met schrijfrechten</label>
   <input id="inNsWriteTok" type="password" autocomplete="off" spellcheck="false" placeholder="careportal-…">
   <label class="aitog" style="margin-top:1.1rem"><input type="checkbox" id="inCarbsOk"> <span data-i18n="cfg.carbsOk">Ik tel mijn koolhydraten nauwkeurig (wegen of etiket)</span></label>
+  <label class="aitog" style="margin-top:.6rem"><input type="checkbox" id="inCycle"> <span data-i18n="cfg.cycle">Menstruatie bijhouden (knop bij loggen)</span></label>
   <div class="hint" data-i18n="cfg.carbsOkHint">Dan mag IDA je KH-ratio sterker maken als je na het eten structureel hoger uitkomt dan je invoer verklaart. Zonder dit vinkje gaat IDA ervan uit dat je dan te weinig hebt geteld.</div>
   <label style="margin-top:1.1rem" data-i18n="cfg.notifyL">Meldingen vóór het moment</label>
   <div class="hint" data-i18n="cfg.notifyHint">Bijvoorbeeld vóór het avondeten als je al daalt. Zonder server komt een melding alleen als IDA open is of net op de achtergrond staat. Met een meldingenserver ook als IDA dicht is.</div>
@@ -1603,6 +1611,8 @@ Object.assign(I18N, {
   "tab.analyses":{ en:"Patterns", pt:"Padrões" },
   "tab.consult":{ en:"Progress", pt:"Progresso" },
   "tab.day":{ en:"Day", pt:"Dia" },
+  "tab.inzicht":{ en:"Analyses", pt:"Análises" },
+  "cfg.cycle":{ en:"Track my period (button when logging)", pt:"Registar menstruação" },
   "tab.profile":{ en:"Profile", pt:"Perfil" },
   "btn.back":{ en:"Back", pt:"Voltar" },
   // Instellingen
@@ -2348,7 +2358,7 @@ async function _refresh(){
   const timeline = glucose.length ? await loadProfiles(cfg.days) : null;
   _dsRecent = glucose.length ? await loadDeviceStatus() : [];
   _dsAll = glucose.length ? await loadDeviceStatusRange(Math.min(cfg.days,90)) : [];
-  try{ _penKeys = penDayKeys(await DB.all("annotations")); }catch(_){ _penKeys=new Set(); }
+  try{ const _an=await DB.all("annotations"); _penKeys = penDayKeys(_an); _medKeys = medDayKeys(_an); }catch(_){ _penKeys=new Set(); _medKeys=new Set(); }
   render(glucose, treatments, timeline);
   try{ await renderIda(); }catch(e){ console.error(e); }
   try{ renderMoment(); }catch(e){ console.error(e); }
@@ -2377,7 +2387,7 @@ document.getElementById("btnCfg").onclick = ()=>{
   document.getElementById("inLang").value=LANG;
   document.getElementById("inAiOn").checked=!!cfg.aiOn;
   document.getElementById("inNsWrite").checked=!!cfg.nsWrite; document.getElementById("inNsWriteTok").value=cfg.nsWriteToken||"";
-  document.getElementById("inCarbsOk").checked=!!cfg.carbsAccurate; document.getElementById("inNotify").checked=!!cfg.notify; document.getElementById("inPushUrl").value=cfg.pushUrl||""; document.getElementById("inPushKey").value=cfg.pushKey||"";
+  document.getElementById("inCarbsOk").checked=!!cfg.carbsAccurate; { const cy=document.getElementById("inCycle"); if(cy) cy.checked=!!cfg.cycle; } document.getElementById("inNotify").checked=!!cfg.notify; document.getElementById("inPushUrl").value=cfg.pushUrl||""; document.getElementById("inPushKey").value=cfg.pushKey||"";
   document.getElementById("inAiUrl").value=cfg.aiUrl||""; document.getElementById("inAiModel").value=cfg.aiModel||""; document.getElementById("inAiKey").value=cfg.aiKey||"";
   document.getElementById("cfgErr").hidden=true; openDlg(); };
 document.getElementById("inLang").onchange=e=>setLang(e.target.value);   // direct effect, geen "Bewaren" nodig
@@ -2408,7 +2418,7 @@ document.getElementById("btnSave").onclick = async ()=>{
   cfg.aiUrl=document.getElementById("inAiUrl").value.trim().replace(/\/+$/,"");
   cfg.aiModel=document.getElementById("inAiModel").value.trim();
   cfg.nsWrite=document.getElementById("inNsWrite").checked; cfg.nsWriteToken=document.getElementById("inNsWriteTok").value.trim();
-  cfg.carbsAccurate=document.getElementById("inCarbsOk").checked;
+  cfg.carbsAccurate=document.getElementById("inCarbsOk").checked; { const cy=document.getElementById("inCycle"); if(cy) cfg.cycle=cy.checked; }
   { const was=!!cfg.notify; cfg.notify=document.getElementById("inNotify").checked; cfg.pushUrl=document.getElementById("inPushUrl").value.trim().replace(/\/+$/,""); cfg.pushKey=document.getElementById("inPushKey").value.trim();
     if(cfg.notify && !was){ try{ notifyEnable(); }catch(_){} } }
   cfg.aiKey=document.getElementById("inAiKey").value.trim();
@@ -3606,5 +3616,6 @@ snapshotI18n(); applyStaticI18n();   // NL vastleggen, daarna vaste teksten in d
 </script>
 <script src="js/ida3.js"></script>
 <script src="js/ida4.js"></script>
+<script src="js/ida5.js"></script>
 </body>
 </html>

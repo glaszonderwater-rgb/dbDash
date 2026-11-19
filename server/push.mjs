@@ -104,7 +104,11 @@ async function check({ stateless, sent, file }) {
   const now = Date.now(); status.checks++;
   const { glucose, treatments, off } = await loadData(now);
   status.lastCheck = new Date(now).toISOString(); status.lastGlucose = glucose.length ? new Date(glucose[glucose.length - 1].ts).toISOString() : null; status.lastError = null;
-  const opts = { now, tzOffsetMin: off };
+  // logboek en uitgezette meldingen uit de back-up van de app; actieve insuline uit de laatste loopstatus
+  let anns = [], mute = [], iob = null;
+  try { const st = await store.getState(file); if (st) { anns = st.annotations || []; mute = (st.cfg && st.cfg.mute5) || []; } } catch (e) { console.error(e.message); }
+  try { const ds = await ns('/api/v1/devicestatus.json', { count: 3 }); for (const d of ds) { const oa = d.openaps || {}, io = Array.isArray(oa.iob) ? oa.iob[0] : oa.iob; const v = io && +io.iob; if (isFinite(v) && Date.parse(d.created_at) > now - 15 * MIN) { iob = v; break; } } } catch (e) { console.error(e.message); }
+  const opts = { now, tzOffsetMin: off, anns, mute, iob };
   const iv = (+env.INTERVAL_MIN || 10) * MIN;
   let list = stateless ? newMoments(glucose, treatments, opts, iv) : idaMoments(glucose, treatments, opts);
   if (!stateless) { const keep = []; for (const m of list) if (!(await store.wasSent(m.key, sent))) keep.push(m); list = keep; }

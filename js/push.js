@@ -13,14 +13,16 @@ function currentMoments(){
   if(typeof idaMoments!=="function" || !_ctx || !_ctx.glucose) return [];
   const now=Date.now(); const off=(typeof tzOffsetAt==="function" && tzOffsetAt(now)!=null) ? tzOffsetAt(now) : -new Date().getTimezoneOffset();
   let st; try{ const r=mealBolusRisk(_ctx); st=r&&r.fall.n>=5&&r.ok.n>=5?{ fallPct:Math.round(100*r.fall.hypo/r.fall.n), okPct:Math.round(100*r.ok.hypo/r.ok.n) }:null; }catch(_){ st=undefined; }
-  try{ return idaMoments(_ctx.glucose, _ctx.treatments, { now, tzOffsetMin:off, stats:st }); }catch(e){ console.error(e); return []; }
+  let iob=null; try{ const ds=(typeof _dsAll!=="undefined"&&_dsAll)||[], d=ds[ds.length-1]; if(d&&now-d.ts<15*60e3) iob=d.iob; }catch(_){}
+  const anns=(typeof _idaAnns!=="undefined"&&_idaAnns)||[];
+  try{ return idaMoments(_ctx.glucose, _ctx.treatments, { now, tzOffsetMin:off, stats:st, anns, iob, mute:cfg.mute5||[] }); }catch(e){ console.error(e); return []; }
 }
 
 // In de app: het moment staat bovenaan Vandaag
 function renderMoment(){
   const host=document.getElementById("assist"); if(!host) return;
   document.getElementById("idaMoment")?.remove();
-  const m=currentMoments().find(x=>x.kind==="eten"); if(!m) return;
+  const m=currentMoments().find(x=>x.kind!=="vraag"); if(!m) return;
   const el=document.createElement("section"); el.id="idaMoment"; el.className="imoment";
   el.innerHTML=`<span class="imk">${TL("NU","NOW","AGORA")}</span><b></b><p></p>`;
   el.querySelector("b").textContent=m.title; el.querySelector("p").textContent=m.body;

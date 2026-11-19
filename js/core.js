@@ -593,6 +593,8 @@ function quality(glucose, treatments){
   }
   // Dagen die je zelf als "op pen" hebt gelogd: niet meetellen.
   if (typeof _penKeys!=="undefined" && _penKeys.size){ for(const d of usable) if(_penKeys.has(d.day)) loopGaps.add(d.day); usable = usable.filter(d=>!_penKeys.has(d.day)); }
+  // Dagen met prednison (+2 dagen), vitamine C of aspirine (sensor wijkt af): niet meetellen.
+  if (typeof _medKeys!=="undefined" && _medKeys.size) usable = usable.filter(d=>!_medKeys.has(d.day));
   let gaps=0; for (let i=1;i<glucose.length;i++) if (glucose[i].ts-glucose[i-1].ts>30*60e3) gaps++;
   return { days, usable, loopGaps:[...loopGaps].sort(), usableKeys:new Set(usable.map(d=>d.day)),
     coverage: days.length ? days.reduce((s,d)=>s+Math.min(d.coverage,1),0)/days.length : 0,
@@ -619,7 +621,7 @@ function agp(g){
   const pct=(s,p)=>s[Math.min(s.length-1,Math.floor(p*s.length))];
   const out=[];
   for (let b=0;b<48;b++){ if(bins[b].length<5) continue; const s=bins[b].sort((a,b)=>a-b);
-    out.push({ b, min:b*30+15, p10:pct(s,.1), p25:pct(s,.25), p50:pct(s,.5), p75:pct(s,.75), p90:pct(s,.9) }); }
+    out.push({ b, min:b*30+15, p5:pct(s,.05), p95:pct(s,.95), p10:pct(s,.1), p25:pct(s,.25), p50:pct(s,.5), p75:pct(s,.75), p90:pct(s,.9) }); }
   return out;
 }
 function joinBins(bins){ const s=[...bins].sort((a,b)=>a-b), out=[];
@@ -886,7 +888,7 @@ function opportunity(m, ag, hy, trend){
 function agpSvg(ag){
   if (ag.length<12) return `<div class="muted">Nog te weinig gespreide data voor een dagprofiel.</div>`;
   const W=320, H=170, PB=18, PL=22;                 // padding onder/links voor labels
-  const lo=Math.min(3, ...ag.map(a=>a.p10))-.5, hi=Math.max(14, ...ag.map(a=>a.p90))+.5;
+  const lo=Math.min(3, ...ag.map(a=>a.p5))-.5, hi=Math.max(14, ...ag.map(a=>a.p95))+.5;
   const X=min=>PL+(min/1440)*(W-PL), Y=b=>(H-PB)-(b-lo)/(hi-lo)*(H-PB);
   const line=(k)=>ag.map((a,i)=>(i?"L":"M")+X(a.min).toFixed(1)+" "+Y(a[k]).toFixed(1)).join(" ");
   const area=(hiK,loK)=>ag.map((a,i)=>(i?"L":"M")+X(a.min).toFixed(1)+" "+Y(a[hiK]).toFixed(1)).join(" ")
@@ -901,7 +903,7 @@ function agpSvg(ag){
   return `<svg class="chart" viewBox="0 0 ${W} ${H}">`+
     `<rect x="${PL}" y="${yz1.toFixed(1)}" width="${W-PL}" height="${(yz2-yz1).toFixed(1)}" fill="var(--inRange)" opacity=".08"/>`+
     ax+
-    `<path d="${area("p90","p10")}" fill="var(--inRange)" opacity=".13"/>`+
+    `<path d="${area("p95","p5")}" fill="var(--inRange)" opacity=".13"/>`+
     `<path d="${area("p75","p25")}" fill="var(--inRange)" opacity=".28"/>`+
     `<path d="${line("p50")}" fill="none" stroke="var(--ink)" stroke-width="2" vector-effect="non-scaling-stroke"/>`+
     `</svg>`;
@@ -2350,12 +2352,18 @@ function aapsProfile(glucose, treatments, timeline, q, ds){
   // per uur: laag/hoog op bruikbare dagen
   const hs=Array.from({length:24},()=>({n:0,lo:0,hi:0}));
   for(const x of glucose){ if(usable&&!usable.has(localDayKey(x.ts))) continue; const o=hs[Math.floor(todMin(x.ts)/60)%24]; o.n++; if(x.bg<LO_T)o.lo++; if(x.bg>HI_T)o.hi++; }
+  // Voorzichtige stand (Autotune/ADVICE4U): na een laagte (≥15 min onder 3,9) in de laatste 48 uur niets strakker,
+  // en bij een laagte in 48 u of >4% onder 3,9 (laatste 14 dagen) maar 50% van de weg in plaats van 70%.
+  const careful=(()=>{ let low48=null; try{ const hy=hypoStats(glucose.filter(x=>x.ts>now-48*3600e3)); const ev=hy.eps.filter(e=>!e.suspect); if(ev.length) low48=ev[ev.length-1].start; }catch(_){}
+    const g14=glucose.filter(x=>x.ts>now-14*DAY&&(!usable||usable.has(localDayKey(x.ts)))), tbr=g14.length?g14.filter(x=>x.bg<LO_T).length/g14.length:0;
+    return { low48, tbr, on:!!low48||tbr>0.04, k:(!!low48||tbr>0.04)?0.5:0.7 }; })();
   const hours=[];
   for(let h=0;h<24;h++){
     const p=cur(h), L=hs[h].n?hs[h].lo/hs[h].n:0, Hh=hs[h].n?hs[h].hi/hs[h].n:0, a=lb.hours[h]&&lb.hours[h].act;
     let nv=p.basal, why="";
-    // 70% van de weg naar wat de loop nuchter levert, met een dode zone van 10% (ruis) en per stap hooguit ±20%.
-    if(a!=null){ const d=a-p.basal; nv=Math.abs(d)<0.10*p.basal?p.basal:p.basal+0.7*d; nv=Math.min(Math.max(nv,p.basal*0.8),p.basal*1.2); why="lev"; }
+    // 70% (voorzichtig: 50%) van de weg naar wat de loop nuchter levert, met een dode zone van 10% (ruis) en per stap hooguit ±20%.
+    if(a!=null){ const d=a-p.basal; nv=Math.abs(d)<0.10*p.basal?p.basal:p.basal+careful.k*d; nv=Math.min(Math.max(nv,p.basal*0.8),p.basal*1.2); why="lev"; }
+    if(careful.low48 && nv>p.basal){ nv=p.basal; why="voorzichtig"; }
     if(Hh>0.25 && nv<p.basal){ nv=p.basal; why="hooggrens"; }   // niet minder waar je vaak hoog zit
     if(L>0.04){ nv=Math.min(nv, p.basal*0.85); why="laag"; }
     else if(L>0.03 && nv>p.basal){ nv=p.basal; why="laaggrens"; }
@@ -2400,6 +2408,7 @@ function aapsProfile(glucose, treatments, timeline, q, ds){
   const tddUse=tddD||ic0.tdd;
   if(tddUse>5) est.push({k:"tdd",v:100/tddUse});
   let isfNew=est.length?_pMed(est.map(e=>e.v)):isfMed; isfNew=_r1(Math.min(Math.max(isfNew,isfMed*0.8),isfMed*1.15));
+  if(careful.low48) isfNew=Math.max(isfNew,_r1(isfMed));   // na een recente laagte geen sterkere ISF
   // ISF per uur: waar je vaak laag zit blijft de huidige waarde; blokken van minstens 3 uur.
   const isfT=isfNow.map((v,h)=>hours[h].low>0.04?v:isfNew);
   const isfBlocks=_segment(isfT,3,0.05,6).map(([f,t])=>{ const keep=hours.slice(f,t).some(o=>o.low>0.04);
@@ -2438,6 +2447,7 @@ function aapsProfile(glucose, treatments, timeline, q, ds){
       // Zonder "ik tel nauwkeurig" gaat IDA uit van tellen en maakt de ratio dan niet sterker.
       if(v<cb && mfrac!=null && mfrac>1.15 && !(typeof cfg!=="undefined" && cfg.carbsAccurate)){ v=cb; why="tellen"; }
       if(v>cb && hiF>0.30){ v=cb; why="hoog"; } else if(v<cb && loF>0.04){ v=cb; why="laag"; }
+      if(v<cb && careful.low48){ v=cb; why="voorzichtig"; }
       if(Math.abs(v-cb)<0.05 && why==="gemeten") why="gelijk";
       ic.push({ from:_hhmm(h*60), to:e, now:_r1(cb), nowAll:[_r1(cb)], value:_r1(v), measured:med, n:ms.length, why, hiF, loF }); h=e; } }
   // aaneengesloten gelijke blokken samenvoegen
@@ -2448,7 +2458,7 @@ function aapsProfile(glucose, treatments, timeline, q, ds){
   const newAt=h=>{ let v=basal[0].value; for(const b of basal) if(hhmmToMin(b.from)<=h*60) v=b.value; return v; };
   const changed = hours.some(o=>Math.abs(newAt(o.h)-o.cur)>=0.1) || Math.abs(dayNew-dayNow)/dayNow>=0.05
     || isfBlocks.some(b=>Math.abs(b.now-b.value)>=0.2) || ic.some(b=>Math.abs(b.now-b.value)>=0.3);
-  return { basal, isf:isfBlocks, ic, isfEst:est, isfNow:isfMed, sensMean, sensMax, tdd:tddUse, dayNow, dayNew,
+  return { careful, basal, isf:isfBlocks, ic, isfEst:est, isfNow:isfMed, sensMean, sensMax, tdd:tddUse, dayNow, dayNew,
     maxIobMin:_r1(3*maxBasal), days:usable?usable.size:null, meals:meals.length, changed,
     target:{ lo:cur(0).targetLow??null, hi:cur(0).targetHigh??null }, name:cur(0).name,
     mfrac, mfracDays, mealBolus:_pMed(treatments.filter(t=>t.insulin>=0.5&&!t.isSMB&&(!usable||usable.has(localDayKey(t.ts)))).map(t=>t.insulin)) };

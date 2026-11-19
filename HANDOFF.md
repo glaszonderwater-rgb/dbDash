@@ -1,7 +1,7 @@
 # IDA — overdracht voor een nieuwe sessie
 
 Lees dit eerst. Het beschrijft hoe de app werkt, welke afspraken gelden en wat er nog openstaat.
-Laatste stand: v41 (19 nov 2026), branch `main`, GitHub Pages: https://glaszonderwater-rgb.github.io/dbDash/
+Laatste stand: v42 (20 nov 2026), branch `main`, GitHub Pages: https://glaszonderwater-rgb.github.io/dbDash/
 
 ## Wat IDA is
 Persoonlijke offline PWA voor één gebruiker (Focko) met AAPS closed loop + Omnipod Dash, Libre via xDrip+, data uit Nightscout.
@@ -27,6 +27,7 @@ IDA leest Nightscout, analyseert en stelt concrete AAPS-profielwaarden voor (bas
 - `js/ida2.js` — extra's: GRI, hypo-analyse, `mealBolusRisk`, loop-limieten, max IOB, experiment (`expPre` = bolusmoment uit t50), reizen, voorraad, rijcheck, Nightscout-notities, CSV, autoSync.
 - `js/ida3.js` — geen uitklapblokken: rijen + detailpagina's (`openDetail`, `closeDetail`), Vandaag max 2 kaarten onder "Let op".
 - `js/ida4.js` — laadt als laatste: navigatie (`showTab`), statuskaart Vandaag, Dag-scherm met momenten (`dayMoments`, `_momNext`), Profiel-werkbank (`idaProfiel`) en stap voor stap overnemen (`openTake`), eigen grafiek `idaCurveSvg` (vervangt `renderLast24`).
+- `js/ida5.js` — laadt na ida4: de 32 analyses uit het onderzoeksdoc (`idaAn`, scherm `inzicht` onder Dag › Analyses, detail via `openAn5`), analyse 28 = `idaFactors5` (n-of-1: elk factorvenster tegen dezelfde uren op eigen dagen zonder die factor; telt bij ≥5× én ≥10%-punt TIR of ≥2%-punt TBR) en verrijkt `_momFactors`. Vandaag-kaart alleen voor een vergeten profielpercentage (>24 u).
 - `css/ida4.css` — ontwerp (licht en warm, donker variant), beweging alleen bij schermwissel. `fonts/` — Geist en Geist Mono (OFL).
 - `js/moments.js` — pure regels voor "advies vóór het moment" (gedeeld met server).
 - `js/push.js` — moment bovenaan Vandaag, lokale meldingen, Web Push-aanmelding.
@@ -63,7 +64,8 @@ Playwright-core wordt gebruikt; `CHROME_PATH` naar een Chromium. Nightly data-ar
 6. **Tijdzones:** de wisselingen in de data (+60/0/−60) zijn echte reizen (Kaapverdië 28 okt–18 nov); de afhandeling klopt.
 7. **Snelheid (v41):** `DB` houdt een geheugenspiegel per tabel (entries/treatments/devicestatus); syncs werken die direct bij, dus verversen leest niet steeds 90 dagen uit IndexedDB. `travelStats` maakte per meting een Intl-formatter (3,8 s) — nu één formatter + per uur onthouden. Verversen 6,3 s → 0,75 s (desktop). Automatisch syncen elke minuut zolang IDA open is.
 8. **Momenten in Dag (v41):** `_momFactors` weegt per moment meerdere factoren tegen je eigen gewone waarden (opname t50 en stijging per dagdeel, IOB bij maaltijden/per uur, bolus t.o.v. ratio incl. correctie, start en trend, grote maaltijd, SMB erna, alcohol/sport/ziek/stress, pod- en sensorleeftijd, piek ervoor, sensordruk, late stijging na eten, basaal uit het profielvoorstel, max IOB). "Volgende keer" komt uit de zwaarste factoren; goed verlopen maaltijden krijgen geen correctie-advies.
-9. Bekende beperking: `riseCarbEstimate` telt tijdelijke basaalverhogingen niet mee.
+9. **Analyses (v42):** onderzoeksdoc https://claude.ai/artifact/YSZmxHGew1Km1kznkPkLqF. Nieuwe logsoorten: warmte, korte nacht, medicijn (`med`: prednison/vitc/aspirine + `days`), podplaats (`site`), menstruatie (alleen met instelling `cfg.cycle`); HbA1c (`hba1c`, `value`) en Gold-score (`gold`) via het analysescherm. Medicijndagen (prednison +2) tellen niet mee (`_medKeys` in `quality`). Profielvoorstel: voorzichtige stand (`P.careful`): laagte in 48 u → niets strakker; laagte of >4% onder 3,9 → 50% i.p.v. 70% van de weg. AGP nu 5–95%. Meldingen erbij in `moments.js` (ketonen, pod, nacht ≥3 factoren, ochtend na alcohol, vóór vast sportmoment; eetmelding vanaf 7,5 na een laagte); uitzetten per soort (`cfg.mute5`), server leest logboek en mute uit de back-up en IOB uit devicestatus. Tijdelijke streefwaarden met reden Hypo/Automation tellen als reactie van AAPS, niet als oorzaak.
+10. Bekende beperking: `riseCarbEstimate` telt tijdelijke basaalverhogingen niet mee.
 
 ## Werkwijze
 - Commit-berichten in het Nederlands; release = `sw.js` VERSION ophogen, tests draaien, pushen naar `main`.

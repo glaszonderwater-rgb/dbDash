@@ -47,7 +47,20 @@
     return { fallPct: Math.round(100 * r.fall.low / r.fall.n), okPct: Math.round(100 * r.ok.low / r.ok.n), n: r.fall.n };
   }
 
-  /* De momenten die nú gelden. opts: { now, tzOffsetMin, stats } */
+  /* Laatste laagte (≥15 min onder 3,9) in de 24 uur vóór nu: eindtijd, of null. */
+  function recentLow(glucose, T, now) {
+    let run = null, last = null;
+    for (let k = idx(T, now - 24 * H); k < glucose.length && T[k] <= now; k++) {
+      const x = glucose[k];
+      if (x.bg < LOW) { if (!run) run = { a: x.ts, b: x.ts }; else run.b = x.ts; }
+      else { if (run && run.b - run.a >= 10 * MIN) last = run.b; run = null; }
+    }
+    if (run && run.b - run.a >= 10 * MIN) last = run.b;
+    return last;
+  }
+  const annIn = (anns, type, a, b) => (anns || []).filter(x => x && x.type === type && x.ts >= a && x.ts <= b);
+
+  /* De momenten die nú gelden. opts: { now, tzOffsetMin, stats, anns (logboek), iob (actieve insuline nu), mute (soorten uit) } */
   function idaMoments(glucose, treatments, opts) {
     opts = opts || {};
     const now = opts.now || Date.now(), off = opts.tzOffsetMin || 0, out = [];
@@ -65,9 +78,10 @@
       // al gegeten in dit dagdeel vandaag? dan geen melding meer
       const dayStart = now - m * MIN;
       if (treatments.some(t => (t.carbs >= 15 || (t.insulin >= 1 && !t.isSMB)) && t.ts >= dayStart + w.a * MIN && t.ts <= now)) continue;
-      if (last.bg < 7 && s != null && s <= -0.03) {
+      const lowRecent = recentLow(glucose, T, now);
+      if (last.bg < (lowRecent ? 7.5 : 7) && s != null && s <= -0.03) {
         const st = opts.stats === undefined ? fallStats(glucose, treatments) : opts.stats;
-        const why = st ? `Zo eindigt het bij jou ${st.fallPct}% van de keren laag, normaal ${st.okPct}%.` : `Bij een dalende start loop je meer kans op een laagte na het eten.`;
+        const why = (st ? `Zo eindigt het bij jou ${st.fallPct}% van de keren laag, normaal ${st.okPct}%.` : `Bij een dalende start loop je meer kans op een laagte na het eten.`) + (lowRecent ? ` Je was om ${hm(tod(lowRecent, off))} laag: de volgende voel je minder.` : ``);
         out.push({ key: `eten-${w.name}-${day}`, kind: "eten", prio: 1,
           title: `${w.name[0].toUpperCase() + w.name.slice(1)}: bolus pas bij de eerste hap`,
           body: `${fmt(last.bg)} en dalend. ${why}`, since: last.ts });
@@ -88,7 +102,58 @@
         }
       }
     }
-    return out.sort((x, y) => x.prio - y.prio);
+    // 3 · Ketonen: al 2 uur boven 14 (of ziek gelogd en boven 14)
+    {
+      let a = null; for (let k = glucose.length - 1; k >= 0 && glucose[k].bg >= 14; k--) { if (k < glucose.length - 1 && T[k + 1] - T[k] > 20 * MIN) break; a = glucose[k]; }
+      const ill = annIn(opts.anns, 'ziek', now - 48 * H, now).length > 0;
+      if (a && (now - a.ts >= 120 * MIN || (ill && now - a.ts >= 30 * MIN))) {
+        out.push({ key: `ketonen-${day}-${Math.floor(tod(a.ts, off) / 240)}`, kind: 'ketonen', prio: 0,
+          title: `${ill ? 'Ziek en boven 14' : 'Al ' + fmt((now - a.ts) / H) + ' uur boven 14'}: meet ketonen`,
+          body: `Onder 0,6 gewoon corrigeren. 0,6–1,4: correctie met de pen, nieuwe pod. Vanaf 1,5 ook je team bellen, vanaf 3,0 spoed.`, since: a.ts });
+      }
+    }
+    // 4 · Pod: > 5 uur boven 13,9, of 2 correcties binnen 3 uur zonder daling
+    {
+      let a = null; for (let k = glucose.length - 1; k >= 0 && glucose[k].bg > 13.9; k--) { if (k < glucose.length - 1 && T[k + 1] - T[k] > 20 * MIN) break; a = glucose[k]; }
+      const cor = treatments.filter(t => !t.isSMB && t.insulin >= 0.5 && t.ts > now - 3 * H && t.ts <= now - 60 * MIN && !treatments.some(x => x.carbs > 0 && Math.abs(x.ts - t.ts) <= 45 * MIN));
+      let why = null;
+      if (a && now - a.ts >= 5 * H) why = `Al ${fmt((now - a.ts) / H)} uur boven 13,9.`;
+      else if (cor.length >= 2 && last.bg >= 13.9) { const b0 = bgAt(glucose, T, cor[0].ts); if (b0 != null && last.bg >= b0 - 0.5) why = `${cor.length} correcties sinds ${hm(tod(cor[0].ts, off))}, en je daalt niet.`; }
+      if (why) out.push({ key: `pod-${day}-${Math.floor(tod(now, off) / 360)}`, kind: 'pod', prio: 0,
+        title: `Pod mogelijk niet goed`, body: `${why} Vervang de pod en corrigeer met de pen.`, since: now });
+    }
+    // 5 · Nacht: om 22:30–23:30 kans op een laagte vannacht (≥ 3 risicofactoren; bij 2 voorspelde het in je data niets)
+    if (m >= 22 * 60 + 30 && m <= 23 * 60 + 30) {
+      const F = [], dayStart = now - m * MIN;
+      if (opts.iob != null && opts.iob >= 3) F.push(`${fmt(opts.iob)} E actief`);
+      if (treatments.some(t => !t.isSMB && t.insulin >= 1 && t.ts > now - 3 * H)) F.push('bolus in de laatste 3 uur');
+      if (annIn(opts.anns, 'sport', dayStart, now).length) F.push('sport vandaag');
+      if (annIn(opts.anns, 'alcohol', now - 8 * H, now).length) F.push('alcohol');
+      if (recentLow(glucose, T, now) > dayStart + 6 * H) F.push('laag vandaag');
+      if (last.bg < 6.5) F.push(`nu ${fmt(last.bg)}`);
+      if (F.length >= 3) out.push({ key: `nacht-${day}`, kind: 'nacht', prio: 1, title: 'Grotere kans op een laagte vannacht',
+        body: `${F.join(', ')}. Eet iets kleins of zet een tijdelijke streefwaarde voor de nacht.`, since: now });
+    }
+    // 6 · Ochtend na alcohol: 06:30–11:00, alcohol gisteravond gelogd
+    if (m >= 390 && m <= 660) {
+      const dayStart = now - m * MIN, alc = annIn(opts.anns, 'alcohol', dayStart - 8 * H, dayStart + 3 * H);
+      if (alc.length) out.push({ key: `alcohol-${day}`, kind: 'alcohol', prio: 1, title: 'Ochtend na alcohol: ontbijt niet overslaan',
+        body: `Je lever remt nog tot ver in de ochtend. Eet op tijd en bolus voorzichtig${last.bg < 7 ? `; je zit nu op ${fmt(last.bg)}` : ''}.`, since: now });
+    }
+    // 7 · Vóór sport: vast sportmoment (zelfde weekdag ≥ 3 van de laatste 4 weken, ± 1 uur) → 60–90 min vooraf
+    {
+      const sp = (opts.anns || []).filter(x => x && x.type === 'sport' && x.ts > now - 29 * DAY && x.ts < now - 12 * H);
+      const wd = new Date(now + off * MIN).getUTCDay();
+      const same = sp.filter(x => new Date(x.ts + off * MIN).getUTCDay() === wd).map(x => tod(x.ts, off));
+      if (same.length >= 3) {
+        const t0 = q(same, 0.5), lead = t0 - m;
+        if (same.filter(v => Math.abs(v - t0) <= 60).length >= 3 && lead >= 60 && lead <= 90 && !annIn(opts.anns, 'sport', now - 3 * H, now).length)
+          out.push({ key: `sport-${day}`, kind: 'sport', prio: 2, title: `Sport rond ${hm(t0)}? Zet nu je streefwaarde`,
+            body: `Tijdelijke streefwaarde ± 8,3 vanaf nu tot het einde van het sporten. Eet je vlak ervoor, bolus dan 25–33% minder.`, since: now });
+      }
+    }
+    const mute = new Set(opts.mute || []);
+    return out.filter(x => !mute.has(x.kind)).sort((x, y) => x.prio - y.prio);
   }
 
   /* Alleen wat nieuw is t.o.v. een eerder tijdstip (voor een server zonder geheugen). */
@@ -98,7 +163,7 @@
     return nowL.filter(x => !before.has(x.key));
   }
 
-  const api = { idaMoments, newMoments, mealWindows, fallStats };
+  const api = { idaMoments, newMoments, mealWindows, fallStats, recentLow };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else Object.assign(root, api);
 })(typeof self !== "undefined" ? self : this);

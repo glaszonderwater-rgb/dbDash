@@ -3,7 +3,7 @@
    het AAPS-profiel en Snel loggen. Klassiek script; gebruikt de globale functies
    uit js/core.js en index.html. Rekent zelf niets zwaars behalve aapsProfile(). */
 
-let _penKeys = new Set();
+let _penKeys = new Set(), _medKeys = new Set();
 let _P = null, _idaAnns = [], _profTab = "basal", _qlSel = null, _qlWhen = 0, _qlDur = 60;
 const _idaN = (v,d=1) => (v==null||!isFinite(v)) ? "—" : v.toFixed(d).replace(".", DECSEP());
 const _idaPct = v => (v==null||!isFinite(v)) ? "—" : Math.round(v*100)+"%";
@@ -242,18 +242,28 @@ const _LOGT_=()=>[["sport",TL("Sport","Exercise","Exercício"),'<circle cx="14" 
   ["stress",TL("Stress","Stress","Stress"),'<path d="M13 2L4 14h7l-1 8 9-12h-7z"/>'],
   ["alcohol",TL("Alcohol","Alcohol","Álcool"),'<path d="M8 3h8l-1 7a3 3 0 0 1-6 0zM12 13v8M9 21h6"/>'],
   ["correctie",TL("Correctie zonder eten","Correction without food","Correção sem comida"),'<path d="M12 3v12M8 11l4 4 4-4M5 21h14"/>'],
-  ["pen",TL("Op pen","On pen","Em caneta"),'<path d="M4 20l4-1 11-11-3-3L5 16zM14 6l3 3"/>']];   // functie: labels in de actuele taal
+  ["pen",TL("Op pen","On pen","Em caneta"),'<path d="M4 20l4-1 11-11-3-3L5 16zM14 6l3 3"/>'],
+  ["warmte",TL("Warmte","Heat","Calor"),'<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M5 19l1.5-1.5M17.5 6.5L19 5"/>'],
+  ["nacht",TL("Korte nacht","Short night","Noite curta"),'<path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/>'],
+  ["medicijn",TL("Medicijn","Medication","Medicação"),'<rect x="3" y="9" width="18" height="6" rx="3" transform="rotate(-35 12 12)"/><path d="M9.5 8.5l5 7"/>'],
+  ["plaats",TL("Podplaats","Pod site","Local do pod"),'<path d="M12 21s-6-5.5-6-10a6 6 0 0 1 12 0c0 4.5-6 10-6 10z"/><circle cx="12" cy="11" r="2"/>'],
+  ...((typeof cfg!=="undefined"&&cfg.cycle)?[["cyclus",TL("Menstruatie","Period","Menstruação"),'<circle cx="12" cy="12" r="8"/><path d="M12 4v16"/>']]:[])];   // functie: labels in de actuele taal
+let _qlSub=null;
+const _SUBS_=()=>({ medicijn:[["prednison",TL("Prednison","Prednisone","Prednisona")],["vitc",TL("Vitamine C","Vitamin C","Vitamina C")],["aspirine",TL("Aspirine","Aspirin","Aspirina")]],
+  plaats:[["buikL",TL("Buik L","Belly L","Barriga E")],["buikR",TL("Buik R","Belly R","Barriga D")],["armL",TL("Arm L","Arm L","Braço E")],["armR",TL("Arm R","Arm R","Braço D")],["beenL",TL("Been L","Leg L","Perna E")],["beenR",TL("Been R","Leg R","Perna D")],["rug",TL("Rug","Back","Costas")]] });
 function openLogSheet(){
-  _qlSel=null; _qlWhen=0; _qlDur=60;
+  _qlSel=null; _qlWhen=0; _qlDur=60; _qlSub=null;
   const d=_idaEl("logSheet"); renderLogSheet();
   try{ d.showModal(); }catch(_){ d.setAttribute("open",""); }
 }
 function renderLogSheet(){
-  const pen=_qlSel==="pen", durs=pen?[[1,TL("1 dag","1 day","1 dia")],[3,TL("3 dagen","3 days","3 dias")],[7,TL("7 dagen","7 days","7 dias")]]:[[30,"30 min"],[60,"60 min"],[90,"90 min"]];
+  const pen=_qlSel==="pen"||_qlSel==="medicijn", durs=pen?[[1,TL("1 dag","1 day","1 dia")],[3,TL("3 dagen","3 days","3 dias")],[7,TL("7 dagen","7 days","7 dias")]]:[[30,"30 min"],[60,"60 min"],[90,"90 min"]];
   if(pen && ![1,3,7].includes(_qlDur)) _qlDur=1; if(!pen && ![30,60,90].includes(_qlDur)) _qlDur=60;
-  const showDur=_qlSel && _qlSel!=="correctie";
+  const showDur=_qlSel && !["correctie","nacht","plaats","cyclus"].includes(_qlSel);
+  const subs=_SUBS_()[_qlSel]; if(subs && !subs.some(x=>x[0]===_qlSub)) _qlSub=subs[0][0];
   _idaEl("logBody").innerHTML=`<div class="lgrid">${_LOGT_().map(([k,l,ic])=>`<button class="ltile${_qlSel===k?" on":""}" data-lt="${k}"><svg viewBox="0 0 24 24" aria-hidden="true">${ic}</svg>${l}</button>`).join("")}</div>
     <span class="llab">${TL("Wanneer","When","Quando")}</span><div class="lchips">${[[0,TL("Nu","Now","Agora")],[30,TL("30 min geleden","30 min ago","há 30 min")],[120,TL("2 uur geleden","2 h ago","há 2 h")]].map(([v,l])=>`<button class="lchip${_qlWhen===v?" on":""}" data-lw="${v}">${l}</button>`).join("")}</div>
+    ${subs?`<span class="llab">${_qlSel==="plaats"?TL("Waar","Where","Onde"):TL("Welk","Which","Qual")}</span><div class="lchips">${subs.map(([v,l])=>`<button class="lchip${_qlSub===v?" on":""}" data-ls="${v}">${l}</button>`).join("")}</div>`:""}
     ${showDur?`<span class="llab">${TL("Hoe lang","How long","Quanto tempo")}</span><div class="lchips">${durs.map(([v,l])=>`<button class="lchip${_qlDur===v?" on":""}" data-ld="${v}">${l}</button>`).join("")}</div>`:""}
     ${_qlSel==="sport"?(()=>{ const S=(typeof sportTT==="function"&&_ctx)?sportTT(_ctx):null; return `<span class="its big">${S?TL(`Tip: zet ongeveer een uur vóór het sporten een tijdelijke streefwaarde van ${_idaN(S.v)} voor ${Math.round(S.dur)} min${S.lowFrac>0.2?" (of iets hoger: je kwam daarna nog vaak laag)":""}.`,`Tip: about an hour before exercise, set a temporary target of ${_idaN(S.v)} for ${Math.round(S.dur)} min${S.lowFrac>0.2?" (or a bit higher: you still went low often)":""}.`,`Dica: cerca de uma hora antes, alvo temporário de ${_idaN(S.v)} durante ${Math.round(S.dur)} min.`):TL("Tip: zet ongeveer een uur vóór het sporten een tijdelijke streefwaarde in AAPS.","Tip: set a temporary target in AAPS about an hour before exercise.","Dica: alvo temporário uma hora antes.")}</span>`; })():""}
     <button class="ibtn big acc" id="logSave" ${_qlSel?"":"disabled"}>${TL("Opslaan","Save","Guardar")}</button>`;
@@ -261,22 +271,30 @@ function renderLogSheet(){
   b.querySelectorAll("[data-lt]").forEach(x=>x.onclick=()=>{ _qlSel=x.dataset.lt; renderLogSheet(); });
   b.querySelectorAll("[data-lw]").forEach(x=>x.onclick=()=>{ _qlWhen=+x.dataset.lw; renderLogSheet(); });
   b.querySelectorAll("[data-ld]").forEach(x=>x.onclick=()=>{ _qlDur=+x.dataset.ld; renderLogSheet(); });
+  b.querySelectorAll("[data-ls]").forEach(x=>x.onclick=()=>{ _qlSub=x.dataset.ls; renderLogSheet(); });
   _idaEl("logSave").onclick=saveQuickLog;
 }
 async function saveQuickLog(){
   if(!_qlSel) return;
   const ts=Date.now()-_qlWhen*60000, lab=(_LOGT_().find(x=>x[0]===_qlSel)||[])[1]||_qlSel;
+  const days=_qlSel==="pen"||_qlSel==="medicijn", subL=((_SUBS_()[_qlSel]||[]).find(x=>x[0]===_qlSub)||[])[1];
   const an={ id:"q"+ts+"-"+Math.random().toString(36).slice(2,6), ts, type:_qlSel, created:Date.now(), src:"quick",
-    note: _qlSel==="pen" ? TL(`${_qlDur} dag(en) op pen`,`${_qlDur} day(s) on pen`,`${_qlDur} dia(s) em caneta`) : _qlSel==="correctie" ? "" : `${_qlDur} min`,
-    days: _qlSel==="pen" ? _qlDur : undefined, dur: _qlSel!=="pen" ? _qlDur : undefined };
+    note: _qlSel==="pen" ? TL(`${_qlDur} dag(en) op pen`,`${_qlDur} day(s) on pen`,`${_qlDur} dia(s) em caneta`) : _qlSel==="medicijn" ? `${subL}, ${_qlDur} ${TL("dag(en)","day(s)","dia(s)")}` : _qlSel==="plaats" ? subL : ["correctie","nacht","cyclus"].includes(_qlSel) ? "" : `${_qlDur} min`,
+    days: days ? _qlDur : undefined, dur: !days && !["correctie","nacht","plaats","cyclus"].includes(_qlSel) ? _qlDur : undefined,
+    med: _qlSel==="medicijn" ? _qlSub : undefined, site: _qlSel==="plaats" ? _qlSub : undefined };
   try{ await DB.putMany("annotations",[an]); }catch(e){ toast(TL("Opslaan mislukt.","Save failed.","Falha ao guardar.")); return; }
   try{ if(typeof nsWriteNote==="function") await nsWriteNote(an); }catch(e){ toast(TL("Opgeslagen in IDA, maar niet in Nightscout: ","Saved in IDA, not in Nightscout: ","Guardado no IDA, não no Nightscout: ")+e.message); }
   closeLogSheet(); toast(TL(`${lab} vastgelegd.`,`${lab} saved.`,`${lab} guardado.`));
   try{ renderLog(); }catch(_){}
-  if(_qlSel==="pen"){ try{ await refresh(); }catch(_){} }
+  if(_qlSel==="pen"||_qlSel==="medicijn"){ try{ await refresh(); }catch(_){} }
+  else if(typeof _ctx!=="undefined"&&_ctx){ delete _ctx._an5; delete _ctx._fac5; delete _ctx._base4; }
 }
 function closeLogSheet(){ const d=_idaEl("logSheet"); try{ d.close(); }catch(_){ d.removeAttribute("open"); } }
 // Dagen die je als "op pen" hebt gelogd tellen niet mee in de analyses.
+function medDayKeys(anns){
+  const s=new Set(); for(const a of anns||[]){ if(a.type!=="medicijn") continue; const n=Math.max(1,Math.min(30,+a.days||1))+(a.med==="prednison"?2:0);
+    for(let i=0;i<n;i++) s.add(localDayKey(a.ts+i*864e5)); } return s;
+}
 function penDayKeys(anns){
   const s=new Set(); for(const a of anns||[]){ if(a.type!=="pen") continue; const n=Math.max(1,Math.min(30,+a.days||1));
     for(let i=0;i<n;i++) s.add(localDayKey(a.ts+i*864e5)); } return s;
