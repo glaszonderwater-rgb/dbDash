@@ -58,7 +58,7 @@ function idaDagOpen(key){ _i4.dagKey=key; showTab("dag"); }
 function idaOpenSetting(id){
   try{ _e4("btnCfg").click(); }catch(_){}
   setTimeout(()=>{ const el=_e4(id); if(!el) return; const row=el.closest("label")||el; row.scrollIntoView({block:"center",behavior:_rm4()?"auto":"smooth"});
-    row.style.transition="background .3s"; row.style.background="var(--plum-soft)"; row.style.borderRadius="12px"; setTimeout(()=>{ row.style.background=""; },1600); try{ el.focus({preventScroll:true}); }catch(_){} }, 350);
+    row.style.transition="background .3s"; row.style.background="var(--brand-soft)"; row.style.borderRadius="12px"; setTimeout(()=>{ row.style.background=""; },1600); try{ el.focus({preventScroll:true}); }catch(_){} }, 350);
 }
 // "Ik tel mijn koolhydraten nauwkeurig" werkt meteen (niet pas bij Bewaren)
 (function(){ const el=_e4("inCarbsOk"); if(!el) return;
@@ -416,7 +416,7 @@ function idaProfiel(c){
   // meting
   const act=_idaActivation();
   if(act){ const d=Math.floor((Date.now()-act.ts)/864e5), r=Math.min(7,d), dash=(r/7*94.2).toFixed(1);
-    html+=`<section class="ibox pmeas"><svg class="pring" width="40" height="40" viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="15" stroke="var(--surface-2)"/><circle cx="20" cy="20" r="15" stroke="var(--plum)" stroke-dasharray="${dash} 94.2" stroke-linecap="round" transform="rotate(-90 20 20)"/></svg>
+    html+=`<section class="ibox pmeas"><svg class="pring" width="40" height="40" viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="15" stroke="var(--surface-2)"/><circle cx="20" cy="20" r="15" stroke="var(--brand)" stroke-dasharray="${dash} 94.2" stroke-linecap="round" transform="rotate(-90 20 20)"/></svg>
       <div style="flex:1"><b>${d<7?TL(`Meting loopt · dag ${d} van 7`,`Measuring · day ${d} of 7`,`A medir · dia ${d} de 7`):TL("Meting klaar","Measurement done","Medição concluída")}</b><br><span>${TL(`Geactiveerd op ${new Date(act.ts).toLocaleDateString(LOCALE(),{day:"numeric",month:"long"})}. De uitslag staat bij Team.`,`Activated on ${new Date(act.ts).toLocaleDateString(LOCALE(),{day:"numeric",month:"long"})}. The result is under Team.`,`Ativado em ${new Date(act.ts).toLocaleDateString(LOCALE())}.`)}</span></div><button class="ibtn" data-team="1">Team ›</button></section>`; }
   // max IOB
   const MA=(typeof maxIobAdvice==="function")?maxIobAdvice(c):null, iobMin=_idaN(MA?MA.v:P.maxIobMin+(P.mealBolus||0));

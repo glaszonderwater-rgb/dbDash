@@ -1,7 +1,7 @@
 # IDA — overdracht voor een nieuwe sessie
 
 Lees dit eerst. Het beschrijft hoe de app werkt, welke afspraken gelden en wat er nog openstaat.
-Laatste stand: v38 (19 nov 2026), branch `main`, GitHub Pages: https://glaszonderwater-rgb.github.io/dbDash/
+Laatste stand: v39 (19 nov 2026), branch `main`, GitHub Pages: https://glaszonderwater-rgb.github.io/dbDash/
 
 ## Wat IDA is
 Persoonlijke offline PWA voor één gebruiker (Focko) met AAPS closed loop + Omnipod Dash, Libre via xDrip+, data uit Nightscout.
@@ -30,7 +30,7 @@ IDA leest Nightscout, analyseert en stelt concrete AAPS-profielwaarden voor (bas
 - `css/ida4.css` — ontwerp (licht en warm, donker variant), beweging alleen bij schermwissel. `fonts/` — Geist en Geist Mono (OFL).
 - `js/moments.js` — pure regels voor "advies vóór het moment" (gedeeld met server).
 - `js/push.js` — moment bovenaan Vandaag, lokale meldingen, Web Push-aanmelding.
-- `sw.js` — service worker; **VERSION ophogen bij elke release** (nu `v38`) en nieuwe bestanden (js, css, fonts) aan `SHELL` toevoegen.
+- `sw.js` — service worker; **VERSION ophogen bij elke release** (nu `v39`) en nieuwe bestanden (js, css, fonts) aan `SHELL` toevoegen.
 - `server/` — meldingenserver (`push.mjs`, README). `.github/workflows/ida-push.yml` doet niets zonder geheimen.
 
 Klassieke scripts (geen modules), zodat `file://` werkt. Globale staat: `_ctx`, `_dsAll`, `_dsRecent`, `_P` (profielvoorstel), `_idaAnns`, `cfg`.
@@ -50,7 +50,7 @@ Playwright-core wordt gebruikt; `CHROME_PATH` naar een Chromium. Nightly data-ar
 
 ## Open punten / besluiten bij de gebruiker
 1. **KH-ratio:** data (123% terug na eten) wijst op een sterkere ratio (4,5→3,6 en 5,0→4,0 met het vinkje aan). De gebruiker wilde na een hypo bij het avondeten juist een zwakkere. Die hypo past bij "bolus terwijl je al daalt" (22% vs 9% hypo). Niet zelf beslissen.
-2. **Ontwerp v38 gebouwd** (licht en warm): crème #F5F0E8, inkt #1E1A16, aubergine #4A3B7A (merk, actieve tab, knoppen), abrikoos #F09A48 (plusknop, "volgende keer"); glucose groen/amber/rood. Geist + Geist Mono (tijden, tabellen). Donkere variant via dezelfde tokens.
+2. **Ontwerp v38 gebouwd** (licht en warm): crème #F5F0E8, inkt #1E1A16, inktblauw #1F3A5F (merk, actieve tab, knoppen; donker #9DBAE6), abrikoos #F09A48 (plusknop, "volgende keer"); glucose groen/amber/rood. Geist + Geist Mono (tijden, tabellen). Donkere variant via dezelfde tokens.
    Tabs: Vandaag · Dag · (+) · Profiel · Team. Patronen en Eten hangen onder Dag (rij + terugknop, onderbalk blijft op Dag).
    - Vandaag: statuskaart (pil in bereik/hoog/laag/oud, getal telt op, één zin incl. AAPS-verwachting, IOB/COB/vandaag in bereik), gekleurde 24-uurscurve, 3 kerncijfers, "Let op" max 2.
    - Dag: tijd in bereik per dag (7 staafjes, tik = dag), oordeel t.o.v. eigen 30-dagengemiddelde, curve met genummerde momenten (maaltijd/laag/hoog), detail met feiten en "volgende keer" (alleen uit eigen data; prebolus uit t50 per dagdeel).
