@@ -11,5 +11,8 @@ create table if not exists public.ida_push_sent (
 );
 alter table public.ida_push_subscriptions enable row level security;
 alter table public.ida_push_sent enable row level security;
+-- Nieuwe projecten geven tabellen niet meer automatisch API-toegang: alleen de server-rol krijgt rechten.
+grant usage on schema public to service_role;
+grant select, insert, update, delete on public.ida_push_subscriptions, public.ida_push_sent to service_role;
 -- Opruimen van oude verzonden-sleutels (optioneel, bv. wekelijks):
 -- delete from public.ida_push_sent where at < now() - interval '7 days';
