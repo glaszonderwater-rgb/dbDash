@@ -1,0 +1,7 @@
+# IDA draait op GitHub Pages. Het oude Netlify-adres (diametric.netlify.app) stuurt alles daarheen.
+# GitHub Pages negeert dit bestand.
+[[redirects]]
+  from = "/*"
+  to = "https://glaszonderwater-rgb.github.io/dbDash/:splat"
+  status = 301
+  force = true
