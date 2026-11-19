@@ -26,9 +26,11 @@ await page.waitForTimeout(800);
 const v=await page.evaluate(()=>({ hero:document.getElementById('idaVal').textContent, tiles:document.querySelectorAll('#bento .itile').length,
   prof:(()=>{ showTab('profiel'); return { rows:document.querySelectorAll('#profBody .iprow').length, txt:typeof _P!=='undefined'&&_P&&_P.basal?aapsProfileText(_P):null, firstBasal:_P&&_P.basal?_P.basal[0].value:null }; })(),
   team:(()=>{ showTab('consult'); return document.getElementById('teamTop').textContent.includes('Effect van je nieuwe profiel'); })(),
+  cap:(()=>{ if(!_P||!_P.basal) return null; let worst=0; for(let h=0;h<24;h++){ const cur=profileAt(_ctx.timeline,_hourTs(h,_ctx.q.to||Date.now())).basal; let v=_P.basal[0].value; for(const b of _P.basal) if(hhmmToMin(b.from)<=h*60) v=b.value; worst=Math.max(worst,Math.abs(v/cur-1)); } return worst; })(),
   tz:(()=>{ setTzTimeline([{ts:0,raw:{utcOffset:-60}}]); const m=todMin(Date.UTC(2026,0,1,12,0)); setTzTimeline(_ctx.treatments); return m; })() }));
 console.log('hero:',v.hero,'| tegels:',v.tiles,'| profielrijen:',v.prof.rows,'| eerste basaal:',v.prof.firstBasal,'| team-meting:',v.team?'JA':'NEE','| tz (12:00 UTC bij −60):',v.tz);
 console.log(v.prof.txt);
+console.log('grootste afwijking per uur t.o.v. huidig basaal:', v.cap!=null?Math.round(v.cap*100)+'%':'—');
 // snel loggen: ziek, nu, opslaan → annotatie
 await page.evaluate(()=>{ showTab('overzicht'); openLogSheet(); }); await page.waitForTimeout(150);
 await page.click('[data-lt="ziek"]'); await page.click('#logSave'); await page.waitForTimeout(300);
@@ -40,6 +42,6 @@ const act=await page.evaluate(()=>document.getElementById('teamTop').textContent
 console.log('meting gestart:',act?'JA':'NEE');
 console.log('errors:', errors.length?errors:'geen');
 // loop levert 1,2 bij profiel 0,9 → nieuw basaal hoger dan 0,9, max +30% per dag
-const ok = /\d/.test(v.hero) && v.tiles>=3 && v.prof.rows>=1 && v.prof.firstBasal>0.9 && v.prof.firstBasal<=1.2 && v.team && v.tz===660 && logged && act && !errors.length;
+const ok = v.cap!=null && v.cap<=0.33 && /\d/.test(v.hero) && v.tiles>=1 && v.prof.rows>=1 && v.prof.firstBasal>0.9 && v.prof.firstBasal<=1.2 && v.team && v.tz===660 && logged && act && !errors.length;
 console.log('\nRESULTAAT:', ok?'OK':'FOUT');
 await browser.close();

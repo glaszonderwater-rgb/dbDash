@@ -34,10 +34,26 @@ t('geen eetmoment als je niet daalt', !idaMoments(up, tr, { now, tzOffsetMin: 0,
 t('niets buiten eettijd', !idaMoments(glucose.map(x => ({ ...x, ts: x.ts - 4 * H })), tr, { now: now - 4 * H, tzOffsetMin: 0, stats: null }).some(x => x.kind === 'eten'));
 // oude data → niets
 t('niets zonder verse waarde', idaMoments(glucose.filter(x => x.ts < now - 30 * MIN), tr, { now, tzOffsetMin: 0 }).length === 0);
-// stijging zonder eten
-const rise = glucose.map(x => { const a = (now - x.ts) / MIN; return a <= 150 && a >= 90 ? { ...x, bg: 7 + (150 - a) / 60 * 6.8 } : x; });
-const q = idaMoments(rise, tr, { now, tzOffsetMin: 0, stats: null }).find(x => x.kind === 'vraag');
+// stijging zonder eten: 7 → 13,8 in het laatste uur (om 14:00, buiten eettijd en overdag)
+const noon = Date.UTC(2026, 10, 18, 14, 0);
+const flat = []; for (let m = 600; m >= 0; m -= 5) flat.push({ ts: noon - m * MIN, bg: 7 });
+const riseAt = (g, end) => g.map(x => { const a = (end - x.ts) / MIN; return a <= 60 ? { ...x, bg: 7 + (60 - a) / 60 * 6.8 } : x; });
+const r1 = riseAt(flat, noon);
+const q = idaMoments(r1, tr, { now: noon, tzOffsetMin: 0, stats: null }).find(x => x.kind === 'vraag');
 t('vraag bij stijging zonder eten', !!q && /zonder eten/.test(q.title));
+// dezelfde stijging 1 en 2 uur later: geen nieuwe vraag (geen herhaling elke 5 minuten)
+const later = (h) => { const n = noon + h * H; const g = r1.concat(Array.from({ length: h * 12 }, (_, i) => ({ ts: noon + (i + 1) * 5 * MIN, bg: 13.8 - (i + 1) * 0.05 }))); return idaMoments(g, tr, { now: n, tzOffsetMin: 0, stats: null }).filter(x => x.kind === 'vraag'); };
+const l1 = later(1), l2 = later(2);
+t('geen herhaalde vraag voor dezelfde stijging', l1.length === 0 && l2.length === 0);
+// sleutel blijft gelijk terwijl de stijging doorloopt
+const k1 = idaMoments(riseAt(flat, noon - 15 * MIN).filter(x => x.ts <= noon - 15 * MIN), tr, { now: noon - 15 * MIN, tzOffsetMin: 0, stats: null }).find(x => x.kind === 'vraag');
+t('één sleutel per stijging', !k1 || k1.key === q.key);
+// 's nachts geen vraag
+const night = Date.UTC(2026, 10, 18, 3, 0); const fN = flat.map(x => ({ ...x, ts: x.ts - (noon - night) }));
+t('geen vraag tussen 23 en 7 uur', !idaMoments(riseAt(fN, night), tr, { now: night, tzOffsetMin: 0, stats: null }).some(x => x.kind === 'vraag'));
+// herstel na een laagte is geen maaltijd
+const fromLow = r1.map(x => { const a = (noon - x.ts) / MIN; return a <= 60 ? { ...x, bg: 3.6 + (60 - a) / 60 * 7.4 } : x; });
+t('geen vraag bij herstel na een laagte', !idaMoments(fromLow, tr, { now: noon, tzOffsetMin: 0, stats: null }).some(x => x.kind === 'vraag'));
 // server zonder geheugen: alleen nieuw t.o.v. 10 min geleden
 const n1 = newMoments(glucose, tr, { now, tzOffsetMin: 0, stats: null }, 10 * MIN).filter(x => x.kind === 'eten').length;
 const steady = glucose.map(x => x.ts > now - 15 * MIN ? x : x);

@@ -22,7 +22,7 @@ await page.click('#btnSave');
 await page.waitForFunction(()=>document.getElementById('idaHero') && !document.getElementById('idaHero').hidden,{timeout:40000}).catch(()=>{});
 await page.waitForTimeout(1000);
 const r=await page.evaluate(()=>({ gri:[...document.querySelectorAll('#bento .itl')].some(e=>/GRI/.test(e.textContent)),
-  drive:!!document.getElementById('driveBtn'), supplies:/Voorraad/.test(document.getElementById('teamTop').textContent),
+  drive:!!document.getElementById('driveBtn'), supplies:/Voorraad/.test(document.querySelector('.view[data-view="consult"]').textContent),
   csv:dailyCsv(_ctx).split('\n')[0].includes('in_bereik_%'), rep:/IDA-samenvatting/.test(idaReportHtml()),
   gri2:(()=>{ const g=[...Array(90).fill(6),...Array(5).fill(3.5),...Array(5).fill(2.5)].map((bg,i)=>({ts:i,bg})); return griOf(g).gri; })() }));
 await page.click('#idaDrive'); await page.waitForTimeout(200);

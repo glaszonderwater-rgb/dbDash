@@ -1,5 +1,5 @@
 "use strict";
-/* IDA 4 — tabs Vandaag · Dag · (+) · Profiel · Team.
+/* IDA 4 — tabs Vandaag · Dag · (+) · Profiel · Voortgang.
    - Vandaag: statuskaart (getal, één zin, IOB/COB) met gekleurde 24-uurscurve.
    - Dag: tijd in bereik per dag, oordeel t.o.v. je eigen gemiddelde, curve met genummerde momenten,
      per moment een pagina met "volgende keer". Patronen en Eten hangen onder Dag.
@@ -65,8 +65,15 @@ function idaOpenSetting(id){
   el.addEventListener("change",()=>{ cfg.carbsAccurate=el.checked; saveCfg(); _P=null;
     try{ renderIda(); }catch(_){} toast(el.checked?TL("Opgeslagen: IDA gaat ervan uit dat je nauwkeurig telt.","Saved: IDA assumes you count accurately.","Guardado."):TL("Opgeslagen.","Saved.","Guardado.")); }); })();
 
-// Dagcurve staat nu in Dag; de rij in Patronen verdwijnt
-(function(){ const o=buildRows; window.buildRows=function(){ o(); const d=_e4("secDay"); if(d&&d._row) d._row.classList.add("gone"); }; })();
+// Patronen: alleen wat je echt gebruikt. Wat elders al staat of zelden iets zegt gaat uit de lijst
+// (Dagcurve → Dag, Profiel/Gemeten vs. ingesteld → Profiel, Insuline & KH → Voorraad, Band → kerncijfers);
+// via een link of melding blijven ze bereikbaar.
+const _GONE4=["#secDay","#secProfile","#mvsFold","#secInsulin","#bandCard",'details[data-an="lunch"]','details[data-an="maand"]','details[data-an="dagpatroon"]'];
+(function(){ const o=buildRows; window.buildRows=function(){ o();
+  for(const q of _GONE4){ const d=document.querySelector(q); if(d&&d._row) d._row.classList.add("gone"); }
+  document.querySelectorAll('.view[data-view="analyses"] .h3').forEach(h=>{ let n=h.nextElementSibling, any=false;
+    while(n&&!n.classList.contains("h3")){ if(n.classList.contains("irow")&&!n.hidden&&!n.classList.contains("gone")) any=true; n=n.nextElementSibling; }
+    h.classList.toggle("gone",!any); }); }; })();
 
 /* ── grafiek: gekleurde glucoselijn ──────────────────────────────────────── */
 function _zone(bg){ return bg<LO_T?"lo":bg>HI_T?"hi":"ok"; }
@@ -344,9 +351,12 @@ function openMoment(c, m, dayFrom){
     F.push([TL("Gelogd eten","Logged food","Comida registada"),m.carbs3?TL("ja","yes","sim"):TL("nee","no","não"),TL("3 uur ervoor","3 hours before","3 h antes")]);
   }
   const next=_momNext(c,m);
+  // Laagte: dezelfde oorzaakbepaling als de meldingen op Vandaag (explainHypo), zodat beide hetzelfde zeggen
+  let cause=null; if(m.k==="lo"){ try{ cause=explainHypo({start:m.ts}, c.glucose, c.treatments, c.timeline); }catch(_){} }
   const node=document.createElement("div"); node.className="momdet";
   node.innerHTML=`<p class="isub">${esc(new Date(localDayKey(m.ts)+"T12:00:00").toLocaleDateString(LOCALE(),{weekday:"long",day:"numeric",month:"long"}))} · ${_hm4(m.k==="meal"?m.ts:m.tMark)}</p>
     <section class="ibox">${idaCurveSvg(rd,ev,{from:a,to:b,marks:[{ts:m.tMark,bg:m.bg,n:m.n,k:m.k}],h:170})}</section>
+    ${cause?`<p class="mcause"><span>${TL("Waarschijnlijke oorzaak","Likely cause","Causa provável")}</span><b>${cause.label.charAt(0).toUpperCase()+cause.label.slice(1)}</b><i>${TL("zekerheid","certainty","certeza")} ${cause.conf}</i></p>`:""}
     <div class="mfacts">${F.map(([k,v,s])=>`<div><i>${k}</i><b>${v}</b>${s?`<em>${s}</em>`:""}</div>`).join("")}</div>
     <section class="nexttime"><span class="nk">${TL("VOLGENDE KEER","NEXT TIME","PRÓXIMA VEZ")}</span>${next.map(t=>`<p>${esc(t)}</p>`).join("")}</section>
     <button class="ibtn line" data-idaask="moment" style="align-self:flex-start">${TL("Vraag door","Ask more","Perguntar")} ›</button>`;
@@ -399,8 +409,10 @@ function idaProfiel(c){
   const rows=[], chip=(d,dec)=>`<span class="ichip ${d>0?"up":"dn"}">${d>0?"+":"−"}${_idaN(Math.abs(d),dec)}</span>`;
   P.basal.forEach((b,i)=>{ const n=_avg(b.now); if(Math.abs(b.value-n)<0.05) return;
     const why=b.why==="laag"?TL(`${_idaN(b.low*100)}% van de tijd laag`,`${_idaN(b.low*100)}% of the time low`,`${_idaN(b.low*100)}% do tempo baixa`):b.act?TL(`loop levert nuchter ${_idaN(b.act[0],2)}${b.act[1]-b.act[0]>0.05?"–"+_idaN(b.act[1],2):""}`,`loop delivers ${_idaN(b.act[0],2)}${b.act[1]-b.act[0]>0.05?"–"+_idaN(b.act[1],2):""} fasting`,`loop entrega ${_idaN(b.act[0],2)}`):"";
+    const capped=b.value>n && b.act && b.act[0]*0.98>b.value;
+    const why2=why+(capped?TL(" · hooguit +20% per stap"," · at most +20% per step"," · máx. +20% por passo"):"");
     const was=b.now.length>1?`${_idaN(Math.min(...b.now),2)}–${_idaN(Math.max(...b.now),2)}`:_idaN(b.now[0],2);
-    rows.push(`<div class="iprow"><span class="ipt">${b.from}</span><span class="ipv"><span class="ipk">${TL("Basaal","Basal","Basal")}</span><s>${was} → </s>${_idaN(b.value,2)}</span>${chip(b.value-n,2)}<span class="ipw">${why}</span></div>`); });
+    rows.push(`<div class="iprow"><span class="ipt">${b.from}</span><span class="ipv"><span class="ipk">${TL("Basaal","Basal","Basal")}</span><s>${was} → </s>${_idaN(b.value,2)}</span>${chip(b.value-n,2)}<span class="ipw">${why2}</span></div>`); });
   P.isf.forEach(b=>{ if(Math.abs(b.value-b.now)<0.1) return;
     rows.push(`<div class="iprow"><span class="ipt">${b.from}</span><span class="ipv"><span class="ipk">ISF</span><s>${_idaN(b.now)} → </s>${_idaN(b.value)}</span>${chip(b.value-b.now,1)}<span class="ipw">${b.why==="laag"?TL("hier zit je vaak laag","you're often low here","baixas aqui"):TL("uit autosens en dagdosis","from autosens and daily dose","de autosens e dose diária")}</span></div>`); });
   icCh.forEach(b=>{ rows.push(`<div class="iprow"><span class="ipt">${b.from}</span><span class="ipv"><span class="ipk">${TL("KH-ratio","Carb ratio","Rácio HC")}</span><s>${_idaN(b.now)} → </s>${_idaN(b.value)}</span>${chip(b.value-b.now,1)}<span class="ipw">${TL(`gemeten ${_idaN(b.measured)} uit ${b.n} maaltijden`,`measured ${_idaN(b.measured)} from ${b.n} meals`,`medido ${_idaN(b.measured)} em ${b.n} refeições`)}</span></div>`); });
@@ -417,7 +429,7 @@ function idaProfiel(c){
   const act=_idaActivation();
   if(act){ const d=Math.floor((Date.now()-act.ts)/864e5), r=Math.min(7,d), dash=(r/7*94.2).toFixed(1);
     html+=`<section class="ibox pmeas"><svg class="pring" width="40" height="40" viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="15" stroke="var(--surface-2)"/><circle cx="20" cy="20" r="15" stroke="var(--brand)" stroke-dasharray="${dash} 94.2" stroke-linecap="round" transform="rotate(-90 20 20)"/></svg>
-      <div style="flex:1"><b>${d<7?TL(`Meting loopt · dag ${d} van 7`,`Measuring · day ${d} of 7`,`A medir · dia ${d} de 7`):TL("Meting klaar","Measurement done","Medição concluída")}</b><br><span>${TL(`Geactiveerd op ${new Date(act.ts).toLocaleDateString(LOCALE(),{day:"numeric",month:"long"})}. De uitslag staat bij Team.`,`Activated on ${new Date(act.ts).toLocaleDateString(LOCALE(),{day:"numeric",month:"long"})}. The result is under Team.`,`Ativado em ${new Date(act.ts).toLocaleDateString(LOCALE())}.`)}</span></div><button class="ibtn" data-team="1">Team ›</button></section>`; }
+      <div style="flex:1"><b>${d<7?TL(`Meting loopt · dag ${d} van 7`,`Measuring · day ${d} of 7`,`A medir · dia ${d} de 7`):TL("Meting klaar","Measurement done","Medição concluída")}</b><br><span>${TL(`Geactiveerd op ${new Date(act.ts).toLocaleDateString(LOCALE(),{day:"numeric",month:"long"})}. De uitslag staat bij Voortgang.`,`Activated on ${new Date(act.ts).toLocaleDateString(LOCALE(),{day:"numeric",month:"long"})}. The result is under Progress.`,`Ativado em ${new Date(act.ts).toLocaleDateString(LOCALE())}.`)}</span></div><button class="ibtn" data-team="1">${TL("Voortgang","Progress","Progresso")} ›</button></section>`; }
   // max IOB
   const MA=(typeof maxIobAdvice==="function")?maxIobAdvice(c):null, iobMin=_idaN(MA?MA.v:P.maxIobMin+(P.mealBolus||0));
   const whyI=MA?MA.why:TL("3× je hoogste basaal plus je gemiddelde maaltijdbolus","3× your highest basal plus your average meal bolus","3× o basal mais alto mais o bólus médio");
@@ -501,3 +513,14 @@ function renderTake(node){
       if(first){ first=false; requestAnimationFrame(()=>idaEnter(t)); } } }catch(e){ console.error(e); }
     return r; };
 })();
+
+/* ── Voortgang: voorraad en export onderaan, los van meting en consult ──── */
+(function(){ const o=idaExtrasTeam;
+  window.idaExtrasTeam=function(c){
+    let more=_e4("teamMore");
+    if(!more){ const ep=_e4("epConsult"); if(!ep) return o(c);
+      ep.insertAdjacentHTML("afterend",`<div class="h3" id="teamMoreH">${TL("Voorraad en export","Supplies and export","Material e exportação")}</div><div id="teamMore"></div>`); more=_e4("teamMore"); }
+    more.innerHTML=""; o(c);
+    const top=_e4("teamTop"); if(!top) return;
+    [...top.querySelectorAll(".ix")].forEach(el=>{ if(el.querySelector("#expStart,#expStop")||/xperiment/.test(el.textContent.slice(0,60))) return; more.appendChild(el); });
+  }; })();

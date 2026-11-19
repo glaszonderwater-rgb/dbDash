@@ -214,7 +214,7 @@ button:focus-visible,a:focus-visible,[tabindex]:focus-visible{outline:2px solid 
 .dethead .ititle{font-size:1.45rem!important;letter-spacing:-.03em!important}
 .dethead{margin:.4rem 0 1rem!important}
 #profBack{display:none!important}
-.irow.gone{display:none!important}
+.irow.gone,.h3.gone{display:none!important}
 
 /* ── Dag ─────────────────────────────────────────────────────────────── */
 .dnav{display:flex;align-items:center;gap:.5rem;margin:.2rem 0 .8rem}
@@ -374,3 +374,13 @@ dialog label:has(> input[type=checkbox]) input{width:auto;margin-top:.2rem;flex:
 input[type=checkbox],input[type=radio]{accent-color:var(--brand)}
 dialog{border-radius:24px;border-color:var(--line)}
 dialog::backdrop{background:rgba(30,20,10,.42)}
+
+.mcause{display:flex;flex-direction:column;gap:.1rem;margin:.2rem 0 .1rem;padding:.75rem .9rem;border-radius:16px;background:var(--lo-soft)}
+.mcause span{font-size:.7rem;font-weight:600;color:var(--lo-t)} .mcause b{font-size:.98rem;font-weight:600} .mcause i{font-style:normal;font-family:var(--mono);font-size:.68rem;color:var(--muted)}
+#teamMore{display:flex;flex-direction:column;gap:.6rem}
+#teamMore section{margin-bottom:0}
+/* kleine tekst iets groter: leesbaar op een telefoon */
+.chome.ida .kpis .kpi .s,.psum em,.mfacts em,.wday .wv{font-size:.72rem!important}
+.hmono,.dfacts,.irow .irt i,.mrow .mt i{font-size:.8rem!important}
+.ichart text,.bchart text{font-size:9.5px}
+.heat .hax{font-size:.68rem}

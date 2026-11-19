@@ -651,12 +651,15 @@ function explainHypo(e, glucose, treatments, timeline){
   const basalHr=prof&&isFinite(prof.basal)?prof.basal:null; // E/u profiel op dat uur
   const mdl=insulinModel(PEAK_MIN,dia);
   // Actieve insuline op het moment van de low, per bron.
-  let iobSMB=0,iobMeal=0,iobMan=0,nSMB=0,biggest=null;
+  let iobSMB=0,iobMeal=0,iobMan=0,nSMB=0,biggest=null,mealBol=null;
+  // Een bolus telt als maaltijdbolus als er ≥10 g koolhydraten bij staan (zelfde regel als in Dag:
+  // 45 min ervoor tot 30 min erna). AAPS legt bolus en koolhydraten vaak als aparte regels vast.
+  const carbNear=ts=>treatments.some(c=>c.carbs>=10&&c.ts>=ts-30*60e3&&c.ts<=ts+45*60e3);
   for(const t of treatments){ if(!(t.insulin>0)) continue;
     const dt=(t0-t.ts)/60000; if(dt<0||dt>dia) continue;
     const c=t.insulin*mdl.iob(dt); if(c<=0) continue;
     if(detectSMB(t)){ iobSMB+=c; nSMB++; }
-    else if(t.carbs>0){ iobMeal+=c; }
+    else if(t.carbs>0||carbNear(t.ts)){ iobMeal+=c; if(!mealBol||t.insulin>mealBol.insulin) mealBol=t; }
     else { iobMan+=c; }
     if(!biggest||t.insulin>biggest.insulin) biggest=t; }
   const iob=iobSMB+iobMeal+iobMan;
@@ -686,11 +689,15 @@ function explainHypo(e, glucose, treatments, timeline){
     const steps=[iobLine]; if(dropLine)steps.push(dropLine);
     if(dom===iobSMB){ cause="smb-stapeling"; label=TL("loop-correcties werkten door","loop corrections kept acting","correções do loop continuaram a atuar");
       steps.push(TL(`De loop stapelde ${nSMB} SMB'${nSMB===1?"s":"s"} tegen een stijging; die insuline werkte door tot ná de piek.`,`The loop stacked ${nSMB} SMB${nSMB===1?"":"s"} against a rise; that insulin kept acting past the peak.`,`O loop acumulou ${nSMB} SMB contra uma subida; essa insulina continuou a atuar após o pico.`)); }
-    else if(dom===iobMeal && cob<10){ cause="maaltijd-nawerking"; label=TL("maaltijdbolus werkte na de koolhydraten door","meal bolus kept acting after the carbs","bólus de refeição continuou a atuar após os hidratos");
+    else if(dom===iobMeal && cob>=10){ cause="maaltijd-nawerking"; label=TL("maaltijdbolus werkte sneller dan de koolhydraten","meal bolus acted faster than the carbs","bólus de refeição atuou mais depressa que os hidratos");
+      steps.push(TL(`Er was nog ${nl1(cob)} g koolhydraat actief: de insuline was de opname voor.`,`There were still ${nl1(cob)} g of carbs active: the insulin was ahead of absorption.`,`Ainda havia ${nl1(cob)} g de hidratos ativos: a insulina adiantou-se.`)); }
+    else if(dom===iobMeal){ cause="maaltijd-nawerking"; label=TL("maaltijdbolus werkte na de koolhydraten door","meal bolus kept acting after the carbs","bólus de refeição continuou a atuar após os hidratos");
       steps.push(TL(`De koolhydraten waren vermoedelijk eerder op dan de insuline (nog ${nl1(cob)} g actief) — de staart van de bolus duwde je omlaag.`,`The carbs were probably gone before the insulin (still ${nl1(cob)} g active) — the tail of the bolus pushed you down.`,`Os hidratos acabaram provavelmente antes da insulina (ainda ${nl1(cob)} g ativos) — a cauda do bólus empurrou-o para baixo.`)); }
     else { cause="correctie-nawerking"; label=TL("een correctiebolus werkte door","a correction bolus kept acting","um bólus de correção continuou a atuar");
       steps.push(TL(`De correctie bracht je verder omlaag dan nodig — mogelijk te vroeg gestapeld op nog actieve insuline.`,`The correction brought you further down than needed — possibly stacked too soon on still-active insulin.`,`A correção baixou-o mais do que o necessário — possivelmente acumulada cedo demais sobre insulina ainda ativa.`)); }
     conf = dom>=0.6*iob && iob>=THR ? TL("hoog","high","alta") : TL("matig","medium","média");
+    if(dom===iobMeal && mealBol){ const b0=bgAt(mealBol.ts), bp=bgAt(mealBol.ts-20*60e3);
+      if(b0!=null&&bp!=null&&b0<7&&(b0-bp)/20<=-0.03) steps.push(TL(`Bij de bolus zat je op ${nl1(b0)} en daalde je al.`,`At the bolus you were at ${nl1(b0)} and already falling.`,`No bólus estava a ${nl1(b0)} e já a descer.`)); }
     if(rescue.length) steps.push(TL(`Je vulde ${nl1(rescue.reduce((s,t)=>s+t.carbs,0))} g koolhydraten bij — reddingskoolhydraten, geen maaltijd.`,`You took ${nl1(rescue.reduce((s,t)=>s+t.carbs,0))} g of carbs — rescue carbs, not a meal.`,`Tomou ${nl1(rescue.reduce((s,t)=>s+t.carbs,0))} g de hidratos — hidratos de resgate, não uma refeição.`));
     return { cause,label,conf,steps };
   }
@@ -1824,9 +1831,11 @@ function anDagpatroon(glucose, treatments, q){
 // weg). Beter is te lezen wat de lóóp deed: per uur van de dag de werkelijk geleverde
 // basaal (temp-basaal, met je profiel als terugval waar geen temp actief is) naast je
 // profiel-basaal. Waar de loop dag na dag structureel méér/minder levert, staat je
-// profiel daar te laag/hoog. Maaltijduren (3 u na koolhydraten) worden eruit gefilterd
-// zodat het over nuchtere basaalbehoefte gaat; SMB's blijven juist meetellen.
-function loopBasal(treatments, timeline, q){
+// profiel daar te laag/hoog. Maaltijduren worden eruit gefilterd zodat het over nuchtere
+// basaalbehoefte gaat; SMB's blijven juist meetellen. Venster na eten groeit met de maaltijd
+// (≥10 g: 3 u, ≥20 g: 4 u, ≥40 g: 5 u: trage maaltijden blijven langer doorwerken), en met
+// glucose erbij vallen ook ongelogde stijgingen (≥2,5 in een uur zonder koolhydraten) eruit.
+function loopBasal(treatments, timeline, q, glucose){
   if(!timeline) return { noprof:true };
   const from=q.from||0, to=q.to||Date.now();
   const temps=treatments.filter(t=>t.type==="Temp Basal").map(t=>{ const r=t.raw||{};
@@ -1838,9 +1847,15 @@ function loopBasal(treatments, timeline, q){
   if(temps.length<50) return { few:temps.length };
   const TL=temps.map(t=>t.ts);
   const lastTemp=ts=>{ let lo=0,hi=TL.length; while(lo<hi){const m=(lo+hi)>>1; if(TL[m]<=ts)lo=m+1;else hi=m;} return lo-1; };
-  const carbTs=treatments.filter(t=>t.carbs>=20).map(t=>t.ts).sort((a,b)=>a-b);
-  const MEAL=3*3600e3;
-  const nearMeal=ts=>{ let lo=0,hi=carbTs.length; while(lo<hi){const m=(lo+hi)>>1; if(carbTs[m]<=ts)lo=m+1;else hi=m;} return lo>0 && carbTs[lo-1]>ts-MEAL; };
+  const meals=treatments.filter(t=>t.carbs>=10).map(t=>({ts:t.ts, end:t.ts+(t.carbs>=40?5:t.carbs>=20?4:3)*3600e3})).sort((a,b)=>a.ts-b.ts);
+  // ongelogd eten: snelle stijging zonder koolhydraten → 3 uur vanaf het begin van de stijging overslaan
+  if(glucose&&glucose.length){ const g=glucose.filter(x=>x.ts>=from-3600e3&&x.ts<to); let j=0;
+    for(let i=0;i<g.length;i++){ while(g[j].ts<g[i].ts-60*60e3) j++;
+      if(g[i].bg-g[j].bg>=2.5){ const t0=g[j].ts; if(!meals.some(m=>m.ts>t0-2*3600e3&&m.ts<g[i].ts)) meals.push({ts:t0,end:t0+3*3600e3}); } }
+    meals.sort((a,b)=>a.ts-b.ts); }
+  const mTs=meals.map(m=>m.ts), maxW=5*3600e3;
+  const nearMeal=ts=>{ let lo=0,hi=mTs.length; while(lo<hi){const m=(lo+hi)>>1; if(mTs[m]<=ts)lo=m+1;else hi=m;}
+    for(let k=lo-1;k>=0&&mTs[k]>ts-maxW;k--) if(meals[k].end>ts) return true; return false; };
   const STEP=10*60e3, hp=Array.from({length:24},()=>({a:0,p:0,n:0,s:0}));
   const okDay=ts=>!q.usableKeys||q.usableKeys.has(localDayKey(ts));   // alleen bruikbare dagen (geen pen-/loop-uit-dagen)
   for(let t=from;t<to;t+=STEP){
@@ -1870,7 +1885,7 @@ function loopBasalSvg(hours){
     `<div class="legend"><span><i style="background:var(--accent);opacity:.55"></i>${TL("loop geleverd","loop delivered","entregue pelo loop")}</span><span><i style="background:var(--ink)"></i>${TL("profiel","profile","perfil")}</span></div>`;
 }
 function anLoopBasal(glucose, treatments, q, timeline){
-  const r=loopBasal(treatments, timeline, q);
+  const r=loopBasal(treatments, timeline, q, glucose);
   if(r.noprof) return `<div class="muted">${TL("Geen profiel met basaalschema in Nightscout gevonden — nodig om je loop-basaal naast je profiel te leggen.","No profile with a basal schedule found in Nightscout — needed to compare your loop basal against your profile.","Nenhum perfil com esquema basal encontrado no Nightscout — necessário para comparar a basal do loop com o seu perfil.")}</div>`;
   if(r.thin) return `<div class="muted">${TL("Te weinig nuchtere uren met loop-data om je basaal per uur te vergelijken.","Too few fasting hours with loop data to compare your basal per hour.","Poucas horas em jejum com dados do loop para comparar a sua basal por hora.")}</div>`;
   if(r.few!=null) return `<div class="muted">${TL(`Te weinig temp-basaal-data (${r.few}). Werkt alleen bij een <b>closed loop</b> (AAPS/Loop) die temp-basaal naar Nightscout stuurt.`,`Too little temp-basal data (${r.few}). Only works with a <b>closed loop</b> (AAPS/Loop) that sends temp basal to Nightscout.`,`Poucos dados de basal temporária (${r.few}). Só funciona com um <b>closed loop</b> (AAPS/Loop) que envia basal temporária para o Nightscout.`)}</div>`;
@@ -2159,7 +2174,7 @@ function proposalEngine(drift, oi, MR, pi, glucose, treatments, q, timeline){
 
   // 2 — Basaal per dagdeel. Bij een closed loop lezen we wat de lóóp werkelijk
   // leverde (temp-basaal vs. profiel) — die data is er wél; anders de nuchtere drift.
-  { const lb=loopBasal(treatments, timeline, q), lbHours=(lb&&lb.hours)?lb.hours:null;
+  { const lb=loopBasal(treatments, timeline, q, glucose), lbHours=(lb&&lb.hours)?lb.hours:null;
     const rows=[], grid={}; let source=null;
     for(const d of DAYPARTS){
       // A — loop-basaal (voorkeur bij een loop): wat je loop echt leverde vs. profiel
@@ -2317,7 +2332,7 @@ function aapsProfile(glucose, treatments, timeline, q, ds){
   const now=q.to||Date.now(), usable=q.usableKeys;
   const cur=h=>profileAt(timeline,_hourTs(h,now));
   const c0=cur(0); if(!c0||c0.source==="geen"||c0.basal==null) return { none:"profiel" };
-  const lb=loopBasal(treatments,timeline,q);
+  const lb=loopBasal(treatments,timeline,q,glucose);
   if(!lb||!lb.hours) return { none:"loop", few:lb&&lb.few };
   // per uur: laag/hoog op bruikbare dagen
   const hs=Array.from({length:24},()=>({n:0,lo:0,hi:0}));
@@ -2326,7 +2341,9 @@ function aapsProfile(glucose, treatments, timeline, q, ds){
   for(let h=0;h<24;h++){
     const p=cur(h), L=hs[h].n?hs[h].lo/hs[h].n:0, Hh=hs[h].n?hs[h].hi/hs[h].n:0, a=lb.hours[h]&&lb.hours[h].act;
     let nv=p.basal, why="";
-    if(a!=null){ nv=Math.min(Math.max(0.8*a, p.basal*0.7), p.basal*1.5); why="lev"; }
+    // 70% van de weg naar wat de loop nuchter levert, met een dode zone van 10% (ruis) en per stap hooguit ±20%.
+    if(a!=null){ const d=a-p.basal; nv=Math.abs(d)<0.10*p.basal?p.basal:p.basal+0.7*d; nv=Math.min(Math.max(nv,p.basal*0.8),p.basal*1.2); why="lev"; }
+    if(Hh>0.25 && nv<p.basal){ nv=p.basal; why="hooggrens"; }   // niet minder waar je vaak hoog zit
     if(L>0.04){ nv=Math.min(nv, p.basal*0.85); why="laag"; }
     else if(L>0.03 && nv>p.basal){ nv=p.basal; why="laaggrens"; }
     hours.push({h, cur:p.basal, nv, act:a, low:L, high:Hh, why});
@@ -2341,11 +2358,20 @@ function aapsProfile(glucose, treatments, timeline, q, ds){
   // Bloktijden vrij gekozen: de indeling met de kleinste afwijking per uur, met een "prijs" per extra blok
   // en minstens 2 uur per blok (geen losse uurtjes uit toeval).
   const segs=_segment(lead.map(o=>o.nv), 2, 0.015, 8);
-  const basal=segs.map(([f,t])=>{ const hrs=lead.slice(f,t); const mean=hrs.reduce((s,o)=>s+o.nv,0)/hrs.length;
-    const lowH=hrs.filter(o=>o.why==="laag"); const v=Math.max(0.05,_r05(lowH.length?Math.min(mean,...lowH.map(o=>o.nv)):mean));
-    const curs=[...new Set(hrs.map(o=>_r05(o.cur)))], acts=hrs.map(o=>o.act).filter(x=>x!=null);
-    return { from:_hhmm(f*60), to:t, now:curs, value:v, act:acts.length?[Math.min(...acts),Math.max(...acts)]:null,
-      low:Math.max(...hrs.map(o=>o.low)), high:Math.max(...hrs.map(o=>o.high)), why:lowH.length?"laag":(acts.length?"lev":"") }; });
+  // Een blok mag nooit meer dan ±20% afwijken van wat er nú op dat uur staat: waar je huidige profiel binnen
+  // een blok wisselt, splitsen we het blok en begrenzen we per deel. Gelijke buren worden weer samengevoegd.
+  const basal=[];
+  for(const [f,t] of segs){ const hrs=lead.slice(f,t); const mean=hrs.reduce((s,o)=>s+o.nv,0)/hrs.length;
+    const lowH=hrs.filter(o=>o.why==="laag"); const v=lowH.length?Math.min(mean,...lowH.map(o=>o.nv)):mean;
+    for(let h=f;h<t;){ const c=_r05(lead[h].cur); let e=h; while(e<t&&_r05(lead[e].cur)===c) e++;
+      const sub=lead.slice(h,e), acts=sub.map(o=>o.act).filter(x=>x!=null), lw=sub.some(o=>o.why==="laag");
+      const vv=Math.max(0.05,_r05(Math.min(Math.max(v,c*(lowH.length?0.7:0.8)),c*1.2)));   // omlaag bij laagtes mag iets verder
+      const prev=basal[basal.length-1];
+      if(prev&&prev.value===vv&&prev.now.length===1&&prev.now[0]===c){ prev.to=e; if(acts.length) prev.act=prev.act?[Math.min(prev.act[0],...acts),Math.max(prev.act[1],...acts)]:[Math.min(...acts),Math.max(...acts)];
+        prev.low=Math.max(prev.low,...sub.map(o=>o.low)); prev.high=Math.max(prev.high,...sub.map(o=>o.high)); if(lw) prev.why="laag"; }
+      else basal.push({ from:_hhmm(h*60), to:e, now:[c], value:vv, act:acts.length?[Math.min(...acts),Math.max(...acts)]:null,
+        low:Math.max(...sub.map(o=>o.low)), high:Math.max(...sub.map(o=>o.high)), why:lw?"laag":(acts.length?"lev":"") });
+      h=e; } }
   const dayNow=hours.reduce((s,o)=>s+o.cur,0), dayNew=basal.reduce((s,b,i)=>{ const to=i+1<basal.length?hhmmToMin(basal[i+1].from)/60:24; return s+b.value*(to-hhmmToMin(b.from)/60); },0);
   // autosens
   const sensV=(ds||[]).filter(d=>d.sens!=null && (!usable||usable.has(localDayKey(d.ts)))).map(d=>d.sens);

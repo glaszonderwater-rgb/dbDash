@@ -148,8 +148,7 @@ function idaPatronen(c){
   const ls=_worstWindow(lo,3), hsS=_worstWindow(hi,4);
   const lMax=Math.max(lo[ls%24],lo[(ls+1)%24],lo[(ls+2)%24]), lPk=[0,1,2].map(k=>(ls+k)%24).reduce((a,b)=>lo[b]>lo[a]?b:a,(ls)%24);
   const hMax=Math.max(...[0,1,2,3].map(k=>hi[(hsS+k)%24])), hPk=[0,1,2,3].map(k=>(hsS+k)%24).reduce((a,b)=>hi[b]>hi[a]?b:a,hsS%24);
-  tiles.push(`<article class="itile"><span class="itl">${TL(`Laag tussen ${ls} en ${(ls+3)%24} uur`,`Low between ${ls} and ${(ls+3)%24} h`,`Baixa entre as ${ls} e as ${(ls+3)%24} h`)}</span><b class="itn lo">${_idaN(lMax*100)}%</b>${_bars(lo,[ls,ls+1,ls+2].map(x=>x%24),"var(--low)")}<span class="its">${TL(`van de tijd onder 3,9, het meest om ${lPk} uur`,`of the time under 3.9, most at ${lPk} h`,`do tempo abaixo de 3,9, sobretudo às ${lPk} h`)}</span></article>`);
-  tiles.push(`<article class="itile"><span class="itl">${TL(`Hoog tussen ${hsS} en ${(hsS+4)%24} uur`,`High between ${hsS} and ${(hsS+4)%24} h`,`Alta entre as ${hsS} e as ${(hsS+4)%24} h`)}</span><b class="itn hi">${Math.round(hMax*100)}%</b>${_bars(hi,[0,1,2,3].map(k=>(hsS+k)%24),"var(--high)")}<span class="its">${TL(`van de tijd boven 10, het meest om ${hPk} uur`,`of the time above 10, most at ${hPk} h`,`do tempo acima de 10, sobretudo às ${hPk} h`)}</span></article>`);
+  // laag/hoog per uur staat bij Profiel (Waar het misgaat)
   // 4. pod-dag
   const pod=_eventDays(c,/site change|cannula/i,24,3);
   if(pod){ const m=Math.max(...pod), mn=Math.min(...pod), w=pod.indexOf(mn);
@@ -162,10 +161,7 @@ function idaPatronen(c){
     tiles.push(`<article class="itile"><span class="itl">${TL("Nieuwe sensor","New sensor","Novo sensor")}</span><b class="itn">${Math.round(mn*100)}%</b>
       <svg class="ibars" viewBox="0 0 150 40" aria-hidden="true">${sen.map((v,i)=>{ const h=Math.max(4,(v-mn+0.02)/(m-mn+0.02)*30); return `<rect x="${6+i*49}" y="${38-h}" width="40" height="${h}" rx="4" fill="${i===w?'var(--ida-acc)':'var(--ida-acc-2)'}"/>`; }).join("")}</svg>
       <span class="its">${TL(`in bereik, ${w*12} tot ${(w+1)*12} uur na de start`,`in range, ${w*12}–${(w+1)*12} h after start`,`no alvo, ${w*12}–${(w+1)*12} h após o início`)}</span></article>`); }
-  // 6. hypo's
-  try{ const hy=hypoStats(c.glucose.filter(x=>c.q.usableKeys.has(localDayKey(x.ts))));
-    if(hy && hy.episodes!=null){ const n=hy.episodes, nn=hy.nocturnal||0, l2=hy.level2||0;
-      tiles.push(`<article class="itile wide row"><div><span class="itl">${TL("Hypo's","Hypos","Hipos")}</span><span class="its big">${TL(`<b>${n}</b> keer onder 3,9, waarvan <b>${l2}</b> onder 3,0 en <b>${nn}</b> 's nachts.`,`<b>${n}</b> times below 3.9, of which <b>${l2}</b> below 3.0 and <b>${nn}</b> at night.`,`<b>${n}</b> vezes abaixo de 3,9; <b>${l2}</b> abaixo de 3,0 e <b>${nn}</b> à noite.`)}</span></div></article>`); } }catch(_){}
+  // aantal hypo's staat bij Patronen › Veiligheid en in de kerncijfers
   host.innerHTML=tiles.join("");
 }
 

@@ -1017,7 +1017,7 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
     <div class="foldbody"><div id="profile"></div></div>
   </details>
 
-  <div class="h3" data-i18n="an.progress">Voortgang</div>
+  <div class="h3" data-i18n="an.progress">Trend en logboek</div>
     <details class="fold" id="secDay" hidden>
     <summary><span data-i18n="home.dayCurve">Dagcurve</span> <span class="foldhint" data-i18n="home.dayCurveHint">je dag per uur — eten, bolus, hypo's</span></summary>
     <div class="foldbody">
@@ -1132,7 +1132,7 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
       <p>Een "maaltijd" = ≥ 30 g koolhydraten, geïsoleerd (geen andere koolhydraten in −2…+4 u) én <b>met een handmatige maaltijdbolus</b> eromheen. Koolhydraten zónder bolus (hypo-redding, losse invoer) tellen niet mee. Per maaltijd berekent de app de opname-curve door de <i>verwachte</i> insuline-daling van de gemeten glucosestijging af te trekken; daaruit volgen <b>t50</b> (na hoeveel minuten de helft is opgenomen), de <b>piek</b> en de <b>prebolus-timing</b> = je handmatige bolus t.o.v. je koolhydraat-invoer (negatief = ervóór). Let op: de invoertijd is je bolusmoment, niet per se wanneer je begon te eten.</p>
 
       <h4 class="mh">10 · Profielvoorstel</h4>
-      <p>IDA rekent je AAPS-profiel opnieuw uit je eigen data. <b>Basaal</b> per uur: wat je loop nuchter echt levert (temp-basaal + SMB), × 0,8, begrensd op 0,7–1,5× je huidige waarde en lager waar je vaak laag zit; elk blok begint een uur eerder omdat basaal pas na ongeveer een uur werkt. <b>ISF</b>: het midden van je profiel × autosens en 100 ÷ dagdosis, hooguit −20%/+15%. <b>KH-ratio</b>: gemeten uit je maaltijden, per blok hooguit 20% anders; niet sterker als je na het eten vaak laag zit, niet zwakker als je vaak hoog zit, en niet sterker als je stijging meer koolhydraten laat zien dan je invoerde (tenzij je "Ik tel mijn koolhydraten nauwkeurig" aanzet). Alles staat bij <b>Profiel</b>, klaar om over te nemen.</p>
+      <p>IDA rekent je AAPS-profiel opnieuw uit je eigen data. <b>Basaal</b> per uur: 70% van de weg naar wat je loop nuchter echt levert (temp-basaal + SMB), met een marge van 10% waarbinnen niets verandert, per stap hooguit 20% anders (omlaag bij laagtes tot 30%) en niet lager waar je vaak hoog zit. Nuchter = buiten 3–5 uur na eten (hoe groter de maaltijd, hoe langer) en buiten ongelogde stijgingen; elk blok begint een uur eerder omdat basaal pas na ongeveer een uur werkt. <b>ISF</b>: het midden van je profiel × autosens en 100 ÷ dagdosis, hooguit −20%/+15%. <b>KH-ratio</b>: gemeten uit je maaltijden, per blok hooguit 20% anders; niet sterker als je na het eten vaak laag zit, niet zwakker als je vaak hoog zit, en niet sterker als je stijging meer koolhydraten laat zien dan je invoerde (tenzij je "Ik tel mijn koolhydraten nauwkeurig" aanzet). Alles staat bij <b>Profiel</b>, klaar om over te nemen.</p>
 
       <h4 class="mh">11 · Voor/na een wijziging</h4>
       <p>Markeer je in het logboek een instelling-wijziging, dan vergelijkt de app 14 dagen ervóór met 14 dagen erná (alleen dagen met ≥ 70% dekking). <b>Kanttekening:</b> winst na een mindere periode kan deels terugveer naar het gemiddelde zijn — een vergelijking is geen bewijs van oorzaak.</p>
@@ -1144,7 +1144,7 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
       <p>Het Overzicht bouwt een verhaal: <b>Nu</b> (laatste waarde, IOB/COB) → <b>Vandaag</b> (de nacht, dagcurve) → <b>Deze week</b> (maaltijd-, basaal- en wijzigingspatronen; valt nooit leeg terug) → <b>Deze maand</b> (kerncijfers + gemeten-vs-ingesteld). Elke bevinding draagt zijn bewijs (n + kanttekening) en kun je op je <b>consultlijst</b> zetten voor het rapport.</p>
 
       <h4 class="mh">14 · Wat IDA niet doet</h4>
-      <p>IDA leest alleen: het schrijft nooit naar je pomp, loop of instellingen. Profielwaarden neem je zelf over in AAPS. Verander één ding tegelijk en kijk een week naar het effect (Team › Effect).</p>
+      <p>IDA leest alleen: het schrijft nooit naar je pomp, loop of instellingen. Profielwaarden neem je zelf over in AAPS. Verander één ding tegelijk en kijk een week naar het effect (Voortgang › Effect).</p>
 
       <p class="mnote" style="margin-top:1rem">Bron-drempels volgen de internationale consensus (Battelino e.a., 2019, <i>Diabetes Care</i>); het insulinemodel en de gevoeligheids-berekeningen volgen de oref/AndroidAPS-referentie.</p>
     </div>
@@ -1265,7 +1265,7 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
   </div>
 
   <div class="view" data-view="consult" hidden>
-  <h1 class="ititle" data-i18n="tab.consult">Team</h1>
+  <h1 class="ititle" data-i18n="tab.consult">Voortgang</h1>
   <div id="teamTop"></div>
   <div class="h3" style="margin-top:.2rem">Effect</div>
   <details class="fold" id="secProposals" hidden open>
@@ -1304,7 +1304,7 @@ window.addEventListener("unhandledrejection",function(e){var r=e&&e.reason;show(
   <button class="tab" data-tab="dag"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="4.5" width="17" height="16" rx="3"/><path d="M3.5 9.5h17M8 3v3M16 3v3"/><path d="M7 15.5l2.5-2 2.5 1.5 4.5-3"/></svg><span data-i18n="tab.day">Dag</span></button>
   <button class="iplus" id="btnPlus" data-i18n-al="log.open" aria-label="Loggen"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
   <button class="tab" data-tab="profiel"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg><span data-i18n="tab.profile">Profiel</span></button>
-  <button class="tab" data-tab="consult"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M3 20c0-3.5 2.7-6 6-6s6 2.5 6 6M15 20c0-2.5 1-4.5 3.5-4.5S22 17.5 22 20"/></svg><span data-i18n="tab.consult">Team</span><span class="cbadge" id="consultBadge" hidden></span></button>
+  <button class="tab" data-tab="consult"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19h16"/><path d="M5 15l4-4 3 3 7-7"/><path d="M15 7h4v4"/></svg><span data-i18n="tab.consult">Voortgang</span><span class="cbadge" id="consultBadge" hidden></span></button>
 </nav>
 <dialog id="logSheet" class="isheet" aria-labelledby="logTitle">
   <div class="ishandle"></div>
@@ -1543,7 +1543,7 @@ Object.assign(I18N, {
   "an.insulinCarbsHint":{ en:"daily dose and ratio", pt:"dose diária e rácio" },
   "an.profile":{ en:"Profile", pt:"Perfil" },
   "an.profileHint":{ en:"your set schedules + peak time", pt:"os seus horários definidos + tempo de pico" },
-  "an.progress":{ en:"Progress", pt:"Progresso" },
+  "an.progress":{ en:"Trend and logbook", pt:"Tendência e diário" },
   "an.trend":{ en:"Weekly trend", pt:"Tendência semanal" },
   "an.trendHint":{ en:"time in range per week", pt:"tempo no alvo por semana" },
   "an.log":{ en:"Logbook", pt:"Diário" },
@@ -1601,7 +1601,7 @@ Object.assign(I18N, {
   "tab.overview":{ en:"Today", pt:"Hoje" },
   "tab.food":{ en:"Food", pt:"Comida" },
   "tab.analyses":{ en:"Patterns", pt:"Padrões" },
-  "tab.consult":{ en:"Team", pt:"Equipa" },
+  "tab.consult":{ en:"Progress", pt:"Progresso" },
   "tab.day":{ en:"Day", pt:"Dia" },
   "tab.profile":{ en:"Profile", pt:"Perfil" },
   "btn.back":{ en:"Back", pt:"Voltar" },
@@ -1696,7 +1696,7 @@ Object.assign(I18N, { "meth.body":{
       <p>A "meal" = ≥ 30 g carbs, isolated (no other carbs in −2…+4 h) and <b>with a manual meal bolus</b> around it. Carbs without a bolus (hypo rescue, loose entry) don't count. Per meal the app computes the absorption curve by subtracting the <i>expected</i> insulin fall from the measured glucose rise; from that follow <b>t50</b> (after how many minutes half is absorbed), the <b>peak</b> and the <b>prebolus timing</b> = your manual bolus relative to your carb entry (negative = before). Note: the entry time is your bolus moment, not necessarily when you started eating.</p>
 
       <h4 class="mh">10 · Profile proposal</h4>
-      <p>IDA recalculates your AAPS profile from your own data. <b>Basal</b> per hour: what your loop really delivers while fasting (temp basal + SMB), × 0.8, limited to 0.7–1.5× your current value and lower where you are often low; each block starts an hour earlier because basal takes about an hour to act. <b>ISF</b>: the middle of your profile × autosens and 100 ÷ daily dose, at most −20%/+15%. <b>Carb ratio</b>: measured from your meals, at most 20% different per block; not stronger if you are often low after meals, not weaker if you are often high, and not stronger if your rise shows more carbs than you entered (unless you turn on "I count accurately"). Everything is under <b>Profile</b>, ready to copy.</p>
+      <p>IDA recalculates your AAPS profile from your own data. <b>Basal</b> per hour: 70% of the way towards what your loop really delivers while fasting (temp basal + SMB), with a 10% dead band, at most 20% per step (down to 30% where you are often low) and not lower where you are often high. Fasting = outside 3–5 hours after eating (longer for bigger meals) and outside unlogged rises; each block starts an hour earlier because basal takes about an hour to act. <b>ISF</b>: the middle of your profile × autosens and 100 ÷ daily dose, at most −20%/+15%. <b>Carb ratio</b>: measured from your meals, at most 20% different per block; not stronger if you are often low after meals, not weaker if you are often high, and not stronger if your rise shows more carbs than you entered (unless you turn on "I count accurately"). Everything is under <b>Profile</b>, ready to copy.</p>
 
       <h4 class="mh">11 · Before/after a change</h4>
       <p>If you mark a setting change in the logbook, the app compares 14 days before with 14 days after (only days with ≥ 70% coverage). <b>Note:</b> gains after a poorer period may partly be regression to the mean — a comparison is not proof of cause.</p>
@@ -1708,7 +1708,7 @@ Object.assign(I18N, { "meth.body":{
       <p>The Overview builds a story: <b>Now</b> (last value, IOB/COB) → <b>Today</b> (the night, day curve) → <b>This week</b> (meal, basal and change patterns; never falls back empty) → <b>This month</b> (key figures + measured-vs-set). Each finding carries its evidence (n + caveat) and you can put it on your <b>consult list</b> for the report.</p>
 
       <h4 class="mh">14 · What IDA does not do</h4>
-      <p>IDA only reads: it never writes to your pump, loop or settings. You copy profile values into AAPS yourself. Change one thing at a time and watch the effect for a week (Team › Effect).</p>
+      <p>IDA only reads: it never writes to your pump, loop or settings. You copy profile values into AAPS yourself. Change one thing at a time and watch the effect for a week (Voortgang › Effect).</p>
 
       <p class="mnote" style="margin-top:1rem">Source thresholds follow the international consensus (Battelino et al., 2019, <i>Diabetes Care</i>); the insulin model and sensitivity calculations follow the oref/AndroidAPS reference.</p>
     `,
@@ -1768,7 +1768,7 @@ Object.assign(I18N, { "meth.body":{
       <p>Uma "refeição" = ≥ 30 g de hidratos, isolada (sem outros hidratos em −2…+4 h) e <b>com um bólus de refeição manual</b> à volta. Hidratos sem bólus (resgate de hipo, entrada solta) não contam. Por refeição a app calcula a curva de absorção subtraindo a descida <i>esperada</i> da insulina à subida medida da glicose; daí resultam <b>t50</b> (ao fim de quantos minutos metade é absorvida), o <b>pico</b> e o <b>timing de prebólus</b> = o seu bólus manual relativamente à entrada de hidratos (negativo = antes). Nota: a hora de entrada é o momento do bólus, não necessariamente quando começou a comer.</p>
 
       <h4 class="mh">10 · Proposta de perfil</h4>
-      <p>O IDA recalcula o seu perfil AAPS a partir dos seus dados. <b>Basal</b> por hora: o que o loop realmente entrega em jejum (basal temporária + SMB), × 0,8, limitado a 0,7–1,5× o valor atual e mais baixo onde tem hipos frequentes; cada bloco começa uma hora antes porque a basal demora cerca de uma hora. <b>ISF</b>: o meio do perfil × autosens e 100 ÷ dose diária, no máximo −20%/+15%. <b>Rácio HC</b>: medido nas refeições, no máximo 20% diferente por bloco; não mais forte com hipos frequentes depois de comer, não mais fraco com altas frequentes, e não mais forte se a subida mostrar mais hidratos do que registou (a não ser que ative "Conto com precisão"). Tudo está em <b>Perfil</b>, pronto a copiar.</p>
+      <p>O IDA recalcula o seu perfil AAPS a partir dos seus dados. <b>Basal</b> por hora: 70% do caminho até ao que o loop entrega em jejum (basal temporária + SMB), margem de 10%, no máximo 20% por passo (até 30% para baixo com hipos) e não mais baixo onde está muitas vezes alto. Jejum = fora de 3–5 h após comer e fora de subidas não registadas; cada bloco começa uma hora antes porque a basal demora cerca de uma hora. <b>ISF</b>: o meio do perfil × autosens e 100 ÷ dose diária, no máximo −20%/+15%. <b>Rácio HC</b>: medido nas refeições, no máximo 20% diferente por bloco; não mais forte com hipos frequentes depois de comer, não mais fraco com altas frequentes, e não mais forte se a subida mostrar mais hidratos do que registou (a não ser que ative "Conto com precisão"). Tudo está em <b>Perfil</b>, pronto a copiar.</p>
 
       <h4 class="mh">11 · Antes/depois de uma alteração</h4>
       <p>Se marcar uma alteração de definição no diário, a app compara 14 dias antes com 14 dias depois (só dias com ≥ 70% de cobertura). <b>Nota:</b> ganhos após um período pior podem em parte ser regressão à média — uma comparação não é prova de causa.</p>
@@ -1780,7 +1780,7 @@ Object.assign(I18N, { "meth.body":{
       <p>O Resumo constrói uma narrativa: <b>Agora</b> (último valor, IOB/COB) → <b>Hoje</b> (a noite, curva do dia) → <b>Esta semana</b> (padrões de refeição, basal e alterações; nunca recua para vazio) → <b>Este mês</b> (números-chave + medido-vs-definido). Cada achado traz a sua evidência (n + ressalva) e pode colocá-lo na sua <b>lista de consulta</b> para o relatório.</p>
 
       <h4 class="mh">14 · O que o IDA não faz</h4>
-      <p>O IDA só lê: nunca escreve na bomba, no loop ou nas definições. Os valores do perfil introduz você no AAPS. Mude uma coisa de cada vez e veja o efeito durante uma semana (Equipa › Efeito).</p>
+      <p>O IDA só lê: nunca escreve na bomba, no loop ou nas definições. Os valores do perfil introduz você no AAPS. Mude uma coisa de cada vez e veja o efeito durante uma semana (Progresso › Efeito).</p>
 
       <p class="mnote" style="margin-top:1rem">Os limiares de referência seguem o consenso internacional (Battelino et al., 2019, <i>Diabetes Care</i>); o modelo de insulina e os cálculos de sensibilidade seguem a referência oref/AndroidAPS.</p>
     ` } });

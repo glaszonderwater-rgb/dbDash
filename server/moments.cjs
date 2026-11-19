@@ -16,7 +16,7 @@
   const fmt = v => (Math.round(v * 10) / 10).toFixed(1).replace(".", ",");
   const hm = m => String(Math.floor(m / 60) % 24).padStart(2, "0") + ":" + String(Math.round(m % 60)).padStart(2, "0");
 
-  /* Jouw vaste eetmomenten: per dagdeel het middelste deel van je maaltijdtijden (laatste 30 dagen). */
+  /* Jouw vaste eetmomenten: per dagdeel het middelste deel (30–70%) van je maaltijdtijden (laatste 30 dagen), vanaf een half uur ervoor. */
   function mealWindows(treatments, now, off) {
     const parts = [["ontbijt", 300, 660], ["lunch", 660, 960], ["avondeten", 960, 1380]];
     const meals = treatments.filter(t => t.carbs >= 15 && t.ts > now - 30 * DAY && t.ts <= now);
@@ -24,7 +24,10 @@
     for (const [name, a, b] of parts) {
       const ms = meals.map(t => tod(t.ts, off)).filter(m => m >= a && m < b);
       if (ms.length < 8) continue;
-      out.push({ name, from: q(ms, 0.2) - 30, to: q(ms, 0.8), n: ms.length });
+      // alleen een gewoonte die nu loopt: in minstens 4 van de laatste 7 dagen een maaltijd in dit dagdeel gelogd
+      const recent = new Set(meals.filter(t => t.ts > now - 7 * DAY && tod(t.ts, off) >= a && tod(t.ts, off) < b).map(t => new Date(t.ts + (off || 0) * MIN).toISOString().slice(0, 10)));
+      if (recent.size < 4) continue;
+      out.push({ name, from: q(ms, 0.3) - 30, to: q(ms, 0.7), n: ms.length, a, b });
     }
     return out;
   }
@@ -59,6 +62,9 @@
     const carbsRecent = treatments.some(t => t.carbs > 0 && t.ts > now - 90 * MIN && t.ts <= now + 5 * MIN);
     for (const w of mealWindows(treatments, now, off)) {
       if (m < w.from || m > w.to || carbsRecent) continue;
+      // al gegeten in dit dagdeel vandaag? dan geen melding meer
+      const dayStart = now - m * MIN;
+      if (treatments.some(t => (t.carbs >= 15 || (t.insulin >= 1 && !t.isSMB)) && t.ts >= dayStart + w.a * MIN && t.ts <= now)) continue;
       if (last.bg < 7 && s != null && s <= -0.03) {
         const st = opts.stats === undefined ? fallStats(glucose, treatments) : opts.stats;
         const why = st ? `Zo eindigt het bij jou ${st.fallPct}% van de keren laag, normaal ${st.okPct}%.` : `Bij een dalende start loop je meer kans op een laagte na het eten.`;
@@ -68,15 +74,18 @@
       }
     }
 
-    // 2 · Stijging zonder gelogd eten (afgelopen 3 uur): vraag het, zodat de KH-berekening klopt
-    for (let i = idx(T, now - 3 * H); i < glucose.length; i++) {
-      const a = glucose[i]; const j = idx(T, a.ts + 60 * MIN); if (j >= glucose.length) break;
-      let pk = a, pi = i; for (let k = i; k <= j && k < glucose.length; k++) if (glucose[k].bg > pk.bg) { pk = glucose[k]; pi = k; }
-      if (pk.bg - a.bg >= 3 && pk.bg > HIGH && !treatments.some(t => t.carbs > 0 && t.ts > a.ts - 2 * H && t.ts < pk.ts)) {
-        out.push({ key: `stijging-${day}-${hm(tod(a.ts, off))}`, kind: "vraag", prio: 2,
-          title: `Gestegen naar ${fmt(pk.bg)} zonder eten`,
-          body: `Tussen ${hm(tod(a.ts, off))} en ${hm(tod(pk.ts, off))} van ${fmt(a.bg)} naar ${fmt(pk.bg)}. Wat at je?`, since: pk.ts });
-        break;
+    // 2 · Stijging zonder gelogd eten: alleen terwijl hij gebeurt (piek hooguit 30 min geleden), één keer per stijging,
+    //     niet 's nachts (23–7 uur) en niet na een laagte (dat is herstel, geen maaltijd).
+    const nightQ = m >= 23 * 60 || m < 7 * 60;
+    if (!nightQ) {
+      let pk = null; for (let k = idx(T, now - 90 * MIN); k < glucose.length; k++) if (!pk || glucose[k].bg > pk.bg) pk = glucose[k];
+      if (pk && now - pk.ts <= 30 * MIN && pk.bg > HIGH) {
+        let a = null; for (let k = idx(T, pk.ts - 90 * MIN); k < glucose.length && T[k] <= pk.ts; k++) if (!a || glucose[k].bg < a.bg) a = glucose[k];
+        if (a && pk.bg - a.bg >= 3 && a.bg >= 4.5 && !treatments.some(t => t.carbs > 0 && t.ts > a.ts - 2 * H && t.ts < pk.ts)) {
+          out.push({ key: `stijging-${day}-${Math.floor(tod(a.ts, off) / 120)}`, kind: "vraag", prio: 2,
+            title: `Gestegen naar ${fmt(pk.bg)} zonder eten`,
+            body: `Sinds ${hm(tod(a.ts, off))} van ${fmt(a.bg)} naar ${fmt(pk.bg)}. Iets gegeten? Leg het vast in IDA.`, since: pk.ts });
+        }
       }
     }
     return out.sort((x, y) => x.prio - y.prio);
