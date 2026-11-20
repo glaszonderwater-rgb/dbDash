@@ -629,10 +629,8 @@ function idaInzicht(){
   const c=_ctx, A=idaAn(c), G=_GRP5();
   const dot=s=>`<span class="an5d ${s}"></span>`;
   const row=a=>`<button type="button" class="irow an5r" data-an5open="${a.id}">${dot(a.s)}<span class="irt"><b>${esc(a.t)}</b><i>${esc(a.v)}</i></span><span class="irc" aria-hidden="true">›</span></button>`;
-  const lets=A.filter(a=>a.s==="let");
-  host.innerHTML=_a28view(c)
-    +(lets.length?`<h2 class="ihead">${TL("Let op","Watch","Atenção")} · ${lets.length}</h2>${lets.map(row).join("")}`:"")
-    +G.map(([g,l])=>{ const x=A.filter(a=>a.g===g&&a.s!=="let"); return x.length?`<h2 class="ihead">${l}</h2>${x.map(row).join("")}`:""; }).join("");
+  host.innerHTML=`<p class="an5intro">${TL("Hier rekent IDA mee. Wat ertoe doet zie je bij je momenten, op Vandaag en bij Profiel; dit is de onderbouwing.","This is what IDA calculates with. What matters shows up in your moments, on Today and under Profile; this is the reasoning behind it.","Isto é a base dos cálculos.")}</p>`+_a28view(c)
+    +G.map(([g,l])=>{ const x=A.filter(a=>a.g===g); return x.length?`<h2 class="ihead">${l}</h2>${x.map(row).join("")}`:""; }).join("");
   host.querySelectorAll("[data-an5open]").forEach(b=>b.onclick=()=>openAn5(b.dataset.an5open));
 }
 function openAn5(id){
@@ -662,15 +660,13 @@ function _wireAn5(node, id){
 (function(){
   const o=window.showTab; window.showTab=function(tab){ o(tab); if(tab==="inzicht") try{ idaInzicht(); }catch(e){ console.error(e); } };
   const od=window.idaDag; window.idaDag=function(){ od();
-    const h=document.getElementById("dagBody"); if(!h||h.querySelector("[data-go5]")) return; const first=h.querySelector('.irow[data-go="analyses"]'); if(!first) return;
-    let nLet=0; try{ if(_ctx&&_ctx._an5) nLet=_ctx._an5.filter(a=>a.s==="let").length; }catch(_){}
-    const b=document.createElement("button"); b.type="button"; b.className="irow"; b.dataset.go5="1";
-    b.innerHTML=`<span class="ird"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg></span><span class="irt"><b>${TL("Analyses","Analyses","Análises")}</b><i>${TL("oorzaken, gevolgen en wat bij jou meespeelt","causes, effects and what matters for you","causas e efeitos")}${nLet?` · ${nLet} ${TL("om op te letten","to watch","para ver")}`:""}</i></span><span class="irc" aria-hidden="true">›</span>`;
-    b.onclick=()=>showTab("inzicht"); first.before(b); };
+    const h=document.getElementById("dagBody"); if(!h||h.querySelector("[data-go5]")) return;
+    const b=document.createElement("button"); b.type="button"; b.className="an5link"; b.dataset.go5="1";
+    b.textContent=TL("Alle analyses ›","All analyses ›","Todas as análises ›"); b.onclick=()=>showTab("inzicht"); h.appendChild(b); };
+  // Voortgang: alleen wat nieuw is en bij geen moment hoort
+  const ot=window.showTab; window.showTab=function(tab){ ot(tab); if(tab==="consult") setTimeout(()=>{ try{ _new5(); }catch(e){ console.error(e); } },60); };
   // Profiel: voorzichtige stand zichtbaar
-  const op=window.idaProfiel; window.idaProfiel=function(c){ op(c); try{ const C=_P&&_P.careful, h=document.getElementById("profBody"); if(!C||!C.on||!h||h.querySelector(".an5care")) return;
-    const p=document.createElement("p"); p.className="an5care"; p.textContent=C.low48?TL(`Voorzichtige stand: laagte op ${_dateL5(C.low48)} ${_hm5(C.low48)}. Tot 48 uur erna wordt niets strakker.`,`Cautious mode: low on ${_dateL5(C.low48)} ${_hm5(C.low48)}. Nothing gets tighter for 48 hours after.`,`Modo cauteloso.`):TL(`Voorzichtige stand: ${_p5(C.tbr)} onder 3,9. Het voorstel zet halve stappen.`,`Cautious mode: ${_p5(C.tbr)} below 3.9. The proposal takes half steps.`,`Modo cauteloso.`);
-    h.prepend(p); }catch(e){ console.error(e); } };
+  const op=window.idaProfiel; window.idaProfiel=function(c){ op(c); try{ _profWhy5(c); }catch(e){ console.error(e); } };
   // Vandaag: alleen wat nú telt (max 1 kaart, telt mee in "Let op")
   const ov=window.idaVandaag; window.idaVandaag=function(c){ ov(c); try{ _now5(c); }catch(e){ console.error(e); } };
 })();
@@ -694,7 +690,7 @@ function _now5(c){
     const at=m.ts, byId=Object.fromEntries(E.map(e=>[e.id,e]));
     const defs=_factorDefs5(c), active=new Set(defs.filter(d=>d.w.some(w=>w.a<=at&&w.b>at)).map(d=>d.id));
     // bestaande factoren verrijken met het effect bij jou
-    for(const f of F){ if(f.k&&byId[f.k]&&active.has(f.k)){ const e=byId[f.k]; f.txt+=" "+_facLine5(e).replace(/^./,x=>x.toUpperCase())+"."; if(e.known) f.w=Math.max(f.w,Math.abs(e.dTir)>=0.2||e.dTbr>=0.04?3:2); else if(e.enough) f.w=Math.min(f.w,1); } }
+    for(const f of F){ if(f.k&&byId[f.k]&&active.has(f.k)){ const e=byId[f.k]; f.txt+=" "+_facLine5(e).replace(/^./,x=>x.toUpperCase())+"."; if(e.known) f.w=Math.max(f.w,Math.abs(e.dTir)>=0.2||e.dTbr>=0.04?3:2); else if(e.enough&&!f.tip) f.drop=1; } }
     const have=new Set(F.map(f=>f.k).filter(Boolean));
     const extra={ tt:TL("Tijdelijke streefwaarde actief.","Temporary target active.","Alvo temporário ativo."), pct:TL("Profielpercentage ≠ 100% actief.","Profile percentage ≠ 100% active.","Percentagem ativa."),
       warmte:TL("Warmte gelogd (sauna/heet bad).","Heat logged (sauna/hot bath).","Calor registado."), prednison:TL("Prednison-kuur.","Prednisone course.","Prednisona."), nacht:TL("Na een korte nacht.","After a short night.","Após noite curta."),
@@ -703,11 +699,78 @@ function _now5(c){
       nalaag:TL("Na een laagte voel je de volgende minder: eet bij twijfel eerder iets.","After a low you feel the next one less: eat something earlier when in doubt.","Após uma baixa sente menos a seguinte."),
       prednison:TL("Prednison geeft vanaf de middag hogere waarden; een hoger profielpercentage tijdens de kuur helpt.","Prednisone raises glucose from the afternoon; a higher profile percentage during the course helps.","Prednisona sobe à tarde.") };
     for(const id of Object.keys(extra)){ if(!active.has(id)||have.has(id)) continue; const e=byId[id];
-      if(id==="weekend"&&!(e&&e.known)) continue;
+      if((id==="weekend"||id==="tt")&&!(e&&e.known)) continue;
+      if(e&&e.enough&&!e.known&&!tips[id]) continue;   // bij jou geen verschil: niet noemen
       const pct=id==="pct"?(_pcts5(c).find(x=>x.a<=at&&x.b>at)||{}).p:null;
       F.push({ k:id, w:e&&e.known?(Math.abs(e.dTir)>=0.2||e.dTbr>=0.04?3:2):1, txt:(pct?TL(`Profielpercentage ${pct}% actief.`,`Profile percentage ${pct}% active.`,`Percentagem ${pct}%.`):extra[id])+(e?" "+_facLine5(e).replace(/^./,x=>x.toUpperCase())+".":""),
         tip:(m.k==="lo"||id==="prednison")&&tips[id]?tips[id]:null }); }
-    return F.sort((a,b)=>b.w-a.w);
+    return F.filter(f=>!f.drop).sort((a,b)=>b.w-a.w);
   };
 })();
 (function(){ const el=document.getElementById("inCycle"); if(!el) return; el.addEventListener("change",()=>{ cfg.cycle=el.checked; saveCfg(); }); })();
+
+/* ── losse analyses op aanvraag (snel, zonder alles door te rekenen) ── */
+function _one5(c, fn){ c._one5=c._one5||{}; const k=fn.name; if(!(k in c._one5)){ try{ c._one5[k]=fn(c); }catch(e){ console.error(e); c._one5[k]=null; } } return c._one5[k]; }
+
+/* ── Profiel: waarom dit voorstel (max 3 regels uit de analyses) ── */
+function _profWhy5(c){
+  const h=document.getElementById("profBody"); if(!h||h.querySelector(".an5why")) return;
+  const L=[], C=_P&&_P.careful;
+  if(C&&C.on) L.push(["let",C.low48?TL(`Voorzichtige stand: laagte op ${_dateL5(C.low48)} ${_hm5(C.low48)}. Tot 48 uur erna wordt niets strakker.`,`Cautious mode: low on ${_dateL5(C.low48)} ${_hm5(C.low48)}. Nothing gets tighter for 48 hours after.`,`Modo cauteloso.`):TL(`Voorzichtige stand: ${_p5(C.tbr)} onder 3,9. Het voorstel zet halve stappen.`,`Cautious mode: ${_p5(C.tbr)} below 3.9. The proposal takes half steps.`,`Modo cauteloso.`),"voorzichtig"]);
+  const a3=_one5(c,_a3); if(a3&&a3.s==="let") L.push(["let",a3.v+" "+TL("Daarom past IDA je KH-ratio voorzichtig aan.","That's why IDA adjusts your carb ratio cautiously.",""),"loggen"]);
+  const a4=_one5(c,_a4); if(a4&&a4.s==="let") L.push(["let",a4.v,"loopmaal"]);
+  const a17=_one5(c,_a17); if(a17&&a17.s==="let") L.push(["info",a17.v+" "+TL("Het ochtendblok gaat daarom een uur eerder omhoog.","So the morning block goes up an hour earlier.",""),"dawn"]);
+  const a29=_one5(c,_a29); if(a29&&a29.long) L.push(["let",a29.v,"aaps"]);
+  if(!L.length) return;
+  const sec=document.createElement("section"); sec.className="ibox an5why";
+  sec.innerHTML=`<span class="ilabel">${TL("Waarom","Why","Porquê")}</span>${L.slice(0,3).map(([st,t,id])=>`<button type="button" class="an5wl" data-an5open="${id}"><span class="an5d ${st}"></span><span>${esc(t)}</span><span class="irc" aria-hidden="true">›</span></button>`).join("")}`;
+  const chg=h.querySelector(".ibox.chg"); if(chg) chg.after(sec); else h.prepend(sec);
+  sec.querySelectorAll("[data-an5open]").forEach(b=>b.onclick=()=>{ showTab("inzicht"); setTimeout(()=>openAn5(b.dataset.an5open),50); });
+}
+
+/* ── Voortgang: nieuw deze week (patronen die bij geen moment horen) ── */
+const _NEWIDS5=["loggen","telfout","vuist","14d","episodes","variab","gemist","laat","weekend","trend","hba1c","plaats","podnieuw","podfalen","meldingen","nalaag","hypobeh","dawn","sport","alcohol","slaap","warmte","cyclus","gold"];
+function _new5(){
+  const top=document.getElementById("teamTop"); if(!top||!_ctx||!_ctx.glucose||!_ctx.glucose.length) return;
+  document.getElementById("an5New")?.remove();
+  const A=idaAn(_ctx); let seen={}; try{ seen=JSON.parse(localStorage.getItem("ida.an5new")||"{}"); }catch(_){}
+  const now=Date.now(), lets=A.filter(a=>a.s==="let"&&_NEWIDS5.includes(a.id));
+  for(const k of Object.keys(seen)) if(!lets.some(a=>a.id===k)) delete seen[k];   // weer in orde: volgende keer opnieuw "nieuw"
+  for(const a of lets) if(!seen[a.id]) seen[a.id]=now;
+  try{ localStorage.setItem("ida.an5new",JSON.stringify(seen)); }catch(_){}
+  const fresh=lets.filter(a=>now-seen[a.id]<7*_D5).sort((a,b)=>seen[b.id]-seen[a.id]).slice(0,3);
+  // eten loggen blijft altijd zichtbaar zolang het speelt
+  const log=lets.find(a=>a.id==="loggen"); if(log&&!fresh.includes(log)) fresh.unshift(log);
+  if(!fresh.length) return;
+  const sec=document.createElement("section"); sec.id="an5New"; sec.className="ibox an5why";
+  sec.innerHTML=`<span class="ilabel">${TL("Uit je analyses","From your analyses","Das análises")}</span>${fresh.slice(0,3).map(a=>`<button type="button" class="an5wl" data-an5open="${a.id}"><span class="an5d let"></span><span><b>${esc(a.t)}</b> ${esc(a.v)}</span><span class="irc" aria-hidden="true">›</span></button>`).join("")}`;
+  top.after(sec);
+  sec.querySelectorAll("[data-an5open]").forEach(b=>b.onclick=()=>{ showTab("inzicht"); setTimeout(()=>openAn5(b.dataset.an5open),50); });
+}
+
+/* ── momenten: wat de analyses over dít moment zeggen ── */
+(function(){
+  const of=window._momFactors; if(typeof of!=="function") return;
+  window._momFactors=function(c, m){
+    const F=of(c,m); const add=f=>{ if(!F.some(x=>x.k===f.k)) F.push(f); };
+    try{
+      const dp=_dp5(m.ts), N=_DPN5(), E=TL("E","U","U"), hr=Math.floor(todMin(m.ts)/60);
+      if(m.k==="meal"){
+        const a4=_one5(c,_a4), r4=a4&&a4.s==="let"&&m.smb>=1?(a4.f||[]).find(r=>r[0].toLowerCase()===N[dp]):null;
+        if(r4) add({ k:"an4", w:2, txt:TL(`Na je ${N[dp]}maaltijd geeft de loop gemiddeld ${r4[1]} SMB bij in 4 uur.`,`After your ${N[dp]} meal the loop adds ${r4[1]} SMB on average in 4 hours.`,`O loop dá ${r4[1]} após comer.`), tip:TL("Voer alles in wat je eet, ook kleine dingen; dan hoeft de loop niet in te halen.","Enter everything you eat, small things too; then the loop doesn't have to catch up.","Registe tudo o que come.") });
+        const a5=_one5(c,_a5); if(a5&&m.peak>HI_T){ const lab=m.g<40?"< 40 g":m.g<70?"40–70 g":"> 70 g", row=(a5.f||[]).find(r=>r[0]===lab); const v=row?parseInt(row[1]):NaN; if(v>115) add({ k:"an5", w:2, txt:TL(`Bij maaltijden van ${lab} komt bij jou ${v}% terug van wat je invoert.`,`For ${lab} meals ${v}% of what you enter comes back for you.`,`${v}% volta.`), tip:TL("Schat dit soort maaltijden ruimer, of weeg ze een paar keer.","Estimate this kind of meal more generously, or weigh it a few times.","Estime com mais margem.") }); }
+        const a13=_one5(c,_a13); if(a13&&a13.s==="let"&&m.tPeak>180){ const row=(a13.f||[]).find(r=>r[0].toLowerCase()===N[dp]); if(row) add({ k:"an13", w:2, txt:TL(`Piek pas na ${Math.round(m.tPeak/60*10)/10} uur; bij je ${N[dp]} gebeurt dat vaker (${row[1]}).`,`Peak only after ${Math.round(m.tPeak/60*10)/10} hours; at your ${N[dp]} this happens more often (${row[1]}).`,`Pico tardio.`), tip:TL("Geef bij dit soort maaltijden een deel van de bolus 1–2 uur later.","For this kind of meal give part of the bolus 1–2 hours later.","Parte do bólus 1–2 h depois.") }); }
+      } else if(m.k==="lo"){
+        const a22=_one5(c,_a22); if(a22&&a22.s==="let"&&m.rebound!=null&&m.rebound>HI_T) add({ k:"an22", w:2, txt:TL(`${a22.v.split(";")[0].replace(/\.$/,"")}.`,`${a22.v.split(";")[0].replace(/\.$/,"")}.`,`Sobretrata com frequência.`), tip:TL("Met de loop heb je minder nodig: 5 g per 5 minuten, of de helft van wat je gewend bent.","With the loop you need less: 5 g every 5 minutes, or half of what you're used to.","Com o loop precisa de menos.") });
+        if(hr<7||hr>=23){ const t23=m.ts-((todMin(m.ts)-1380+1440)%1440)*_M5; const NF=_nightFactors5(c,t23); if(NF.length>=2){ const nm={ iob:TL("veel actieve insuline","lots of active insulin",""), bolus:TL("bolus in de 3 uur ervoor","bolus in the 3 hours before",""), sport:TL("sport overdag","exercise that day",""), alcohol:TL("alcohol","alcohol",""), laag:TL("laagte overdag","low during the day",""), start:TL("onder 6,5 bij het slapen","below 6.5 at bedtime","") };
+          add({ k:"an16", w:2, txt:TL(`Om 23 uur al ${NF.length} risicofactoren: ${NF.map(f=>nm[f]).join(", ")}.`,`At 23:00 already ${NF.length} risk factors: ${NF.map(f=>nm[f]).join(", ")}.`,`${NF.length} fatores às 23 h.`), tip:TL("Met zo'n avond: iets kleins eten voor het slapen of een tijdelijke streefwaarde voor de nacht.","On an evening like that: a small snack before bed or a temporary target for the night.","Coma algo antes de dormir.") }); } }
+      } else {
+        const a19=_one5(c,_a19); const pf=_podFails5(c,m.ts-6*_H5).find(p=>p.ts<=(m.end||m.ts)+_H5&&p.end>=m.ts-_H5);
+        if(pf) add({ k:"an19", w:3, txt:pf.why==="5u"?TL("Meer dan 5 uur boven 13,9: past bij een pod die niet goed werkte.","More than 5 hours above 13.9: fits a pod that wasn't working properly.","Pod com falha."):TL("Correcties zonder effect: past bij een pod die niet goed werkte.","Corrections without effect: fits a pod that wasn't working properly.","Pod com falha."), tip:TL("Bij dit beeld: pod vervangen en corrigeren met de pen.","With this picture: replace the pod and correct with a pen.","Troque o pod.") });
+        if(m.peak>=14&&m.dur>=120) add({ k:"an1", w:2, txt:TL(`${Math.round(m.dur/60*10)/10} uur boven 10, piek ${_n5(m.peak)}.`,`${Math.round(m.dur/60*10)/10} hours above 10, peak ${_n5(m.peak)}.`,`Alta longa.`), tip:TL("Langer dan 2 uur boven 14: meet ketonen.","More than 2 hours above 14: check ketones.","Meça cetonas.") });
+        if(hr>=4&&hr<9){ const a17=_one5(c,_a17); if(a17&&a17.s==="let") for(const f of F) if(/dawn/i.test(f.txt)&&!/nachten/.test(f.txt)) f.txt+=" "+a17.v.replace(/ \(mediaan.*$/,"").replace(/\.$/,"")+"."; }
+      }
+    }catch(e){ console.error(e); }
+    return F.filter(f=>!f.drop).sort((a,b)=>b.w-a.w);
+  };
+})();

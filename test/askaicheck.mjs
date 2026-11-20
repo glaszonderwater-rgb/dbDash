@@ -26,8 +26,8 @@ await page.waitForFunction(()=>!document.getElementById('tabbar').hidden,{timeou
 await page.waitForTimeout(400);
 
 // AI-knop verschijnt bij een lokaal antwoord
-await page.evaluate(()=>showTab('analyses')); await page.waitForTimeout(100);
-await page.fill('#askInput','Hoe is mijn tijd in bereik?'); await page.press('#askInput','Enter'); await page.waitForTimeout(200);
+await page.evaluate(()=>showTab('analyses')); await page.waitForTimeout(1500);
+await page.fill('#askInput','Hoe is mijn tijd in bereik?'); await page.press('#askInput','Enter'); await page.waitForTimeout(800);
 const aiBtn=await page.evaluate(()=>!!document.querySelector('#askAnswer [data-askai]'));
 // klik AI
 await page.click('#askAnswer [data-askai]'); await page.waitForTimeout(300);

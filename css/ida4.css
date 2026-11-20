@@ -424,3 +424,11 @@ dialog::backdrop{background:rgba(30,20,10,.42)}
 .an5tg input{width:18px;height:18px;accent-color:var(--brand)}
 .an5care{margin:0 0 .8rem;padding:.65rem .8rem;border-radius:12px;background:var(--hi-soft);color:var(--hi-t);font-size:.86rem;line-height:1.4}
 button.an5now{display:block;width:100%;text-align:left;font:inherit;cursor:pointer;border:0}
+.an5link{display:block;margin:1.4rem auto .4rem;padding:.5rem .8rem;border:0;background:none;color:var(--muted);font:inherit;font-size:.86rem;cursor:pointer}
+.an5link:hover{color:var(--brand)}
+.an5intro{margin:0 .2rem .9rem;color:var(--muted);font-size:.88rem;line-height:1.45}
+.an5why .an5wl{display:flex;align-items:flex-start;gap:.5rem;width:100%;text-align:left;border:0;border-top:1px solid var(--line);background:none;color:var(--ink);font:inherit;font-size:.88rem;line-height:1.42;padding:.6rem 0;cursor:pointer}
+.an5why .an5wl:first-of-type{border-top:0}
+.an5why .an5wl .an5d{margin-top:.38rem}
+.an5why .an5wl .irc{margin-left:auto;color:var(--brand);font-size:1.15rem}
+.an5why .an5wl b{font-weight:600}
