@@ -88,26 +88,32 @@
       }
     }
 
-    // 2 · Stijging zonder gelogd eten: alleen terwijl hij gebeurt (piek hooguit 30 min geleden), één keer per stijging,
+    // 2 · Stijging (≥ 4) zonder gelogd eten: alleen terwijl hij gebeurt (piek hooguit 30 min geleden), één keer per stijging,
     //     niet 's nachts (23–7 uur) en niet na een laagte (dat is herstel, geen maaltijd).
     const nightQ = m >= 23 * 60 || m < 7 * 60;
     if (!nightQ) {
       let pk = null; for (let k = idx(T, now - 90 * MIN); k < glucose.length; k++) if (!pk || glucose[k].bg > pk.bg) pk = glucose[k];
       if (pk && now - pk.ts <= 30 * MIN && pk.bg > HIGH) {
         let a = null; for (let k = idx(T, pk.ts - 90 * MIN); k < glucose.length && T[k] <= pk.ts; k++) if (!a || glucose[k].bg < a.bg) a = glucose[k];
-        if (a && pk.bg - a.bg >= 3 && a.bg >= 4.5 && !treatments.some(t => t.carbs > 0 && t.ts > a.ts - 2 * H && t.ts < pk.ts)) {
+        const answered = (opts.anns || []).some(x => x && x.type === 'maaltijd' && Math.abs(x.ts - a.ts) <= 2 * H);
+        if (a && pk.bg - a.bg >= 4 && a.bg >= 4.5 && !answered && !treatments.some(t => t.carbs > 0 && t.ts > a.ts - 2 * H && t.ts < pk.ts)) {
+          // schatting: stijging ÷ (ISF ÷ KH-ratio) + wat de loop sindsdien gaf × KH-ratio (zoals riseCarbEstimate in de app)
+          let grams = null; const P = opts.prof;
+          if (P && P.isf > 0 && P.ic > 0) { const ins = treatments.filter(t => t.insulin > 0 && t.ts >= a.ts && t.ts <= now).reduce((x, t) => x + t.insulin, 0);
+            grams = Math.min(150, Math.max(5, Math.round(((pk.bg - a.bg) / (P.isf / P.ic) + ins * P.ic) / 5) * 5)); }
           out.push({ key: `stijging-${day}-${Math.floor(tod(a.ts, off) / 120)}`, kind: "vraag", prio: 2,
             title: `Gestegen naar ${fmt(pk.bg)} zonder eten`,
-            body: `Sinds ${hm(tod(a.ts, off))} van ${fmt(a.bg)} naar ${fmt(pk.bg)}. Iets gegeten? Leg het vast in IDA.`, since: pk.ts });
+            body: `Sinds ${hm(tod(a.ts, off))} van ${fmt(a.bg)} naar ${fmt(pk.bg)}. Iets gegeten?${grams ? ` Past bij ~${grams} g.` : ''}`, since: pk.ts,
+            rise: { t0: a.ts, grams } });
         }
       }
     }
-    // 3 · Ketonen: al 2 uur boven 14 (of ziek gelogd en boven 14)
+    // 3 · Ketonen: al 2 uur boven 14 (of ziek gelogd en boven 14); hooguit één keer per dag
     {
       let a = null; for (let k = glucose.length - 1; k >= 0 && glucose[k].bg >= 14; k--) { if (k < glucose.length - 1 && T[k + 1] - T[k] > 20 * MIN) break; a = glucose[k]; }
       const ill = annIn(opts.anns, 'ziek', now - 48 * H, now).length > 0;
       if (a && (now - a.ts >= 120 * MIN || (ill && now - a.ts >= 30 * MIN))) {
-        out.push({ key: `ketonen-${day}-${Math.floor(tod(a.ts, off) / 240)}`, kind: 'ketonen', prio: 0,
+        out.push({ key: `ketonen-${day}`, kind: 'ketonen', prio: 0,
           title: `${ill ? 'Ziek en boven 14' : 'Al ' + fmt((now - a.ts) / H) + ' uur boven 14'}: meet ketonen`,
           body: `Onder 0,6 gewoon corrigeren. 0,6–1,4: correctie met de pen, nieuwe pod. Vanaf 1,5 ook je team bellen, vanaf 3,0 spoed.`, since: a.ts });
       }
@@ -119,7 +125,7 @@
       let why = null;
       if (a && now - a.ts >= 5 * H) why = `Al ${fmt((now - a.ts) / H)} uur boven 13,9.`;
       else if (cor.length >= 2 && last.bg >= 13.9) { const b0 = bgAt(glucose, T, cor[0].ts); if (b0 != null && last.bg >= b0 - 0.5) why = `${cor.length} correcties sinds ${hm(tod(cor[0].ts, off))}, en je daalt niet.`; }
-      if (why) out.push({ key: `pod-${day}-${Math.floor(tod(now, off) / 360)}`, kind: 'pod', prio: 0,
+      if (why) out.push({ key: `pod-${day}`, kind: 'pod', prio: 0,
         title: `Pod mogelijk niet goed`, body: `${why} Vervang de pod en corrigeer met de pen.`, since: now });
     }
     // 5 · Nacht: om 22:30–23:30 kans op een laagte vannacht (≥ 3 risicofactoren; bij 2 voorspelde het in je data niets)

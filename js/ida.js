@@ -75,7 +75,7 @@ function idaVandaag(c){
       <div class="icacts"><button class="ibtn acc" data-ida="profiel">${TL("Bekijk profiel","View profile","Ver perfil")}</button><button class="ibtn" data-idaask="profiel">${TL("Leg uit","Explain","Explicar")}</button></div></article>`);
   }
   const r=unloggedRise(g, c.treatments);
-  if(r && !_idaAnns.some(x=>x.id==="rise-"+r.t0)){
+  if(r && !_idaAnns.some(x=>x.id==="rise-"+r.t0||(x.type==="maaltijd"&&x.src==="rise"&&Math.abs(x.ts-r.t0)<=2*3600e3))){
     const est=riseCarbEstimate(c, r);
     const hm=ts=>fmtMin(todMin(ts));
     cards.push(`<article class="icard" id="riseCard"><div class="icrow"><span class="icic p">${_idaIcon("food")}</span><span class="ictxt"><b>${TL("Heb je iets gegeten?","Did you eat something?","Comeu alguma coisa?")}</b> ${TL(`Tussen ${hm(r.t0)} en ${hm(r.t1)} steeg je van ${_idaN(r.b0)} naar ${_idaN(r.b1)}, zonder gelogde koolhydraten.`,`Between ${hm(r.t0)} and ${hm(r.t1)} you rose from ${_idaN(r.b0)} to ${_idaN(r.b1)} without logged carbs.`,`Entre ${hm(r.t0)} e ${hm(r.t1)} subiu de ${_idaN(r.b0)} para ${_idaN(r.b1)} sem hidratos registados.`)}</span></div>

@@ -108,7 +108,14 @@ async function check({ stateless, sent, file }) {
   let anns = [], mute = [], iob = null;
   try { const st = await store.getState(file); if (st) { anns = st.annotations || []; mute = (st.cfg && st.cfg.mute5) || []; } } catch (e) { console.error(e.message); }
   try { const ds = await ns('/api/v1/devicestatus.json', { count: 3 }); for (const d of ds) { const oa = d.openaps || {}, io = Array.isArray(oa.iob) ? oa.iob[0] : oa.iob; const v = io && +io.iob; if (isFinite(v) && Date.parse(d.created_at) > now - 15 * MIN) { iob = v; break; } } } catch (e) { console.error(e.message); }
-  const opts = { now, tzOffsetMin: off, anns, mute, iob };
+  // ISF en KH-ratio van nu (voor de schatting bij "stijging zonder eten")
+  let prof = null;
+  try { const pr = await ns('/api/v1/profile.json', { count: 1 }); const doc = Array.isArray(pr) ? pr[0] : pr; const st = doc && doc.store && doc.store[doc.defaultProfile || Object.keys(doc.store)[0]];
+    if (st) { const t = (new Date(now + off * MIN).getUTCHours() * 60 + new Date(now + off * MIN).getUTCMinutes()) * 60;
+      const at = a => { let v = null; for (const e of (a || []).map(e => ({ s: e.timeAsSeconds != null ? +e.timeAsSeconds : (+String(e.time).split(':')[0] * 3600 + +String(e.time).split(':')[1] * 60), v: +e.value })).sort((x, y) => x.s - y.s)) if (e.s <= t) v = e.v; return v; };
+      let isf = at(st.sens); const mg = String(st.units || doc.units || '').toLowerCase().startsWith('mg'); if (isf && (mg || isf > 30)) isf = isf / MG;
+      prof = { isf, ic: at(st.carbratio) }; } } catch (e) { console.error(e.message); }
+  const opts = { now, tzOffsetMin: off, anns, mute, iob, prof };
   const iv = (+env.INTERVAL_MIN || 10) * MIN;
   let list = stateless ? newMoments(glucose, treatments, opts, iv) : idaMoments(glucose, treatments, opts);
   if (!stateless) { const keep = []; for (const m of list) if (!(await store.wasSent(m.key, sent))) keep.push(m); list = keep; }
@@ -119,7 +126,7 @@ async function check({ stateless, sent, file }) {
   for (const m of list) {
     let ok = 0;
     for (const s of targets) {
-      try { await webpush.sendNotification(s, JSON.stringify({ title: m.title, body: m.body, tag: m.key, url: './' }), { TTL: 1800, urgency: 'high' }); ok++; }
+      try { await webpush.sendNotification(s, JSON.stringify({ title: m.title, body: m.body, tag: m.key, url: './', rise: m.rise || null }), { TTL: 1800, urgency: 'high' }); ok++; }
       catch (e) { console.error('Melding mislukt:', e.statusCode || e.message); if (e.statusCode === 404 || e.statusCode === 410) await store.dropSub(s.endpoint, file); }
     }
     if (sent) await store.markSent(m.key, sent);

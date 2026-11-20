@@ -15,7 +15,8 @@ function currentMoments(){
   let st; try{ const r=mealBolusRisk(_ctx); st=r&&r.fall.n>=5&&r.ok.n>=5?{ fallPct:Math.round(100*r.fall.hypo/r.fall.n), okPct:Math.round(100*r.ok.hypo/r.ok.n) }:null; }catch(_){ st=undefined; }
   let iob=null; try{ const ds=(typeof _dsAll!=="undefined"&&_dsAll)||[], d=ds[ds.length-1]; if(d&&now-d.ts<15*60e3) iob=d.iob; }catch(_){}
   const anns=(typeof _idaAnns!=="undefined"&&_idaAnns)||[];
-  try{ return idaMoments(_ctx.glucose, _ctx.treatments, { now, tzOffsetMin:off, stats:st, anns, iob, mute:cfg.mute5||[] }); }catch(e){ console.error(e); return []; }
+  let prof=null; try{ const p=profileAt(_ctx.timeline, now); if(p&&p.isf>0&&p.ic>0) prof={ isf:p.isf, ic:p.ic }; }catch(_){}
+  try{ return idaMoments(_ctx.glucose, _ctx.treatments, { now, tzOffsetMin:off, stats:st, anns, iob, prof, mute:cfg.mute5||[] }); }catch(e){ console.error(e); return []; }
 }
 
 // In de app: het moment staat bovenaan Vandaag
@@ -36,7 +37,9 @@ async function maybeNotify(list){
   const seen=_notified();
   for(const m of list){ if(seen[m.key]) continue;
     try{ const reg=await navigator.serviceWorker?.ready;
-      if(reg) await reg.showNotification(m.title,{ body:m.body, tag:m.key, icon:"icon-180.png", badge:"icon-180.png", data:{url:"./"} });
+      const o={ body:m.body, tag:m.key, icon:"icon-180.png", badge:"icon-180.png", data:{url:"./", rise:m.rise||null} };
+      if(m.rise) o.actions=[m.rise.grams?{action:"g",title:TL(`Ja, ~${m.rise.grams} g`,`Yes, ~${m.rise.grams} g`,`Sim, ~${m.rise.grams} g`)}:{action:"open",title:TL("Ja, invullen","Yes, enter","Sim")},{action:"nee",title:TL("Nee","No","Não")}];
+      if(reg) await reg.showNotification(m.title,o);
       else new Notification(m.title,{ body:m.body, tag:m.key });
       _markNotified(m.key);
     }catch(_){}
@@ -90,3 +93,11 @@ async function pushTest(){
     cfg.notify=n.checked; cfg.pushUrl=u.value.trim().replace(/\/+$/,""); cfg.pushKey=k.value.trim(); saveCfg(); };
   for(const id of ["inNotify","inPushUrl","inPushKey"]){ const el=document.getElementById(id); if(el) el.addEventListener("change", sync); }
 })();
+
+// Antwoord vanuit een melding ("Ja, ~25 g" / "Nee"): via de service worker of via het adres bij openen
+async function _riseFromNote(t0, g){ if(!(t0>0)) return; try{ if(typeof _idaAnns!=="undefined"&&!_idaAnns.length) _idaAnns=await DB.all("annotations"); }catch(_){}
+  if((_idaAnns||[]).some(a=>a.type==="maaltijd"&&Math.abs(a.ts-t0)<=2*3600e3)) return;
+  try{ await _riseAnswer(String(Math.max(0,Math.round(g||0))), t0); if(_ctx){ delete _ctx._an5; delete _ctx._one5; } }catch(e){ console.error(e); } }
+if(navigator.serviceWorker) navigator.serviceWorker.addEventListener("message", e=>{ const d=e.data||{}; if(d.type==="ida-rise") _riseFromNote(+d.t0, +d.g); });
+(function(){ try{ const u=new URL(location.href), t=+u.searchParams.get("rise"), g=u.searchParams.get("g");
+  if(t>0&&g!=null){ u.searchParams.delete("rise"); u.searchParams.delete("g"); history.replaceState(null,"",u.pathname+u.search+u.hash); setTimeout(()=>_riseFromNote(t,+g),1500); } }catch(_){} })();

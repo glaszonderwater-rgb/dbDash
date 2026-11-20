@@ -29,4 +29,14 @@ ok(!kinds(g,[],{now}).includes('alcohol'),'geen alcoholmelding zonder log');
 const anns=[1,2,3].map(w=>({type:'sport',ts:day0+7*H*0-w*7*DAY+18*H}));
 now=day0+16*H+45*MIN; g=mk(now-6*H,now,()=>7); ok(kinds(g,[],{now,anns}).includes('sport'),'sportmelding 75 min vooraf');
 now=day0+17*H+45*MIN; g=mk(now-6*H,now,()=>7); ok(!kinds(g,[],{now,anns}).includes('sport'),'geen sportmelding 15 min vooraf');
+// stijging zonder eten: pas vanaf 4, met schatting en één-tik-antwoord
+now=day0+15*H; const rise=d=>mk(now-6*H,now,t=>t<now-60*MIN?6:6+d*Math.min(1,(t-(now-60*MIN))/(45*MIN)));
+ok(!kinds(rise(3.5),[],{now}).includes('vraag'),'geen vraag bij stijging 3,5');
+const v=idaMoments(rise(5),[{ts:now-30*MIN,insulin:1,isSMB:true,carbs:0}],{now,tzOffsetMin:0,prof:{isf:2,ic:10}}).find(m=>m.kind==='vraag');
+ok(v&&v.rise&&v.rise.grams===35,'schatting 5/(2/10)+1×10 = 35 g, kreeg '+(v&&v.rise&&v.rise.grams));
+ok(!kinds(rise(5),[],{now,anns:[{type:'maaltijd',ts:now-70*MIN,grams:25}]}).includes('vraag'),'geen vraag als al beantwoord');
+// ketonen hooguit 1× per dag (zelfde sleutel)
+const k1=idaMoments(mk(now-6*H,now,t=>t>now-150*MIN?15.5:8),[],{now,tzOffsetMin:0}).find(m=>m.kind==='ketonen'), now2=now+6*H;
+const k2=idaMoments(mk(now2-8*H,now2,t=>t>now2-150*MIN?15.5:8),[],{now:now2,tzOffsetMin:0}).find(m=>m.kind==='ketonen');
+ok(k1&&k2&&k1.key===k2.key,'ketonen één sleutel per dag');
 if(fail){ console.log(fail+' fout(en)'); process.exit(1); } console.log('moment5check OK');

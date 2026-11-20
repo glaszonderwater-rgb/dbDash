@@ -1,7 +1,7 @@
 # IDA — overdracht voor een nieuwe sessie
 
 Lees dit eerst. Het beschrijft hoe de app werkt, welke afspraken gelden en wat er nog openstaat.
-Laatste stand: v43 (20 nov 2026), branch `main`, GitHub Pages: https://glaszonderwater-rgb.github.io/dbDash/
+Laatste stand: v44 (20 nov 2026), branch `main`, GitHub Pages: https://glaszonderwater-rgb.github.io/dbDash/
 
 ## Wat IDA is
 Persoonlijke offline PWA voor één gebruiker (Focko) met AAPS closed loop + Omnipod Dash, Libre via xDrip+, data uit Nightscout.
@@ -66,7 +66,8 @@ Playwright-core wordt gebruikt; `CHROME_PATH` naar een Chromium. Nightly data-ar
 8. **Momenten in Dag (v41):** `_momFactors` weegt per moment meerdere factoren tegen je eigen gewone waarden (opname t50 en stijging per dagdeel, IOB bij maaltijden/per uur, bolus t.o.v. ratio incl. correctie, start en trend, grote maaltijd, SMB erna, alcohol/sport/ziek/stress, pod- en sensorleeftijd, piek ervoor, sensordruk, late stijging na eten, basaal uit het profielvoorstel, max IOB). "Volgende keer" komt uit de zwaarste factoren; goed verlopen maaltijden krijgen geen correctie-advies.
 9. **Analyses (v42):** onderzoeksdoc https://claude.ai/artifact/YSZmxHGew1Km1kznkPkLqF. Nieuwe logsoorten: warmte, korte nacht, medicijn (`med`: prednison/vitc/aspirine + `days`), podplaats (`site`), menstruatie (alleen met instelling `cfg.cycle`); HbA1c (`hba1c`, `value`) en Gold-score (`gold`) via het analysescherm. Medicijndagen (prednison +2) tellen niet mee (`_medKeys` in `quality`). Profielvoorstel: voorzichtige stand (`P.careful`): laagte in 48 u → niets strakker; laagte of >4% onder 3,9 → 50% i.p.v. 70% van de weg. AGP nu 5–95%. Meldingen erbij in `moments.js` (ketonen, pod, nacht ≥3 factoren, ochtend na alcohol, vóór vast sportmoment; eetmelding vanaf 7,5 na een laagte); uitzetten per soort (`cfg.mute5`), server leest logboek en mute uit de back-up en IOB uit devicestatus. Tijdelijke streefwaarden met reden Hypo/Automation tellen als reactie van AAPS, niet als oorzaak.
 10. **Analyses op de achtergrond (v43):** het analysescherm is alleen nog een link onderaan Dag ("Alle analyses"). Wat ertoe doet komt naar voren in: momenten (`_momFactors`-wrapper in ida5: loop na eten, telfout per maaltijdgrootte, late piek, doorschieten na laagte, nachtfactoren, pod-falen, ketonen, dawn; factoren zonder effect bij jou worden weggelaten), Profiel (blok "Waarom", max 3 regels, `_profWhy5`), Voortgang ("Uit je analyses": nieuw in 7 dagen, max 3, eten loggen blijft staan zolang het speelt; `ida.an5new` in localStorage) en Vandaag (alleen een vergeten profielpercentage; de rest via meldingen).
-11. Bekende beperking: `riseCarbEstimate` telt tijdelijke basaalverhogingen niet mee.
+11. **Eten in één tik (v44):** melding "stijging zonder eten" pas bij ≥ 4 erbij, met schatting (`rise:{t0,grams}`; server leest ISF/KH uit `profile.json`) en knoppen "Ja, ~25 g" / "Nee" (sw.js `actions`). Antwoord gaat via `postMessage` of `?rise=&g=` naar `_riseFromNote` (push.js) → annotatie `maaltijd` (src `rise`). Telt mee bij Wat je logt en bij momenten; de kaart op Vandaag en de melding verschijnen niet meer als er al geantwoord is. Ketonen en pod: hooguit één melding per dag. Simulatie 60 dagen: vraag 96, eten 28, ketonen 8, nacht 4.
+12. Bekende beperking: `riseCarbEstimate` telt tijdelijke basaalverhogingen niet mee.
 
 ## Werkwijze
 - Commit-berichten in het Nederlands; release = `sw.js` VERSION ophogen, tests draaien, pushen naar `main`.

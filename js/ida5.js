@@ -160,6 +160,7 @@ function _a3(c){
   if(keys.length<5) return null; const K=new Set(keys);
   const inK=t=>K.has(_dk5(t.ts)); const tr=T.filter(inK);
   const carbs=tr.reduce((s,t)=>s+(t.carbs||0),0)/keys.length, entries=tr.filter(t=>t.carbs>0).length/keys.length;
+  const back=_anns5("maaltijd").filter(a=>a.src==="rise"&&a.grams>0&&K.has(_dk5(a.ts))), backG=back.reduce((s,a)=>s+a.grams,0)/keys.length;
   const smb=tr.filter(t=>t.isSMB&&t.insulin>0).reduce((s,t)=>s+t.insulin,0), man=tr.filter(t=>!t.isSMB&&t.insulin>0).reduce((s,t)=>s+t.insulin,0);
   const share=smb+man>0?smb/(smb+man):null;
   const noCarb=tr.filter(t=>!t.isSMB&&t.insulin>=0.5&&!T.some(x=>x.carbs>0&&Math.abs(x.ts-t.ts)<=45*_M5)).length/keys.length;
@@ -174,6 +175,7 @@ function _a3(c){
     v:let_?TL(`${_p5(share)} van je bolusinsuline komt van de loop (SMB). Waarschijnlijk wordt veel eten niet of te laag ingevoerd.`,`${_p5(share)} of your bolus insulin comes from the loop (SMB). Much food is probably not entered, or entered too low.`,`${_p5(share)} da insulina de bólus vem do loop.`)
       :TL(`Je voert gemiddeld ${Math.round(carbs)} g per dag in; de loop geeft ${_p5(share)} van je bolusinsuline.`,`You enter ${Math.round(carbs)} g a day on average; the loop gives ${_p5(share)} of your bolus insulin.`,`Regista ${Math.round(carbs)} g por dia.`),
     f:[[TL("Ingevoerd per dag","Entered per day","Registado por dia"),`${Math.round(carbs)} g`,TL(`${_n5(entries)} keer`,`${_n5(entries)} times`,`${_n5(entries)} vezes`)],
+       ...(back.length?[[TL("Achteraf aangegeven","Added afterwards","Indicado depois"),`${Math.round(backG)} g`,TL(`${back.length}× via "Iets gegeten?"`,`${back.length}× via "Did you eat?"`,`${back.length}×`)]]:[]),
        [TL("Bolus + SMB per dag","Bolus + SMB per day","Bólus + SMB por dia"),`${_n5((smb+man)/keys.length)} ${TL("E","U","U")}`,TL(`SMB ${_p5(share)}`,`SMB ${_p5(share)}`,`SMB ${_p5(share)}`)],
        [TL("Bolus zonder KH","Bolus without carbs","Bólus sem hidratos"),`${_n5(noCarb)}/${TL("dag","day","dia")}`,TL("±45 min","±45 min","±45 min")],
        ...(cover!=null?[[TL("Dekt aan eten","Covers in food","Cobre em comida"),`± ${Math.round(cover/10)*10} g`,TL("bovengrens, met je KH-ratio","upper bound, with your carb ratio","limite superior")]]:[]),
@@ -765,6 +767,10 @@ function _new5(){
         if(hr<7||hr>=23){ const t23=m.ts-((todMin(m.ts)-1380+1440)%1440)*_M5; const NF=_nightFactors5(c,t23); if(NF.length>=2){ const nm={ iob:TL("veel actieve insuline","lots of active insulin",""), bolus:TL("bolus in de 3 uur ervoor","bolus in the 3 hours before",""), sport:TL("sport overdag","exercise that day",""), alcohol:TL("alcohol","alcohol",""), laag:TL("laagte overdag","low during the day",""), start:TL("onder 6,5 bij het slapen","below 6.5 at bedtime","") };
           add({ k:"an16", w:2, txt:TL(`Om 23 uur al ${NF.length} risicofactoren: ${NF.map(f=>nm[f]).join(", ")}.`,`At 23:00 already ${NF.length} risk factors: ${NF.map(f=>nm[f]).join(", ")}.`,`${NF.length} fatores às 23 h.`), tip:TL("Met zo'n avond: iets kleins eten voor het slapen of een tijdelijke streefwaarde voor de nacht.","On an evening like that: a small snack before bed or a temporary target for the night.","Coma algo antes de dormir.") }); } }
       } else {
+        const bk=_anns5("maaltijd").find(a=>a.src==="rise"&&Math.abs(a.ts-m.ts)<=3*_H5);
+        if(bk){ for(const f of F) if(/Geen koolhydraten gelogd|No carbs logged/.test(f.txt)) f.drop=1;
+          add({ k:"achteraf", w:2, txt:bk.grams>0?TL(`Achteraf aangegeven: ~${bk.grams} g gegeten.`,`Added afterwards: ~${bk.grams} g eaten.`,`~${bk.grams} g indicado depois.`):TL("Achteraf aangegeven: niets gegeten.","Added afterwards: nothing eaten.","Nada comido."),
+            tip:bk.grams>0?TL("Voer het eten vóór de bolus in; dan hoeft de loop niet in te halen.","Enter food before the bolus; then the loop doesn't have to catch up.","Registe antes do bólus."):null }); }
         const a19=_one5(c,_a19); const pf=_podFails5(c,m.ts-6*_H5).find(p=>p.ts<=(m.end||m.ts)+_H5&&p.end>=m.ts-_H5);
         if(pf) add({ k:"an19", w:3, txt:pf.why==="5u"?TL("Meer dan 5 uur boven 13,9: past bij een pod die niet goed werkte.","More than 5 hours above 13.9: fits a pod that wasn't working properly.","Pod com falha."):TL("Correcties zonder effect: past bij een pod die niet goed werkte.","Corrections without effect: fits a pod that wasn't working properly.","Pod com falha."), tip:TL("Bij dit beeld: pod vervangen en corrigeren met de pen.","With this picture: replace the pod and correct with a pen.","Troque o pod.") });
         if(m.peak>=14&&m.dur>=120) add({ k:"an1", w:2, txt:TL(`${Math.round(m.dur/60*10)/10} uur boven 10, piek ${_n5(m.peak)}.`,`${Math.round(m.dur/60*10)/10} hours above 10, peak ${_n5(m.peak)}.`,`Alta longa.`), tip:TL("Langer dan 2 uur boven 14: meet ketonen.","More than 2 hours above 14: check ketones.","Meça cetonas.") });

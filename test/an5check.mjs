@@ -50,6 +50,10 @@ await page.evaluate(()=>closeDetail()); await page.evaluate(()=>openAn5('melding
 await page.uncheck('[data-an5mute="vraag"]'); ok(await page.evaluate(()=>(cfg.mute5||[]).includes('vraag')),'melding uitzetten bewaard');
 // moment met factoren werkt
 ok(await page.evaluate(()=>{ const c=_ctx, k=[...c.q.usableKeys].slice(-2)[0], g=c.glucose.find(x=>localDayKey(x.ts)===k), from=g.ts-todMin(g.ts)*60e3; const M=dayMoments(c,from,from+864e5); return M.length>0&&M.every(m=>Array.isArray(_momFactors(c,m))); }),'momentfactoren');
+// eten in één tik vanuit een melding: ?rise=<t0>&g=<gram>
+const t0=now-3*3600e3; await page.goto(FILE+'?rise='+t0+'&g=25',{waitUntil:'load'}); await page.waitForTimeout(3500);
+ok(await page.evaluate(async t0=>(await DB.all('annotations')).some(a=>a.type==='maaltijd'&&a.grams===25&&a.ts===t0),t0),'eten vastgelegd vanuit melding');
+ok(await page.evaluate(()=>!/rise=/.test(location.search)),'adres opgeschoond');
 ok(!errors.length,'fouten: '+errors.slice(0,3).join(' | '));
 await browser.close();
 if(fail){ console.log(fail+' fout(en)'); process.exit(1); } console.log('an5check OK');
