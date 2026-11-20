@@ -15,6 +15,7 @@ async function renderIda(keep){
   if(!keep || !_P){ try{ _P = aapsProfile(c.glucose, c.treatments, c.timeline, c.q, _dsAll); }catch(e){ console.error(e); _P=null; } }
   for(const f of [idaVandaag, idaPatronen, idaEten, idaTeam, idaProfiel]){ try{ f(c); }catch(e){ console.error(e); } }
   try{ if(typeof idaExtras==="function") idaExtras(c); }catch(e){ console.error(e); }
+  try{ if(typeof _afterRender4==="function") _afterRender4(); }catch(e){ console.error(e); }
 }
 
 /* ── Vandaag ─────────────────────────────────────────────────────────────── */
@@ -88,6 +89,8 @@ function idaVandaag(c){
   host.querySelectorAll("[data-ida=week]").forEach(b=>b.onclick=()=>{ showTab("consult"); setTimeout(()=>{ const w=_idaEl("weekCard"); if(w) w.scrollIntoView({behavior:"smooth",block:"start"}); },80); });
   host.querySelectorAll("[data-ida=profiel]").forEach(b=>b.onclick=()=>showTab("profiel"));
   host.querySelectorAll("[data-rise]").forEach(b=>b.onclick=()=>_riseAnswer(b.dataset.rise, +b.dataset.t));
+  try{ if(typeof idaHero4==="function") idaHero4(c); }catch(e){ console.error(e); }
+  try{ if(typeof _now5==="function") _now5(c); }catch(e){ console.error(e); }
 }
 async function _riseAnswer(kind, t0){
   if(kind==="ander"){

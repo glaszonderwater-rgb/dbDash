@@ -3108,15 +3108,7 @@ function applyTheme(t){
 document.getElementById("inTheme").onchange=e=>applyTheme(e.target.value);   // direct effect, geen "Bewaren" nodig
 applyTheme(document.documentElement.dataset.theme||"auto");
 
-// Drie lagen: Overzicht (verhaal) · Analyses (bibliotheek) · Consult
-function showTab(tab){
-  const navTab = tab==="profiel" ? "consult" : tab==="detail" ? ((typeof _det!=="undefined"&&_det)?_det.prev:"analyses") : tab;
-  document.querySelectorAll("#tabbar .tab").forEach(b=>{ const on=b.dataset.tab===navTab;
-    b.classList.toggle("on",on); if(on) b.setAttribute("aria-current","page"); else b.removeAttribute("aria-current"); });
-  document.querySelectorAll(".view").forEach(v=>v.hidden = v.dataset.view!==tab);
-  const nu=document.getElementById("secNow"); if(nu) nu.classList.toggle("hideOnHome", tab==="overzicht");
-  window.scrollTo({top:0});
-}
+// Navigatie: showTab staat in js/ida4.js, goTo in js/ida3.js (aangeroepen bij klikken, als alles geladen is).
 document.querySelectorAll("#tabbar .tab").forEach(b=>b.onclick=()=>showTab(b.dataset.tab));
 document.getElementById("btnPlus").onclick=()=>openLogSheet();
 document.getElementById("logClose").onclick=()=>closeLogSheet();
@@ -3127,18 +3119,6 @@ document.getElementById("aiSheet").addEventListener("click",e=>{ if(e.target.id=
 document.getElementById("aiForm").onsubmit=e=>{ e.preventDefault(); const i=document.getElementById("aiIn"); const v=i.value; i.value=""; aiSend(v); };
 document.getElementById("goImport").onclick=()=>{ try{closeDlg();}catch(_){} showTab("import"); }; document.getElementById("backEten").onclick=()=>showTab("eten");
 
-// De index: élke analyse bij naam, één tik — geen zoeken
-// Sprong vanuit Overzicht-links naar een analyse: open de sectie en scrol erheen.
-function goTo(target, view){
-  showTab(view||"analyses");
-  const el = target.startsWith("an:")
-    ? document.querySelector(`details[data-an="${target.slice(3)}"]`)
-    : document.getElementById(target);
-  if(!el) return;
-  for(let p=el.parentElement;p;p=p.parentElement){ if(p.tagName==="DETAILS") p.open=true; }
-  if(el.tagName==="DETAILS") el.open=true;
-  setTimeout(()=>el.scrollIntoView({behavior:"smooth",block:"start"}),60);
-}
 document.querySelectorAll("[data-goto]").forEach(el=>el.onclick=()=>goTo(el.dataset.goto,"analyses"));
 
 // stickyhoogte van de kop voor de Nu-strip

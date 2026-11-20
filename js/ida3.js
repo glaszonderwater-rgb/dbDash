@@ -50,6 +50,7 @@ function buildRows(){
         .observe(d,{attributes:true,attributeFilter:["hidden"],subtree:true,childList:true,characterData:true});
     });
   }
+  try{ if(typeof _hideGone4==="function") _hideGone4(); }catch(e){ console.error(e); }
 }
 // "Waarom ›" onder een melding opent de onderbouwing als pagina
 function buildWhyLinks(){
@@ -65,16 +66,16 @@ function openAllFindings(){
   [t,w].forEach(x=>x&&x.querySelectorAll(".f").forEach(f=>f.hidden=false));
   openDetail([t,w].filter(Boolean), TL("Alle meldingen","All notices","Todos os avisos"), ()=>{ _capN=-1; capHome(); });
 }
-// goTo (sprong naar een analyse) opent nu de detailpagina
-(function(){
-  const orig=typeof goTo==="function"?goTo:null;
-  window.goTo=function(target, view){
-    const el = target && target.startsWith("an:") ? document.querySelector(`details[data-an="${target.slice(3)}"]`) : document.getElementById(target);
-    const top = el && (el.closest("details.irowsrc") || (el.matches&&el.matches("details.irowsrc")?el:null));
-    if(top){ openDetail([top], _sumTitle(top)); return; }
-    if(orig) return orig(target, view);
-  };
-})();
+// goTo: sprong naar een analyse. Een rij opent zijn detailpagina; anders het scherm openen en erheen scrollen.
+function goTo(target, view){
+  const el = target && target.startsWith("an:") ? document.querySelector(`details[data-an="${target.slice(3)}"]`) : document.getElementById(target);
+  const top = el && (el.closest("details.irowsrc") || (el.matches&&el.matches("details.irowsrc")?el:null));
+  if(top){ openDetail([top], _sumTitle(top)); return; }
+  showTab(view||"analyses"); if(!el) return;
+  for(let p=el.parentElement;p;p=p.parentElement){ if(p.tagName==="DETAILS") p.open=true; }
+  if(el.tagName==="DETAILS") el.open=true;
+  setTimeout(()=>el.scrollIntoView({behavior:"smooth",block:"start"}),60);
+}
 
 // Vandaag: nooit meer dan 2 kaarten onder "Let op"; de rest achter "Alle meldingen"
 let _capN=-1;

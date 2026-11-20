@@ -326,6 +326,7 @@ function idaExtrasTeam(c){
   const sp=_idaEl("expStop"); if(sp) sp.onclick=()=>expStop();
   _idaEl("csvBtn").onclick=()=>_download(`IDA-dagen-${localDayKey(Date.now())}.csv`, dailyCsv(c), "text/csv;charset=utf-8");
   _idaEl("bkBtn").onclick=()=>{ document.getElementById("btnExport").click(); try{ localStorage.setItem("ida.lastBackup",String(Date.now())); }catch(_){} };
+  try{ if(typeof _teamMore4==="function") _teamMore4(); }catch(e){ console.error(e); }
 }
 // Rapport: extra sectie met profiel, GRI, effectmeting en weekoverzicht
 function idaReportHtml(){

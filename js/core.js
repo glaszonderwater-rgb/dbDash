@@ -941,19 +941,7 @@ function dayChartSvg(readings, events, win){
   return `<svg class="chart" viewBox="0 0 ${W} ${H}">${band}${ax}${pl}<path d="${d}" fill="none" stroke="var(--ink)" stroke-width="1.5" vector-effect="non-scaling-stroke"/>${red}${mk}</svg>`;
 }
 // Overzicht: doorlopend venster van de laatste 24 uur (eindigt bij de laatste meting).
-function renderLast24(){
-  const host=document.getElementById("last24"); if(!host||!_ctx) return;
-  const g=_ctx.glucose; if(!g.length){ host.innerHTML=""; return; }
-  const to=Math.max(g[g.length-1].ts, Date.now()-5*60e3), from=to-24*36e5;
-  const rd=g.filter(x=>x.ts>=from&&x.ts<=to), ev=(_ctx.treatments||[]).filter(t=>t.ts>=from&&t.ts<=to);
-  // Voorspelling van AAPS (eindwaarde) als stippellijn na de laatste meting
-  let pred=null; try{ const last=g[g.length-1]; const d=[..._dsRecent].reverse().find(x=>x.ev!=null&&Math.abs(x.ts-last.ts)<20*60e3);
-    if(d && Date.now()-last.ts<60*60e3) pred={ts:last.ts, bg:last.bg, ev:d.ev}; }catch(_){}
-  const to2 = pred ? Math.max(to, pred.ts+45*60e3) : to;
-  host.innerHTML=dayChartSvg(rd,ev,{from:to2-24*36e5,to:to2,pred});
-  const sub=document.getElementById("l24sub");
-  if(sub){ const n=rd.length; sub.textContent = n>=3 ? TL(`${pct0(rd.filter(x=>x.bg>=LO_T&&x.bg<=HI_T).length/n)} in bereik`,`${pct0(rd.filter(x=>x.bg>=LO_T&&x.bg<=HI_T).length/n)} in range`,`${pct0(rd.filter(x=>x.bg>=LO_T&&x.bg<=HI_T).length/n)} no alvo`) : ""; }
-}
+// renderLast24: zie js/ida4.js (eigen grafiek idaCurveSvg)
 function dayNarrative(readings, events){
   const n=readings.length; let inR=0,maxB=-Infinity,maxT=0,minB=Infinity,minT=0;
   for(const r of readings){ if(r.bg>=LO_T&&r.bg<=HI_T)inR++; if(r.bg>maxB){maxB=r.bg;maxT=r.ts;} if(r.bg<minB){minB=r.bg;minT=r.ts;} }

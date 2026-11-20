@@ -1,7 +1,7 @@
 # IDA — overdracht voor een nieuwe sessie
 
 Lees dit eerst. Het beschrijft hoe de app werkt, welke afspraken gelden en wat er nog openstaat.
-Laatste stand: v46 (20 nov 2026), branch `main`, GitHub Pages: https://glaszonderwater-rgb.github.io/dbDash/
+Laatste stand: v47 (20 nov 2026), branch `main`, GitHub Pages: https://glaszonderwater-rgb.github.io/dbDash/
 
 ## Wat IDA is
 Persoonlijke offline PWA voor één gebruiker (Focko) met AAPS closed loop + Omnipod Dash, Libre via xDrip+, data uit Nightscout.
@@ -69,7 +69,8 @@ Playwright-core wordt gebruikt; `CHROME_PATH` naar een Chromium. Nightly data-ar
 11. **Eten in één tik (v44):** melding "stijging zonder eten" pas bij ≥ 4 erbij, met schatting (`rise:{t0,grams}`; server leest ISF/KH uit `profile.json`) en knoppen "Ja, ~25 g" / "Nee" (sw.js `actions`). Antwoord gaat via `postMessage` of `?rise=&g=` naar `_riseFromNote` (push.js) → annotatie `maaltijd` (src `rise`). Telt mee bij Wat je logt en bij momenten; de kaart op Vandaag en de melding verschijnen niet meer als er al geantwoord is. Ketonen en pod: hooguit één melding per dag. Simulatie 60 dagen: vraag 96, eten 28, ketonen 8, nacht 4.
 12. **v45:** (a) Waakhond op de server (`watchdog` in moments.js, soort `waakhond`): melding bij ≥ 30 min geen glucose, geen loopstatus, of beide; één per onderbreking, ook 's nachts; `/status` toont `lastLoop`. (b) ida5 hangt niet meer via wrappers aan ida4: ida4 roept `_dagLink5`, `_profWhy5`, `_now5`, `_new5`, `_advView5`, `_facEnrich5`, `_anEnrich5` en `_tipEvidence5` zelf aan. (c) Werkt het advies (`idaAdvice5`): 6 adviezen (prebolus, eerste hap, ≤ 15 g bij laag, bolus splitsen, streefwaarde vóór sport, alles invoeren), eigen keren mét/zonder over 90 dagen; tip krijgt "Bij jou: …" of valt weg bij geen verschil (veiligheidstips blijven); overzicht "Wat werkt bij jou" bij Voortgang. Echte data: bolus vooraf stijgt 2,8 tegen 4,8 (6 tegen 97 maaltijden). (d) Vaste maaltijden (`idaFixedMeals5`) als AAPS-QuickWizard-voorstel bij Profiel en bij het moment; waarschuwing als de maaltijd meestal ≥ 5 stijgt (waarschijnlijk te laag ingevoerd).
 13. **Snelheid (v46, 4× vertraagde CPU ≈ telefoon):** verversen 5,6 → 2,7 s, Voortgang 8,6 → 0,8 s, factorvergelijking 2,0 s → 30 ms (tellen i.p.v. arrays samenvoegen, prefixsommen `_insSum5`, binair zoeken). Analyse 27 (meldingen naspelen, 14 dagen, elke 20 min) rekent pas bij openen. Meetscript: `/home/claude/out/perf6.mjs`. "Stijging zonder eten": hooguit één per dagdeel (ochtend/middag/avond); simulatie 60 dagen: 82. `TL()` valt bij een lege vertaling terug op Nederlands.
-14. Bekende beperking: `riseCarbEstimate` telt tijdelijke basaalverhogingen niet mee.
+14. **Geen overschrijvende lagen meer (v47):** elke functie bestaat nog maar één keer. showTab en renderLast24 staan alleen in ida4, goTo alleen in ida3 (oude versies uit index.html/core.js weg). In plaats van wrappers roepen de oorspronkelijke functies de aanvullingen aan: `buildRows` → `_hideGone4`, `idaVandaag` → `idaHero4` + `_now5`, `renderIda` → `_afterRender4`, `idaExtrasTeam` → `_teamMore4`, `idaDag` → `_dagLink5`, `idaProfiel` → `_profWhy5`, `_momFactors` → `_facEnrich5` + `_anEnrich5`, `_momTips4` → `_tipEvidence5`. Controle: zoek naar `window.x=function` of `const o=x; window.x` — er mag niets meer staan (alleen DB.putMany/delRow in state.js, bewust).
+15. Bekende beperking: `riseCarbEstimate` telt tijdelijke basaalverhogingen niet mee.
 
 ## Werkwijze
 - Commit-berichten in het Nederlands; release = `sw.js` VERSION ophogen, tests draaien, pushen naar `main`.

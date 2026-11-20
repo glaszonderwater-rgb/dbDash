@@ -4,7 +4,7 @@
    - Dag: tijd in bereik per dag, oordeel t.o.v. je eigen gemiddelde, curve met genummerde momenten,
      per moment een pagina met "volgende keer". Patronen en Eten hangen onder Dag.
    - Profiel: werkbank (waar het misgaat, basaal nu/nieuw, wijzigingen) en stap voor stap overnemen in AAPS.
-   Laadt als laatste; vervangt showTab, renderLast24 en idaProfiel, en vult idaVandaag/renderIda aan. */
+   Levert showTab, renderLast24, idaProfiel en de Dag/Profiel-schermen; vult idaVandaag aan. ida5.js laadt erna. */
 
 const _H4 = 3600e3, _M4 = 60e3;
 const _e4 = id => document.getElementById(id);
@@ -14,7 +14,7 @@ const _i4 = { dagKey:null, take:0 };
 
 /* ── navigatie ───────────────────────────────────────────────────────────── */
 const _NAV4 = { overzicht:"overzicht", dag:"dag", analyses:"dag", eten:"dag", import:"dag", profiel:"profiel", consult:"consult" };
-window.showTab = function(tab){
+function showTab(tab){
   if(tab!=="detail" && typeof _det!=="undefined" && _det) closeDetail(true);
   const prev=_curTab();
   const navTab = tab==="detail" ? (_NAV4[(typeof _det!=="undefined"&&_det&&_det.prev)||"overzicht"]||"overzicht") : (_NAV4[tab]||tab);
@@ -28,7 +28,7 @@ window.showTab = function(tab){
   if(tab==="inzicht") try{ idaInzicht(); }catch(e){ console.error(e); }
   if(tab==="consult") setTimeout(()=>{ try{ _new5(); }catch(e){ console.error(e); } try{ _advView5(); }catch(e){ console.error(e); } },60);
   if(tab!==prev && prev!=="detail") idaEnter(tab);
-};
+}
 document.querySelectorAll("[data-back]").forEach(b=>b.onclick=()=>showTab(b.dataset.back));
 
 // Binnenkomst: blokken schuiven kort na elkaar in beeld. Alleen bij wisselen van scherm, niet bij elke sync.
@@ -71,11 +71,13 @@ function idaOpenSetting(id){
 // (Dagcurve → Dag, Profiel/Gemeten vs. ingesteld → Profiel, Insuline & KH → Voorraad, Band → kerncijfers);
 // via een link of melding blijven ze bereikbaar.
 const _GONE4=["#secDay","#secProfile","#mvsFold","#secInsulin","#bandCard",'details[data-an="lunch"]','details[data-an="maand"]','details[data-an="dagpatroon"]'];
-(function(){ const o=buildRows; window.buildRows=function(){ o();
+// Aangeroepen aan het eind van buildRows (ida3.js)
+function _hideGone4(){
   for(const q of _GONE4){ const d=document.querySelector(q); if(d&&d._row) d._row.classList.add("gone"); }
   document.querySelectorAll('.view[data-view="analyses"] .h3').forEach(h=>{ let n=h.nextElementSibling, any=false;
     while(n&&!n.classList.contains("h3")){ if(n.classList.contains("irow")&&!n.hidden&&!n.classList.contains("gone")) any=true; n=n.nextElementSibling; }
-    h.classList.toggle("gone",!any); }); }; })();
+    h.classList.toggle("gone",!any); });
+}
 
 /* ── grafiek: gekleurde glucoselijn ──────────────────────────────────────── */
 function _zone(bg){ return bg<LO_T?"lo":bg>HI_T?"hi":"ok"; }
@@ -112,7 +114,7 @@ function idaCurveSvg(rd, ev, o){
     s+=`<g class="mk k-${m.k}"><circle cx="${f(x)}" cy="${f(y)}" r="8.5"/><text x="${f(x)}" y="${f(y+3.2)}">${m.n}</text></g>`; }
   return `<svg class="ichart" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(o.label||TL("Glucosecurve","Glucose curve","Curva de glicose"))}">${s}</svg>`;
 }
-window.renderLast24=function(){
+function renderLast24(){
   const host=_e4("last24"); if(!host||!_ctx) return;
   const g=_ctx.glucose; if(!g.length){ host.innerHTML=""; return; }
   const last=g[g.length-1], to0=Math.max(last.ts, Date.now()-5*_M4);
@@ -122,7 +124,7 @@ window.renderLast24=function(){
   const rd=g.filter(x=>x.ts>=from&&x.ts<=to), ev=(_ctx.treatments||[]).filter(t=>t.ts>=from&&t.ts<=to);
   host.innerHTML=idaCurveSvg(rd,ev,{from,to,pred,dot:true,h:140,label:TL("Laatste 24 uur","Last 24 hours","Últimas 24 horas")});
   const sub=_e4("l24sub"); if(sub){ const n=rd.length; sub.textContent=n>=3?`${pct0(rd.filter(x=>x.bg>=LO_T&&x.bg<=HI_T).length/n)}`:""; }
-};
+}
 
 /* ── Vandaag: statuskaart ────────────────────────────────────────────────── */
 const _ARR4={ DoubleUp:-90, SingleUp:-90, FortyFiveUp:-45, Flat:0, FortyFiveDown:45, SingleDown:90, DoubleDown:90 };
@@ -170,7 +172,6 @@ function idaHero4(c){
   if(foot){ foot.innerHTML=`<span class="hage">${TL("laatste 24 uur","last 24 hours","últimas 24 horas")}</span><button class="hchip" type="button" id="idaDrive"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 17h14M6 17l1.5-5h9L18 17M7 17v2M17 17v2"/></svg>${TL("Rijcheck","Drive check","Condução")}</button>`;
     _e4("idaDrive").onclick=()=>{ try{ openDrive(); }catch(e){ console.error(e); } }; }
 }
-(function(){ const o=idaVandaag; window.idaVandaag=function(c){ o(c); try{ idaHero4(c); }catch(e){ console.error(e); } try{ _now5(c); }catch(e){ console.error(e); } }; })();
 
 /* ── Dag ─────────────────────────────────────────────────────────────────── */
 function _dayData(c){
@@ -614,23 +615,19 @@ function renderTake(node){
   const ac=_e4("profAct2"); if(ac) ac.onclick=()=>profActivate();
 }
 
-/* ── na elke berekening: Dag bijwerken, eerste binnenkomst animeren ───────── */
-(function(){ const o=renderIda; let first=true;
-  window.renderIda=async function(keep){
-    const r=await o(keep);
-    try{ if(_ctx&&_ctx.glucose){ delete _ctx._days4; delete _ctx._mr4;
-      const t=_curTab(); if(t==="dag") idaDag();
-      if(first){ first=false; requestAnimationFrame(()=>idaEnter(t)); } } }catch(e){ console.error(e); }
-    return r; };
-})();
+/* ── na elke berekening: Dag bijwerken, eerste binnenkomst animeren (aangeroepen aan het eind van renderIda in ida.js) ── */
+let _first4=true;
+function _afterRender4(){
+  try{ if(_ctx&&_ctx.glucose){ delete _ctx._days4; delete _ctx._mr4;
+    const t=_curTab(); if(t==="dag") idaDag();
+    if(_first4){ _first4=false; requestAnimationFrame(()=>idaEnter(t)); } } }catch(e){ console.error(e); }
+}
 
 /* ── Voortgang: voorraad en export onderaan, los van meting en consult ──── */
-(function(){ const o=idaExtrasTeam;
-  window.idaExtrasTeam=function(c){
-    let more=_e4("teamMore");
-    if(!more){ const ep=_e4("epConsult"); if(!ep) return o(c);
-      ep.insertAdjacentHTML("afterend",`<div class="h3" id="teamMoreH">${TL("Voorraad en export","Supplies and export","Material e exportação")}</div><div id="teamMore"></div>`); more=_e4("teamMore"); }
-    more.innerHTML=""; o(c);
-    const top=_e4("teamTop"); if(!top) return;
-    [...top.querySelectorAll(".ix")].forEach(el=>{ if(el.querySelector("#expStart,#expStop")||/xperiment/.test(el.textContent.slice(0,60))) return; more.appendChild(el); });
-  }; })();
+// Voorraad en export onderaan, los van meting en consult (aangeroepen aan het eind van idaExtrasTeam in ida2.js)
+function _teamMore4(){
+  let more=_e4("teamMore");
+  if(!more){ const ep=_e4("epConsult"); if(!ep) return; ep.insertAdjacentHTML("afterend",`<div class="h3" id="teamMoreH">${TL("Voorraad en export","Supplies and export","Material e exportação")}</div><div id="teamMore"></div>`); more=_e4("teamMore"); }
+  more.innerHTML=""; const top=_e4("teamTop"); if(!top) return;
+  [...top.querySelectorAll(".ix")].forEach(el=>{ if(el.querySelector("#expStart,#expStop")||/xperiment/.test(el.textContent.slice(0,60))) return; more.appendChild(el); });
+}
