@@ -39,6 +39,10 @@ function _eps5(G, inZone, minMin){
     prev=x; }
   close(); return out;
 }
+// som van insuline in [a,b) via prefixsommen (snel bij veel vensters)
+function _insSum5(c, smb){ const k=smb?"_ps5s":"_ps5m"; if(!c[k]){ const T=(c.treatments||[]).filter(t=>t.insulin>0&&(smb?t.isSMB:!t.isSMB)).sort((a,b)=>a.ts-b.ts), P=[0]; for(const t of T) P.push(P[P.length-1]+t.insulin); c[k]={ T, P }; }
+  const { T, P }=c[k]; return (a,b)=>P[_lb5(T,b)]-P[_lb5(T,a)]; }
+function _carbTs5(c){ return c._ct5||(c._ct5=(c.treatments||[]).filter(t=>t.carbs>0).map(t=>({ ts:t.ts, g:t.carbs })).sort((a,b)=>a.ts-b.ts)); }
 const _isLo5=bg=>bg<LO_T, _isVlo5=bg=>bg<VLO_T, _isHi5=bg=>bg>HI_T, _isVhi5=bg=>bg>13.9;
 function _sites5(c){ return (c.treatments||[]).filter(t=>/site change|cannula/i.test(t.type||"")).map(t=>t.ts).sort((a,b)=>a-b); }
 function _sensors5(c){ return (c.treatments||[]).filter(t=>/sensor (change|start)/i.test(t.type||"")).map(t=>t.ts).sort((a,b)=>a-b); }
@@ -77,15 +81,20 @@ function _factorDefs5(c){
   F.push({ id:"weekend", t:L("Weekend","Weekend"), w:wk, span:L("de hele dag","the whole day") });
   return F;
 }
+function _acc5(){ return { n:0, inr:0, lo:0, hi:0, vlo:0, vhi:0, sum:0 }; }
+function _add5(A, G, a, b){ let k=0; for(let i=_lb5(G,a); i<G.length&&G[i].ts<b; i++){ const bg=G[i].bg; k++; A.sum+=bg; if(bg<LO_T){ A.lo++; if(bg<VLO_T) A.vlo++; } else if(bg>HI_T){ A.hi++; if(bg>13.9) A.vhi++; } else A.inr++; } A.n+=k; return k; }
+function _cnt5(G, a, b){ return _lb5(G,b)-_lb5(G,a); }
+function _accStat5(A){ return A.n?{ n:A.n, tir:A.inr/A.n, tbr:A.lo/A.n, tar:A.hi/A.n, vlo:A.vlo/A.n, vhi:A.vhi/A.n, mean:A.sum/A.n }:{ n:0 }; }
 function _factorEffect5(c, f){
-  const G=c.glucose, U=c.q&&c.q.usableKeys, W=f.w.filter(w=>w.b>w.a);
-  const overl=(a,b)=>W.some(w=>w.a<b&&w.b>a);
-  let occ=[], ctl=[], nOcc=0;
+  const G=c.glucose, U=c.q&&c.q.usableKeys, W=f.w.filter(w=>w.b>w.a).sort((x,y)=>x.a-y.a);
+  const starts=W.map(w=>w.a); let maxLen=0; for(const w of W) maxLen=Math.max(maxLen,w.b-w.a);
+  const overl=(a,b)=>{ let lo=0,hi=starts.length; while(lo<hi){ const m=(lo+hi)>>1; if(starts[m]<b) lo=m+1; else hi=m; } for(let i=lo-1;i>=0&&starts[i]>=a-maxLen;i--) if(W[i].b>a) return true; return false; };
+  const O=_acc5(), K=_acc5(); let nOcc=0;
   for(const w of W){ if(U&&!U.has(_dk5(w.a))) continue;
-    const s=_slice5(G,w.a,w.b), exp=(w.b-w.a)/(5*_M5); if(s.length<Math.max(6,0.6*exp)) continue; nOcc++; occ=occ.concat(s);
+    const exp=(w.b-w.a)/(5*_M5); if(_cnt5(G,w.a,w.b)<Math.max(6,0.6*exp)) continue; nOcc++; _add5(O,G,w.a,w.b);
     for(let d=-30; d<=30; d++){ if(!d) continue; const a=w.a+d*_D5, b=w.b+d*_D5; if(U&&!U.has(_dk5(a))) continue; if(overl(a,b)) continue;
-      const cs=_slice5(G,a,b); if(cs.length>=0.6*exp) ctl=ctl.concat(cs); } }
-  const o=_stat5(occ), k=_stat5(ctl);
+      if(_cnt5(G,a,b)>=0.6*exp) _add5(K,G,a,b); } }
+  const o=_accStat5(O), k=_accStat5(K);
   const dTir=o.n&&k.n?o.tir-k.tir:null, dTbr=o.n&&k.n?o.tbr-k.tbr:null;
   const known=nOcc>=5&&k.n>=200&&(Math.abs(dTir)>=0.10||dTbr>=0.02);
   return { id:f.id, t:f.t, span:f.span, n:nOcc, o, k, dTir, dTbr, known, enough:nOcc>=5 };
@@ -112,7 +121,10 @@ const _GRP5=()=>[["veilig",TL("Veiligheid","Safety","Segurança")],["eten",TL("E
 function idaAn(c){
   if(c._an5) return c._an5;
   const out=[]; const add=(fn)=>{ try{ const r=fn(c); if(r) out.push(r); }catch(e){ console.error(fn.name, e); } };
-  [_a1,_a2,_a3,_a4,_a5,_a6,_a7,_a8,_a9,_a10,_a11,_a12,_a13,_a14,_a15,_a16,_a17,_a18,_a19,_a20,_a21,_a22,_a23,_a24,_a25,_a26,_a27,_a29,_a30,_a31,_a32].forEach(add);
+  [_a1,_a2,_a3,_a4,_a5,_a6,_a7,_a8,_a9,_a10,_a11,_a12,_a13,_a14,_a15,_a16,_a17,_a18,_a19,_a20,_a21,_a22,_a23,_a24,_a25,_a26,_a29,_a30,_a31,_a32].forEach(add);
+  // 27 (meldingen naspelen) is zwaar: alleen een rij; uitrekenen bij openen
+  out.push({ n:27, id:"meldingen", g:"meld", t:TL("Werken de meldingen?","Do the alerts work?","Os alertas funcionam?"), s:"info", lazy:true,
+    v:TL("Tik om je meldingen van de laatste 2 weken na te spelen, en zet uit wat niet helpt.","Tap to replay your alerts of the last 2 weeks, and switch off what doesn't help.","Toque para rever os alertas."), f:[] });
   return (c._an5=out.sort((a,b)=>a.n-b.n));
 }
 const _U5=(c,ts)=>!c.q||!c.q.usableKeys||c.q.usableKeys.has(_dk5(ts));
@@ -163,7 +175,7 @@ function _a3(c){
   const back=_anns5("maaltijd").filter(a=>a.src==="rise"&&a.grams>0&&K.has(_dk5(a.ts))), backG=back.reduce((s,a)=>s+a.grams,0)/keys.length;
   const smb=tr.filter(t=>t.isSMB&&t.insulin>0).reduce((s,t)=>s+t.insulin,0), man=tr.filter(t=>!t.isSMB&&t.insulin>0).reduce((s,t)=>s+t.insulin,0);
   const share=smb+man>0?smb/(smb+man):null;
-  const noCarb=tr.filter(t=>!t.isSMB&&t.insulin>=0.5&&!T.some(x=>x.carbs>0&&Math.abs(x.ts-t.ts)<=45*_M5)).length/keys.length;
+  const CT=_carbTs5(c), noCarb=tr.filter(t=>!t.isSMB&&t.insulin>=0.5&&_lb5(CT,t.ts+45*_M5+1)===_lb5(CT,t.ts-45*_M5)).length/keys.length;
   const tdd=_P&&_P.tdd?_P.tdd:null, ic=_P&&_P.ic&&_P.ic.length?_med5(_P.ic.map(b=>b.now)):null;
   // wat je bolusinsuline aan koolhydraten kan dekken (bolus + SMB minus nuchter-SMB is niet te scheiden: bovengrens)
   const cover=ic?((smb+man)/keys.length)*ic:null;
@@ -186,13 +198,13 @@ function _a3(c){
 }
 // 4 · Loop na maaltijden
 function _a4(c){
-  const T=c.treatments||[], meals=T.filter(t=>t.carbs>=20&&_U5(c,t.ts)), smbIn=(a,b)=>{ let s=0; for(const t of T) if(t.isSMB&&t.insulin>0&&t.ts>=a&&t.ts<b) s+=t.insulin; return s; };
-  const carbTs=T.filter(t=>t.carbs>0).map(t=>t.ts);
-  const free=(a,b)=>!carbTs.some(x=>x>a-2*_H5&&x<b);
+  const T=c.treatments||[], meals=T.filter(t=>t.carbs>=20&&_U5(c,t.ts)), smbIn=_insSum5(c,true);
+  const CT=_carbTs5(c);
+  const free=(a,b)=>_lb5(CT,b)===_lb5(CT,a-2*_H5);
   const R=[0,1,2,3].map(()=>({n:0,meal:0,fast:0,nf:0,g:0}));
   for(const m of meals){ const r=R[_dp5(m.ts)]; r.n++; r.g+=m.carbs; r.meal+=smbIn(m.ts,m.ts+4*_H5);
     for(const d of [-7,-6,-5,-4,-3,-2,-1,1,2,3,4,5,6,7]){ const a=m.ts+d*_D5; if(!_U5(c,a)||!free(a,a+4*_H5)) continue; r.fast+=smbIn(a,a+4*_H5); r.nf++; } }
-  const bolIn=(a,b)=>{ let s=0; for(const t of T) if(!t.isSMB&&t.insulin>0&&t.ts>=a&&t.ts<b) s+=t.insulin; return s; };
+  const bolIn=_insSum5(c,false);
   meals.forEach(m=>{ R[_dp5(m.ts)].bol=(R[_dp5(m.ts)].bol||0)+bolIn(m.ts-45*_M5,m.ts+30*_M5); });
   const rows=R.map((r,i)=>({ i, n:r.n, g:r.n?r.g/r.n:0, meal:r.n?r.meal/r.n:null, fast:r.nf?r.fast/r.nf:null, bol:r.n?(r.bol||0)/r.n:null })).filter(r=>r.n>=5&&r.fast!=null);
   if(!rows.length) return null;
@@ -307,8 +319,9 @@ function _a12(c){
     if(!b) r.miss++; else if(b.ts-m.ts>15*_M5) r.late++; }
   // stijgingen ≥3 zonder koolhydraten en zonder bolus (VanderWel: gemiste snackbolus)
   let rises=0; const G=c.glucose.filter(x=>x.ts>=from); let i0=0;
-  for(let i=0;i<G.length;i++){ while(i0<i&&G[i].ts-G[i0].ts>90*_M5) i0++; let lo=G[i0]; for(let k=i0;k<=i;k++) if(G[k].bg<lo.bg) lo=G[k];
-    if(G[i].bg-lo.bg>=3&&G[i].bg>HI_T&&lo.bg>=4.5){ const a=lo.ts; if(!T.some(t=>(t.carbs>0||(!t.isSMB&&t.insulin>=0.5))&&t.ts>a-2*_H5&&t.ts<G[i].ts)){ rises++; while(i<G.length-1&&G[i+1].bg>=G[i].bg-0.5) i++; i0=i; } } }
+  const CT12=T.filter(t=>t.carbs>0||(!t.isSMB&&t.insulin>=0.5)).map(t=>({ts:t.ts})).sort((a,b)=>a.ts-b.ts);
+  const dq=[]; for(let i=0;i<G.length;i++){ while(i0<i&&G[i].ts-G[i0].ts>90*_M5) i0++; while(dq.length&&G[dq[dq.length-1]].bg>=G[i].bg) dq.pop(); dq.push(i); while(dq[0]<i0) dq.shift(); const lo=G[dq[0]];
+    if(G[i].bg-lo.bg>=3&&G[i].bg>HI_T&&lo.bg>=4.5){ const a=lo.ts; if(_lb5(CT12,G[i].ts)===_lb5(CT12,a-2*_H5)){ rises++; while(i<G.length-1&&G[i+1].bg>=G[i].bg-0.5) i++; i0=i; dq.length=0; dq.push(i); } } }
   const tot=R.reduce((s,r)=>s+r.n,0); if(tot<10) return null; const miss=R.reduce((s,r)=>s+r.miss,0), late=R.reduce((s,r)=>s+r.late,0);
   const N=_DPN5();
   return { n:12, id:"gemist", g:"eten", t:TL("Gemiste en late bolus","Missed and late bolus","Bólus esquecido ou tardio"), s:(miss+late)/tot>0.15||rises/30>0.5?"let":"ok",
@@ -536,11 +549,11 @@ function _site5(k){ return _SITES5()[k]||k; }
 // 27 · Werkt een melding?
 function _a27(c){
   if(typeof idaMoments!=="function") return null;
-  const G=c.glucose, T=c.treatments||[], end=G[G.length-1].ts, from=end-21*_D5, seen=new Map();
+  const G=c.glucose, T=(c.treatments||[]).slice().sort((a,b)=>a.ts-b.ts), end=G[G.length-1].ts, from=end-14*_D5, seen=new Map();
   const anns=(typeof _idaAnns!=="undefined"&&_idaAnns)||[];
-  for(let t=from; t<=end; t+=15*_M5){ const off=(typeof tzOffsetAt==="function"&&tzOffsetAt(t)!=null)?tzOffsetAt(t):-new Date(t).getTimezoneOffset();
-    const g=G.slice(Math.max(0,_lb5(G,t-30*_D5)),_lb5(G,t+1)), tr=T.filter(x=>x.ts<=t&&x.ts>t-30*_D5);
-    let L=[]; try{ L=idaMoments(g,tr,{ now:t, tzOffsetMin:off, anns, iob:(()=>{ const d=_dsAt4(t,10*_M5); return d?d.iob:null; })() }); }catch(_){}
+  for(let t=from; t<=end; t+=20*_M5){ const off=(typeof tzOffsetAt==="function"&&tzOffsetAt(t)!=null)?tzOffsetAt(t):-new Date(t).getTimezoneOffset();
+    const g=G.slice(Math.max(0,_lb5(G,t-36*_H5)),_lb5(G,t+1)), tr=T.slice(_lb5(T,t-30*_D5),_lb5(T,t+1));
+    let L=[]; try{ L=idaMoments(g,tr,{ now:t, tzOffsetMin:off, anns, stats:null, iob:(()=>{ const d=_dsAt4(t,10*_M5); return d?d.iob:null; })() }); }catch(_){}
     for(const m of L) if(!seen.has(m.key)) seen.set(m.key,{ ...m, t }); }
   const kinds={}; for(const m of seen.values()){ const k=kinds[m.kind]||(kinds[m.kind]={ n:0, ok:0 }); k.n++;
     // uitkomst: wat de melding wil bereiken
@@ -555,10 +568,10 @@ function _a27(c){
   const weak=rows.filter(r=>r.n>=5&&r.ok/r.n<0.2&&r.k==="vraag");
   const muted=(cfg.mute5||[]);
   return { n:27, id:"meldingen", g:"meld", t:TL("Werken de meldingen?","Do the alerts work?","Os alertas funcionam?"), s:weak.length?"let":"info",
-    v:!rows.length?TL("Geen meldingen in de laatste 3 weken.","No alerts in the last 3 weeks.","Sem alertas."):TL(`${rows.reduce((s,r)=>s+r.n,0)} meldingen in 3 weken.`,`${rows.reduce((s,r)=>s+r.n,0)} alerts in 3 weeks.`,`${rows.reduce((s,r)=>s+r.n,0)} alertas.`)+(weak.length?TL(` Op "${nm[weak[0].k]}" volgt zelden iets: zet hem uit als hij je niet helpt.`,` "${nm[weak[0].k]}" rarely leads anywhere: switch it off if it doesn't help.`,""):""),
+    v:!rows.length?TL("Geen meldingen in de laatste 2 weken.","No alerts in the last 2 weeks.","Sem alertas."):TL(`${rows.reduce((s,r)=>s+r.n,0)} meldingen in 2 weken.`,`${rows.reduce((s,r)=>s+r.n,0)} alerts in 2 weeks.`,`${rows.reduce((s,r)=>s+r.n,0)} alertas.`)+(weak.length?TL(` Op "${nm[weak[0].k]}" volgt zelden iets: zet hem uit als hij je niet helpt.`,` "${nm[weak[0].k]}" rarely leads anywhere: switch it off if it doesn't help.`,""):""),
     f:rows.map(r=>[nm[r.k]||r.k,`${r.ok} / ${r.n}`,okw[r.k]||""]),
     x:`<div class="an5mute"><span class="ilabel">${TL("Meldingen aan","Alerts on","Alertas ligados")}</span>${Object.keys(nm).map(k=>`<label class="an5tg"><input type="checkbox" data-an5mute="${k}" ${muted.includes(k)?"":"checked"}><span>${nm[k]}</span></label>`).join("")}</div>`,
-    rule:TL("Per soort melding (nagespeeld over 3 weken) de uitkomst erna; een melding zonder effect kun je uitzetten.","Per kind of alert (replayed over 3 weeks) the outcome afterwards; switch off an alert without effect.","Resultado por alerta."),
+    rule:TL("Per soort melding (nagespeeld over 2 weken) de uitkomst erna; een melding zonder effect kun je uitzetten.","Per kind of alert (replayed over 2 weeks) the outcome afterwards; switch off an alert without effect.","Resultado por alerta."),
     src:TL("eigen ontwerp","own design","design próprio") };
 }
 // 29 · Wat je in AAPS zelf instelde
@@ -566,7 +579,7 @@ function _a29(c){
   const end=c.glucose[c.glucose.length-1].ts, from=end-30*_D5, TTall=_tts5(c).filter(x=>x.b>from), TT=TTall.filter(x=>!_ttAuto5(x)), TA=TTall.filter(_ttAuto5), PC=_pcts5(c).filter(x=>x.b>from);
   const hrs=a=>a.reduce((s,x)=>s+(Math.min(x.b,end)-Math.max(x.a,from)),0)/_H5;
   const cur=PC.find(x=>x.a<=end&&x.b>=end), long=cur&&end-cur.a>24*_H5;
-  const fTT=idaFactors5(c).find(f=>f.id==="tt"), fP=idaFactors5(c).find(f=>f.id==="pct");
+  const FF=c._fac5||null, fTT=FF&&FF.find(f=>f.id==="tt"), fP=FF&&FF.find(f=>f.id==="pct");
   return { n:29, id:"aaps", g:"loop", t:TL("Wat je in AAPS zelf instelde","What you set in AAPS yourself","O que definiu no AAPS"), s:long?"let":"info",
     v:long?TL(`Profielpercentage staat al ${Math.round((end-cur.a)/_H5)} uur op ${cur.p}%. Bewust? Het verandert basaal, ISF en KH-ratio tegelijk.`,`Profile percentage has been ${cur.p}% for ${Math.round((end-cur.a)/_H5)} hours. On purpose? It changes basal, ISF and carb ratio together.`,`Percentagem em ${cur.p}%.`)
       :TL(`In 30 dagen ${TT.length}× zelf een tijdelijke streefwaarde (${Math.round(hrs(TT))} uur), ${TA.length}× door AAPS en ${PC.length}× een profielpercentage (${Math.round(hrs(PC))} uur).`,`In 30 days ${TT.length}× a temporary target set yourself (${Math.round(hrs(TT))} hours), ${TA.length}× by AAPS and ${PC.length}× a profile percentage (${Math.round(hrs(PC))} hours).`,`${TT.length}× alvo temporário.`),
@@ -636,7 +649,8 @@ function idaInzicht(){
   host.querySelectorAll("[data-an5open]").forEach(b=>b.onclick=()=>openAn5(b.dataset.an5open));
 }
 function openAn5(id){
-  const c=_ctx, a=idaAn(c).find(x=>x.id===id); if(!a) return;
+  const c=_ctx; let a=idaAn(c).find(x=>x.id===id); if(!a) return;
+  if(a.lazy){ try{ const full=_one5(c,_a27); if(full) a=full; }catch(e){ console.error(e); } }
   const hold=document.getElementById("inzHold"); const node=document.createElement("div"); node.className="momdet an5det";
   node.innerHTML=`<p class="verdict an5v ${a.s}">${esc(a.v)}</p>
     ${a.f&&a.f.length?`<div class="mfacts">${a.f.map(([k,v,s])=>`<div><i>${esc(k)}</i><b>${esc(v)}</b>${s?`<em>${esc(s)}</em>`:""}</div>`).join("")}</div>`:""}

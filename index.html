@@ -1464,7 +1464,7 @@ function t(key, p){ const d=I18N[key]; let s = d ? (d[LANG]!=null?d[LANG]:(d.nl!
   return s; }
 // Inline drietalige tekst voor dynamisch gegenereerde (vaak geïnterpoleerde) zinnen:
 // het Nederlands blijft de bron, en/pt staan er direct naast. Terugval op nl.
-function TL(nl, en, pt){ return LANG==="en" ? (en!=null?en:nl) : LANG==="pt" ? (pt!=null?pt:nl) : nl; }
+function TL(nl, en, pt){ return LANG==="en" ? (en!=null&&en!==""?en:nl) : LANG==="pt" ? (pt!=null&&pt!==""?pt:nl) : nl; }   // lege vertaling: val terug op Nederlands
 // Vang de bestaande Nederlandse tekst uit de DOM als bron (nl), zodat het
 // woordenboek alleen en + pt hoeft te bevatten. Eén keer, vóór de eerste wissel.
 let _i18nSnapped=false;

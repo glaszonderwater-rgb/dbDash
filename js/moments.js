@@ -101,7 +101,7 @@
           let grams = null; const P = opts.prof;
           if (P && P.isf > 0 && P.ic > 0) { const ins = treatments.filter(t => t.insulin > 0 && t.ts >= a.ts && t.ts <= now).reduce((x, t) => x + t.insulin, 0);
             grams = Math.min(150, Math.max(5, Math.round(((pk.bg - a.bg) / (P.isf / P.ic) + ins * P.ic) / 5) * 5)); }
-          out.push({ key: `stijging-${day}-${Math.floor(tod(a.ts, off) / 120)}`, kind: "vraag", prio: 2,
+          out.push({ key: `stijging-${day}-${tod(a.ts, off) < 720 ? 'o' : tod(a.ts, off) < 1020 ? 'm' : 'a'}`, kind: "vraag", prio: 2,   // hooguit één per dagdeel
             title: `Gestegen naar ${fmt(pk.bg)} zonder eten`,
             body: `Sinds ${hm(tod(a.ts, off))} van ${fmt(a.bg)} naar ${fmt(pk.bg)}. Iets gegeten?${grams ? ` Past bij ~${grams} g.` : ''}`, since: pk.ts,
             rise: { t0: a.ts, grams } });
