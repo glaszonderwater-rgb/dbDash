@@ -549,7 +549,7 @@ function _a27(c){
     else if(m.kind==="eten"||m.kind==="nacht"||m.kind==="alcohol") { if(!win.some(x=>x.bg<LO_T)) k.ok++; }
     else if(m.kind==="ketonen"||m.kind==="pod") { const a=_bgAt5(G,m.t+3*_H5,20*_M5); if(a!=null&&a<=12) k.ok++; }
     else if(m.kind==="sport") { if(!_slice5(G,m.t,m.t+6*_H5).some(x=>x.bg<LO_T)) k.ok++; } }
-  const nm={ eten:TL("Bolus pas bij de eerste hap","Bolus at the first bite","Bólus à 1.ª garfada"), vraag:TL("Stijging zonder eten","Rise without food","Subida sem comida"), ketonen:TL("Meet ketonen","Check ketones","Meça cetonas"), pod:TL("Pod mogelijk niet goed","Pod may be failing","Pod com falha"), nacht:TL("Laagte vannacht","Low tonight","Baixa à noite"), alcohol:TL("Ochtend na alcohol","Morning after alcohol","Manhã após álcool"), sport:TL("Streefwaarde vóór sport","Target before exercise","Alvo antes do exercício") };
+  const nm={ eten:TL("Bolus pas bij de eerste hap","Bolus at the first bite","Bólus à 1.ª garfada"), vraag:TL("Stijging zonder eten","Rise without food","Subida sem comida"), ketonen:TL("Meet ketonen","Check ketones","Meça cetonas"), pod:TL("Pod mogelijk niet goed","Pod may be failing","Pod com falha"), nacht:TL("Laagte vannacht","Low tonight","Baixa à noite"), alcohol:TL("Ochtend na alcohol","Morning after alcohol","Manhã após álcool"), sport:TL("Streefwaarde vóór sport","Target before exercise","Alvo antes do exercício"), waakhond:TL("Geen data van je telefoon (server)","No data from your phone (server)","Sem dados do telemóvel") };
   const okw={ eten:TL("niet laag erna","no low after","sem baixa"), vraag:TL("eten gelogd","food logged","comida registada"), ketonen:TL("binnen 3 uur ≤ 12","≤ 12 within 3 hours","≤ 12 em 3 h"), pod:TL("binnen 3 uur ≤ 12","≤ 12 within 3 hours","≤ 12 em 3 h"), nacht:TL("niet laag erna","no low after","sem baixa"), alcohol:TL("niet laag erna","no low after","sem baixa"), sport:TL("niet laag erna","no low after","sem baixa") };
   const rows=Object.entries(kinds).map(([k,o])=>({ k, ...o }));
   const weak=rows.filter(r=>r.n>=5&&r.ok/r.n<0.2&&r.k==="vraag");
@@ -658,25 +658,14 @@ function _wireAn5(node, id){
   node.querySelectorAll("[data-an5mute]").forEach(b=>b.onchange=()=>{ const k=b.dataset.an5mute, s=new Set(cfg.mute5||[]); if(b.checked) s.delete(k); else s.add(k); cfg.mute5=[...s]; saveCfg(); });
 }
 
-/* ── inhaken op bestaande schermen ──────────────────────────────────── */
-(function(){
-  const o=window.showTab; window.showTab=function(tab){ o(tab); if(tab==="inzicht") try{ idaInzicht(); }catch(e){ console.error(e); } };
-  const od=window.idaDag; window.idaDag=function(){ od();
-    const h=document.getElementById("dagBody"); if(!h||h.querySelector("[data-go5]")) return;
-    const b=document.createElement("button"); b.type="button"; b.className="an5link"; b.dataset.go5="1";
-    b.textContent=TL("Alle analyses ›","All analyses ›","Todas as análises ›"); b.onclick=()=>showTab("inzicht"); h.appendChild(b); };
-  // Voortgang: alleen wat nieuw is en bij geen moment hoort
-  const ot=window.showTab; window.showTab=function(tab){ ot(tab); if(tab==="consult") setTimeout(()=>{ try{ _new5(); }catch(e){ console.error(e); } },60); };
-  // Profiel: voorzichtige stand zichtbaar
-  const op=window.idaProfiel; window.idaProfiel=function(c){ op(c); try{ _profWhy5(c); }catch(e){ console.error(e); } };
-  // Vandaag: alleen wat nú telt (max 1 kaart, telt mee in "Let op")
-  const ov=window.idaVandaag; window.idaVandaag=function(c){ ov(c); try{ _now5(c); }catch(e){ console.error(e); } };
-})();
+/* ── inhaken: idaDag, idaProfiel, idaVandaag, showTab en _momFactors (ida4) roepen deze functies zelf aan ── */
+function _dagLink5(h){ if(!h||h.querySelector("[data-go5]")) return; const b=document.createElement("button"); b.type="button"; b.className="an5link"; b.dataset.go5="1";
+  b.textContent=TL("Alle analyses ›","All analyses ›","Todas as análises ›"); b.onclick=()=>showTab("inzicht"); h.appendChild(b); }
 function _now5(c){
   document.getElementById("an5Now")?.remove(); const host=document.getElementById("assist"); if(!host||!c||!c.glucose||c.glucose.length<50) return;
   if(Date.now()-c.glucose[c.glucose.length-1].ts>20*_M5) return;
   // ketonen, pod, nacht, alcohol en sport komen als moment (js/moments.js); hier alleen een vergeten profielpercentage
-  let a=null; try{ const p=_a29(c); if(p.long) a=p; }catch(_){}
+  let a=null; try{ const p=_one5(c,_a29); if(p&&p.long) a=p; }catch(_){}
   if(!a) return;
   const el=document.createElement("button"); el.type="button"; el.id="an5Now"; el.className="imoment an5now";
   el.innerHTML=`<span class="imk">${TL("NU","NOW","AGORA")}</span><b></b><p></p>`; el.querySelector("b").textContent=a.t; el.querySelector("p").textContent=a.v;
@@ -684,11 +673,9 @@ function _now5(c){
   host.prepend(el);
 }
 
-/* ── analyse 28 in de momenten: factoren die bij jóu meespelen ─────────── */
-(function(){
-  const of=window._momFactors; if(typeof of!=="function") return;
-  window._momFactors=function(c, m){
-    const F=of(c,m); let E=[]; try{ E=idaFactors5(c); }catch(_){ return F; }
+/* analyse 28 in de momenten: verrijkt de factoren van _momFactors (ida4) */
+function _facEnrich5(c, m, F){
+    let E=[]; try{ E=idaFactors5(c); }catch(_){ return F; }
     const at=m.ts, byId=Object.fromEntries(E.map(e=>[e.id,e]));
     const defs=_factorDefs5(c), active=new Set(defs.filter(d=>d.w.some(w=>w.a<=at&&w.b>at)).map(d=>d.id));
     // bestaande factoren verrijken met het effect bij jou
@@ -706,9 +693,8 @@ function _now5(c){
       const pct=id==="pct"?(_pcts5(c).find(x=>x.a<=at&&x.b>at)||{}).p:null;
       F.push({ k:id, w:e&&e.known?(Math.abs(e.dTir)>=0.2||e.dTbr>=0.04?3:2):1, txt:(pct?TL(`Profielpercentage ${pct}% actief.`,`Profile percentage ${pct}% active.`,`Percentagem ${pct}%.`):extra[id])+(e?" "+_facLine5(e).replace(/^./,x=>x.toUpperCase())+".":""),
         tip:(m.k==="lo"||id==="prednison")&&tips[id]?tips[id]:null }); }
-    return F.filter(f=>!f.drop).sort((a,b)=>b.w-a.w);
-  };
-})();
+    return F;
+}
 (function(){ const el=document.getElementById("inCycle"); if(!el) return; el.addEventListener("change",()=>{ cfg.cycle=el.checked; saveCfg(); }); })();
 
 /* ── losse analyses op aanvraag (snel, zonder alles door te rekenen) ── */
@@ -723,6 +709,7 @@ function _profWhy5(c){
   const a4=_one5(c,_a4); if(a4&&a4.s==="let") L.push(["let",a4.v,"loopmaal"]);
   const a17=_one5(c,_a17); if(a17&&a17.s==="let") L.push(["info",a17.v+" "+TL("Het ochtendblok gaat daarom een uur eerder omhoog.","So the morning block goes up an hour earlier.",""),"dawn"]);
   const a29=_one5(c,_a29); if(a29&&a29.long) L.push(["let",a29.v,"aaps"]);
+  try{ const fx=_fixedHtml5(c); if(fx&&!h.querySelector(".an5fix")){ const d=document.createElement("div"); d.innerHTML=fx; const s2=d.firstElementChild; const pacts=h.querySelector(".pacts"); if(pacts) pacts.before(s2); else h.appendChild(s2); } }catch(e){ console.error(e); }
   if(!L.length) return;
   const sec=document.createElement("section"); sec.className="ibox an5why";
   sec.innerHTML=`<span class="ilabel">${TL("Waarom","Why","Porquê")}</span>${L.slice(0,3).map(([st,t,id])=>`<button type="button" class="an5wl" data-an5open="${id}"><span class="an5d ${st}"></span><span>${esc(t)}</span><span class="irc" aria-hidden="true">›</span></button>`).join("")}`;
@@ -751,13 +738,14 @@ function _new5(){
 }
 
 /* ── momenten: wat de analyses over dít moment zeggen ── */
-(function(){
-  const of=window._momFactors; if(typeof of!=="function") return;
-  window._momFactors=function(c, m){
-    const F=of(c,m); const add=f=>{ if(!F.some(x=>x.k===f.k)) F.push(f); };
+/* wat de losse analyses over dít moment zeggen */
+function _anEnrich5(c, m, F){
+    const add=f=>{ if(!F.some(x=>x.k===f.k)) F.push(f); };
     try{
       const dp=_dp5(m.ts), N=_DPN5(), E=TL("E","U","U"), hr=Math.floor(todMin(m.ts)/60);
       if(m.k==="meal"){
+        try{ const f=idaFixedMeals5(c).find(f=>todMin(m.ts)>=f.from&&todMin(m.ts)<=f.to&&Math.abs(m.g-f.g)<=Math.max(5,f.g*0.2));
+          if(f) add({ k:"vast", w:1, txt:TL(`Je vaste ${f.name.toLowerCase()} (${f.g} g, ${f.days} dagen in 45).`,`Your regular ${f.name.toLowerCase()} (${f.g} g, ${f.days} days in 45).`,`Refeição habitual.`), tip:f.under?TL(`Je vaste ${f.name.toLowerCase()} stijgt meestal ${_n5(f.rise)}: weeg hem één keer, dan weet je wat je echt invoert.`,`Your regular ${f.name.toLowerCase()} usually rises ${_n5(f.rise)}: weigh it once, so you know what you really enter.`,`Pese uma vez.`):TL(`Zet hem als QuickWizard in AAPS (${f.g} g, ${fmtMin(f.from)}–${fmtMin(f.to)}): één tik voor koolhydraten en bolus.`,`Add it as QuickWizard in AAPS (${f.g} g, ${fmtMin(f.from)}–${fmtMin(f.to)}): one tap for carbs and bolus.`,`QuickWizard no AAPS.`) }); }catch(_){}
         const a4=_one5(c,_a4), r4=a4&&a4.s==="let"&&m.smb>=1?(a4.f||[]).find(r=>r[0].toLowerCase()===N[dp]):null;
         if(r4) add({ k:"an4", w:2, txt:TL(`Na je ${N[dp]}maaltijd geeft de loop gemiddeld ${r4[1]} SMB bij in 4 uur.`,`After your ${N[dp]} meal the loop adds ${r4[1]} SMB on average in 4 hours.`,`O loop dá ${r4[1]} após comer.`), tip:TL("Voer alles in wat je eet, ook kleine dingen; dan hoeft de loop niet in te halen.","Enter everything you eat, small things too; then the loop doesn't have to catch up.","Registe tudo o que come.") });
         const a5=_one5(c,_a5); if(a5&&m.peak>HI_T){ const lab=m.g<40?"< 40 g":m.g<70?"40–70 g":"> 70 g", row=(a5.f||[]).find(r=>r[0]===lab); const v=row?parseInt(row[1]):NaN; if(v>115) add({ k:"an5", w:2, txt:TL(`Bij maaltijden van ${lab} komt bij jou ${v}% terug van wat je invoert.`,`For ${lab} meals ${v}% of what you enter comes back for you.`,`${v}% volta.`), tip:TL("Schat dit soort maaltijden ruimer, of weeg ze een paar keer.","Estimate this kind of meal more generously, or weigh it a few times.","Estime com mais margem.") }); }
@@ -777,6 +765,125 @@ function _new5(){
         if(hr>=4&&hr<9){ const a17=_one5(c,_a17); if(a17&&a17.s==="let") for(const f of F) if(/dawn/i.test(f.txt)&&!/nachten/.test(f.txt)) f.txt+=" "+a17.v.replace(/ \(mediaan.*$/,"").replace(/\.$/,"")+"."; }
       }
     }catch(e){ console.error(e); }
-    return F.filter(f=>!f.drop).sort((a,b)=>b.w-a.w);
-  };
-})();
+    return F;
+}
+
+/* ── Werkt het advies bij jou? ─────────────────────────────────────────
+   Voor elk soort advies dat IDA geeft: vergelijk je eigen keren mét en zonder dat gedrag (laatste 90 dagen).
+   "werkt" = duidelijk beter, "geen" = genoeg keren maar geen verschil (dan laat IDA het advies weg),
+   "slechter" = slechter, "weinig" = te weinig keren om iets te zeggen. */
+function _meals5(c){
+  if(c._meals5) return c._meals5;
+  const G=c.glucose, T=c.treatments||[], end=G[G.length-1].ts, out=[];
+  const man=T.filter(t=>!t.isSMB&&t.insulin>=0.5).sort((a,b)=>a.ts-b.ts), carbs=T.filter(t=>t.carbs>=15&&t.ts>end-90*_D5).sort((a,b)=>a.ts-b.ts);
+  for(const m of carbs){ if(!_U5(c,m.ts)) continue; if(carbs.some(x=>x!==m&&x.ts>m.ts&&x.ts<m.ts+3*_H5)) continue;
+    const b=man.filter(x=>x.ts>=m.ts-45*_M5&&x.ts<=m.ts+60*_M5)[0]; if(!b) continue;
+    const bg0=_bgAt5(G,m.ts), bgm=_bgAt5(G,m.ts-20*_M5), w=_slice5(G,m.ts,m.ts+4*_H5); if(bg0==null||w.length<30) continue;
+    const peak=Math.max(...w.map(x=>x.bg)), min=Math.min(...w.map(x=>x.bg)), late=_slice5(G,m.ts+2*_H5,m.ts+5*_H5);
+    const second=man.some(x=>x!==b&&x.ts>=m.ts+45*_M5&&x.ts<=m.ts+180*_M5&&!T.some(y=>y.carbs>0&&Math.abs(y.ts-x.ts)<=30*_M5));
+    out.push({ ts:m.ts, g:m.carbs, off:(b.ts-m.ts)/_M5, bg0, slope:bgm!=null?(bg0-bgm)/20:null, rise:peak-bg0, low:min<LO_T, tarLate:late.length?late.filter(x=>x.bg>HI_T).length/late.length:null, second });
+  }
+  return (c._meals5=out);
+}
+function _cmp5(A, B, f, minN){ const a=A.map(f).filter(v=>v!=null), b=B.map(f).filter(v=>v!=null); return { na:a.length, nb:b.length, va:_avg5(a), vb:_avg5(b), ok:a.length>=(minN||6)&&b.length>=(minN||6) }; }
+function idaAdvice5(c){
+  if(c._adv5) return c._adv5;
+  const M=_meals5(c), R=[], N=(n,nl,en)=>TL(`${n} ${nl}`,`${n} ${en}`,`${n}`);
+  // 1 · bolus vooraf (niet bij een dalende start)
+  { const S=M.filter(m=>!(m.bg0<7&&m.slope!=null&&m.slope<=-0.03)), r=_cmp5(S.filter(m=>m.off<=-5),S.filter(m=>m.off>-5),m=>m.rise), l=_cmp5(S.filter(m=>m.off<=-5),S.filter(m=>m.off>-5),m=>m.low?1:0);
+    const d=r.vb-r.va, worse=l.ok&&l.va-l.vb>=0.05;
+    R.push({ id:"prebolus", re:/vóór het eten|before eating/i, t:TL("Bolus vóór het eten","Bolus before eating","Bólus antes de comer"), ...r,
+      verdict:!r.ok?"weinig":worse?"slechter":d>=1?"werkt":d<0.4?"geen":"twijfel",
+      line:r.ok?TL(`Bij jou: met bolus vooraf stijg je ${_n5(r.va)}, zonder ${_n5(r.vb)} (${N(r.na,"tegen","vs")} ${r.nb} maaltijden).`,`For you: with a pre-bolus you rise ${_n5(r.va)}, without ${_n5(r.vb)} (${r.na} vs ${r.nb} meals).`,`Com bólus antes sobe ${_n5(r.va)}, sem ${_n5(r.vb)}.`)+(worse?TL(` Wel vaker laag (${_p5(l.va)} tegen ${_p5(l.vb)}).`,` But more lows (${_p5(l.va)} vs ${_p5(l.vb)}).`,""):""):"" }); }
+  // 2 · dalend aan tafel: bolus pas bij de eerste hap
+  { const S=M.filter(m=>m.bg0<7&&m.slope!=null&&m.slope<=-0.03), r=_cmp5(S.filter(m=>m.off>=-2),S.filter(m=>m.off<-2),m=>m.low?1:0,4);
+    const d=r.vb-r.va;
+    R.push({ id:"eerstehap", re:/eerste hap|first bite/i, safe:true, t:TL("Dalend aan tafel: bolus bij de eerste hap","Falling at the table: bolus at the first bite","A descer: bólus à 1.ª garfada"), ...r,
+      verdict:!r.ok?"weinig":d>=0.1?"werkt":d<=-0.1?"slechter":"geen",
+      line:r.ok?TL(`Bij jou: bolus bij de eerste hap gaf ${_p5(r.va)} laag erna, vooraf ${_p5(r.vb)} (${r.na} tegen ${r.nb} keer).`,`For you: bolus at the first bite gave ${_p5(r.va)} lows after, before ${_p5(r.vb)} (${r.na} vs ${r.nb} times).`,""):"" }); }
+  // 3 · een laagte behandelen met hooguit 15 g
+  { const G=c.glucose, T=c.treatments||[], E=_eps5(G.filter(x=>x.ts>G[G.length-1].ts-90*_D5),_isLo5), H=[];
+    for(const e of E){ const g=T.filter(t=>t.carbs>0&&t.ts>=e.start-10*_M5&&t.ts<=e.start+40*_M5).reduce((s,t)=>s+t.carbs,0); if(!g) continue; const a=_slice5(G,e.end,e.end+150*_M5); if(!a.length) continue; H.push({ g, reb:Math.max(...a.map(x=>x.bg))>HI_T?1:0 }); }
+    const r=_cmp5(H.filter(h=>h.g<=15),H.filter(h=>h.g>15),h=>h.reb,4), d=r.vb-r.va;
+    R.push({ id:"hypo15", re:/15 g|5 g per 5|5 g every 5/i, safe:true, t:TL("Laagte: hooguit 15 g, dan wachten","Low: at most 15 g, then wait","Baixa: até 15 g"), ...r,
+      verdict:!r.ok?"weinig":d>=0.15?"werkt":d<=-0.15?"slechter":"geen",
+      line:r.ok?TL(`Bij jou: met ≤ 15 g schoot je ${_p5(r.va)} door boven 10, met meer ${_p5(r.vb)} (${r.na} tegen ${r.nb} keer).`,`For you: with ≤ 15 g you overshot above 10 ${_p5(r.va)}, with more ${_p5(r.vb)} (${r.na} vs ${r.nb} times).`,""):"" }); }
+  // 4 · een deel van de bolus later
+  { const S=M.filter(m=>m.g>=40), r=_cmp5(S.filter(m=>m.second),S.filter(m=>!m.second),m=>m.tarLate,4), d=r.vb-r.va;
+    R.push({ id:"split", re:/1–2 uur later|1–2 hours later/i, t:TL("Bij vet of grote maaltijden een deel later","Part of the bolus later for fatty or large meals","Parte do bólus depois"), ...r,
+      verdict:!r.ok?"weinig":d>=0.1?"werkt":d<0.03?"geen":"twijfel",
+      line:r.ok?TL(`Bij jou: met een tweede bolus 2–5 uur na eten ${_p5(r.va)} boven 10, zonder ${_p5(r.vb)} (${r.na} tegen ${r.nb} maaltijden).`,`For you: with a second bolus 2–5 h after eating ${_p5(r.va)} above 10, without ${_p5(r.vb)} (${r.na} vs ${r.nb} meals).`,""):"" }); }
+  // 5 · tijdelijke streefwaarde vóór sport
+  { const S=_anns5("sport"), tts=_tts5(c).filter(x=>!_ttAuto5(x)), G=c.glucose;
+    const X=S.map(a=>({ tt:tts.some(x=>x.a>=a.ts-150*_M5&&x.a<=a.ts+15*_M5), low:_slice5(G,a.ts,a.ts+((+a.dur||60)+240)*_M5).some(x=>x.bg<LO_T)?1:0 }));
+    const r=_cmp5(X.filter(x=>x.tt),X.filter(x=>!x.tt),x=>x.low,3), d=r.vb-r.va;
+    R.push({ id:"sporttt", re:/streefwaarde.*sport|vóór het sporten|before exercise/i, safe:true, t:TL("Streefwaarde vóór het sporten","Target before exercise","Alvo antes do exercício"), ...r,
+      verdict:!r.ok?"weinig":d>=0.15?"werkt":d<=-0.15?"slechter":"geen",
+      line:r.ok?TL(`Bij jou: met streefwaarde vooraf ${_p5(r.va)} van de keren laag, zonder ${_p5(r.vb)}.`,`For you: with a target beforehand low ${_p5(r.va)} of the time, without ${_p5(r.vb)}.`,""):"" }); }
+  // 6 · alles invoeren: weken met meer ingevoerd tegenover minder
+  { const G=c.glucose, T=c.treatments||[], end=G[G.length-1].ts, W=[];
+    for(let w=0; w<12; w++){ const a=end-(w+1)*7*_D5, b=end-w*7*_D5; const ks=new Set([...(c.q.usableKeys||[])].filter(k=>{ const t=Date.parse(k+"T12:00:00"); return t>=a&&t<b; })); if(ks.size<4) continue;
+      const g=T.filter(t=>t.carbs>0&&ks.has(_dk5(t.ts))).reduce((s,t)=>s+t.carbs,0)+_anns5("maaltijd").filter(x=>x.grams>0&&ks.has(_dk5(x.ts))).reduce((s,x)=>s+x.grams,0);
+      W.push({ g:g/ks.size, tir:_stat5(G.filter(x=>ks.has(_dk5(x.ts)))).tir }); }
+    const md=_med5(W.map(x=>x.g)), r=_cmp5(W.filter(x=>x.g>md),W.filter(x=>x.g<=md),x=>x.tir,3), d=r.va-r.vb;
+    R.push({ id:"loggen", re:/Voer alles in|Enter everything|Leg het vast|Log it/i, safe:true, t:TL("Alles invoeren wat je eet","Enter everything you eat","Registar tudo"), ...r,
+      verdict:!r.ok?"weinig":d>=0.05?"werkt":d<=-0.05?"slechter":"geen",
+      line:r.ok?TL(`Bij jou: in weken met meer ingevoerd ${_p5(r.va)} in bereik, met minder ${_p5(r.vb)}.`,`For you: in weeks with more entered ${_p5(r.va)} in range, with less ${_p5(r.vb)}.`,""):"" }); }
+  return (c._adv5=R);
+}
+// Gebruikt door _momTips4 (ida4): onderbouw een tip met je eigen uitkomst, of laat hem weg als hij bij jou niets doet.
+function _tipEvidence5(c, tip){
+  let A=[]; try{ A=idaAdvice5(c); }catch(e){ console.error(e); return { tip }; }
+  const a=A.find(x=>x.re.test(tip)); if(!a) return { tip };
+  if(a.verdict==="geen"&&!a.safe) return { drop:true, a };
+  if(a.verdict==="werkt"||a.verdict==="slechter") return { tip:tip+" "+a.line.replace(/ \([^)]*(maaltijden|keer|meals|times)\)/,""), a };
+  return { tip, a };
+}
+function _advView5(){
+  const top=document.getElementById("teamTop"); if(!top||!_ctx||!_ctx.glucose||!_ctx.glucose.length) return;
+  document.getElementById("an5Adv")?.remove();
+  const A=idaAdvice5(_ctx).filter(a=>a.verdict!=="weinig"); if(!A.length) return;
+  const lab={ werkt:TL("werkt bij jou","works for you","funciona"), geen:TL("geen verschil","no difference","sem diferença"), slechter:TL("pakt slechter uit","turns out worse","pior"), twijfel:TL("klein verschil","small difference","pequena diferença") };
+  const cls={ werkt:"ok", geen:"leeg", slechter:"let", twijfel:"info" };
+  const sec=document.createElement("section"); sec.id="an5Adv"; sec.className="ibox an5why";
+  sec.innerHTML=`<span class="ilabel">${TL("Wat werkt bij jou","What works for you","O que funciona")}</span>${A.map(a=>`<div class="an5wl"><span class="an5d ${cls[a.verdict]}"></span><span><b>${esc(a.t)}</b> · ${lab[a.verdict]}<br><i class="an5sub">${esc(a.line)}</i></span></div>`).join("")}
+    <p class="an5src">${TL("Je eigen keren mét en zonder dit gedrag, laatste 90 dagen. Advies zonder verschil laat IDA bij je momenten weg (behalve veiligheid).","Your own times with and without this behaviour, last 90 days. Advice without a difference is dropped from your moments (except safety).","Últimos 90 dias.")}</p>`;
+  const after=document.getElementById("an5New")||top; after.after(sec);
+}
+
+/* ── Vaste maaltijden → AAPS QuickWizard ────────────────────────────────
+   Wat je vaak eet (zelfde dagdeel, ongeveer dezelfde grammen, ≥ 5 dagen in 45 dagen) wordt een knop in AAPS:
+   QuickWizard legt koolhydraten én bolus in één tik vast, op het tijdstip waarvoor hij geldt.
+   IDA geeft geen dosis: AAPS rekent de bolus met je eigen KH-ratio. */
+function idaFixedMeals5(c){
+  if(c._fix5) return c._fix5;
+  const T=c.treatments||[], end=c.glucose[c.glucose.length-1].ts;
+  const E=T.filter(t=>t.carbs>=10&&t.ts>end-45*_D5).map(t=>({ ts:t.ts, g:t.carbs, src:"aaps" }))
+    .concat(_anns5("maaltijd").filter(a=>a.grams>0&&a.ts>end-45*_D5).map(a=>({ ts:a.ts, g:a.grams, src:"achteraf" })));
+  const parts=[["ontbijt",300,660,TL("Ontbijt","Breakfast","Pequeno-almoço")],["lunch",660,960,TL("Lunch","Lunch","Almoço")],["avond",960,1380,TL("Avondeten","Dinner","Jantar")],["snack",0,1440,TL("Tussendoortje","Snack","Lanche")]];
+  const out=[], used=new Set();
+  for(const [id,a,b,name] of parts){
+    const P=E.filter(e=>!used.has(e)&&todMin(e.ts)>=a&&todMin(e.ts)<b&&(id!=="snack"||e.g<=25));
+    // dichtste groep grammen (±20% rond een middenwaarde)
+    let best=null; for(const p of P){ const grp=P.filter(q=>Math.abs(q.g-p.g)<=Math.max(5,p.g*0.2)); const days=new Set(grp.map(q=>_dk5(q.ts))).size;
+      if(days>=5&&(!best||days>best.days)) best={ grp, days }; }
+    if(!best) continue; best.grp.forEach(q=>used.add(q));
+    const ms=best.grp.map(q=>todMin(q.ts)).sort((x,y)=>x-y), q=p=>ms[Math.min(ms.length-1,Math.max(0,Math.round((ms.length-1)*p)))];
+    const r15=v=>Math.round(v/15)*15, from=Math.max(0,r15(q(0.1))-30), to=Math.min(1439,r15(q(0.9))+30);
+    const g=Math.round(_med5(best.grp.map(q=>q.g))/5)*5, back=best.grp.filter(q=>q.src==="achteraf").length;
+    const pre=_preFor(c, best.grp[0].ts);
+    // hoe het bij deze maaltijd afliep (uit je echte maaltijden)
+    const M=_meals5(c).filter(m=>todMin(m.ts)>=a&&todMin(m.ts)<b&&Math.abs(m.g-g)<=Math.max(5,g*0.2));
+    const rise=_med5(M.map(m=>m.rise));
+    out.push({ id, name, g, from, to, days:best.days, n:best.grp.length, back, pre, rise, low:M.length?M.filter(m=>m.low).length/M.length:null, nm:M.length, under:M.length>=4&&rise!=null&&rise>=5 });
+  }
+  return (c._fix5=out);
+}
+function _fixedHtml5(c){
+  let F=[]; try{ F=idaFixedMeals5(c); }catch(e){ console.error(e); } if(!F.length) return "";
+  return `<section class="ibox an5fix"><span class="ilabel">${TL("Vaste maaltijden als knop in AAPS","Regular meals as a button in AAPS","Refeições habituais no AAPS")}</span>
+    <p class="an5note">${TL("Deze eet je vaak. Zet ze als QuickWizard in AAPS: dan leg je koolhydraten én bolus in één tik vast, en vergeet je niets in te voeren.","You eat these often. Add them as QuickWizard in AAPS: then you log carbs and bolus in one tap, and nothing gets forgotten.","Adicione-as como QuickWizard no AAPS.")}</p>
+    ${F.map(f=>`<div class="an5fx"><b>${esc(f.name)}</b><span class="an5fxv">${f.g} g · ${fmtMin(f.from)}–${fmtMin(f.to)}</span>
+      <i>${TL(`${f.days} dagen in 45`,`${f.days} days in 45`,`${f.days} dias`)}${f.back?TL(`, ${f.back}× achteraf aangegeven`,`, ${f.back}× added afterwards`,""):""}${f.pre?TL(` · bolus ${f.pre.lo}–${f.pre.hi} min vooraf`,` · bolus ${f.pre.lo}–${f.pre.hi} min ahead`,` · bólus ${f.pre.lo}–${f.pre.hi} min antes`):""}${f.nm>=4&&f.rise!=null?TL(` · stijgt meestal ${_n5(f.rise)}`,` · usually rises ${_n5(f.rise)}`,""):""}</i>${f.under?`<i class="an5warn">${TL(`Stijgt meestal ${_n5(f.rise)}: waarschijnlijk zit er meer in dan ${f.g} g. Weeg hem één keer en zet dát in de QuickWizard.`,`Usually rises ${_n5(f.rise)}: probably more than ${f.g} g. Weigh it once and put that in the QuickWizard.`,`Provavelmente mais de ${f.g} g.`)}</i>`:""}</div>`).join("")}
+    <p class="an5src">${TL("AAPS › Overzicht › QuickWizard (of Instellingen › QuickWizard) › +: naam, koolhydraten, geldig van–tot. De bolus rekent AAPS zelf met je KH-ratio.","AAPS › Overview › QuickWizard (or Preferences › QuickWizard) › +: name, carbs, valid from–to. AAPS calculates the bolus with your carb ratio.","AAPS › QuickWizard › +.")}</p></section>`;
+}

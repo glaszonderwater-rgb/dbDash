@@ -1,6 +1,6 @@
 // Nieuwe meldingen (v42): ketonen, pod, eten na laagte, nacht, ochtend na alcohol, sport, uitzetten.
 import { createRequire } from 'module'; const require=createRequire(import.meta.url);
-const { idaMoments } = require('../server/moments.cjs');
+const { idaMoments, watchdog } = require('../server/moments.cjs');
 const MIN=60e3,H=60*MIN,DAY=24*H; let fail=0; const ok=(c,m)=>{ if(!c){ fail++; console.log('FOUT:',m); } };
 const day0=Date.UTC(2026,10,10); const mk=(from,to,f)=>{ const g=[]; for(let t=from;t<=to;t+=5*MIN) g.push({ts:t,bg:f(t)}); return g; };
 const kinds=(g,tr,o)=>idaMoments(g,tr,{tzOffsetMin:0,...o}).map(m=>m.kind);
@@ -39,4 +39,12 @@ ok(!kinds(rise(5),[],{now,anns:[{type:'maaltijd',ts:now-70*MIN,grams:25}]}).incl
 const k1=idaMoments(mk(now-6*H,now,t=>t>now-150*MIN?15.5:8),[],{now,tzOffsetMin:0}).find(m=>m.kind==='ketonen'), now2=now+6*H;
 const k2=idaMoments(mk(now2-8*H,now2,t=>t>now2-150*MIN?15.5:8),[],{now:now2,tzOffsetMin:0}).find(m=>m.kind==='ketonen');
 ok(k1&&k2&&k1.key===k2.key,'ketonen één sleutel per dag');
+// waakhond
+now=day0+3*H; const gw=mk(now-6*H,now-40*MIN,()=>7);
+let w=watchdog(gw,[],{now,loopTs:now-40*MIN}); ok(w.length===1&&w[0].key.startsWith('wd-stil'),'waakhond: niets van de telefoon');
+w=watchdog(gw,[],{now,loopTs:now-5*MIN}); ok(w.length===1&&w[0].key.startsWith('wd-cgm'),'waakhond: geen glucose');
+const gf=mk(now-6*H,now,()=>7); w=watchdog(gf,[],{now,loopTs:now-45*MIN}); ok(w.length===1&&w[0].key.startsWith('wd-loop'),'waakhond: loop stil');
+ok(watchdog(gf,[],{now,loopTs:now-5*MIN}).length===0,'waakhond: alles loopt');
+ok(watchdog(gw,[],{now:now+20*MIN,loopTs:now-40*MIN})[0].key===watchdog(gw,[],{now,loopTs:now-40*MIN})[0].key,'waakhond: één melding per onderbreking');
+ok(watchdog(gw,[],{now,loopTs:now-40*MIN,mute:['waakhond']}).length===0,'waakhond uit te zetten');
 if(fail){ console.log(fail+' fout(en)'); process.exit(1); } console.log('moment5check OK');

@@ -50,6 +50,15 @@ await page.evaluate(()=>closeDetail()); await page.evaluate(()=>openAn5('melding
 await page.uncheck('[data-an5mute="vraag"]'); ok(await page.evaluate(()=>(cfg.mute5||[]).includes('vraag')),'melding uitzetten bewaard');
 // moment met factoren werkt
 ok(await page.evaluate(()=>{ const c=_ctx, k=[...c.q.usableKeys].slice(-2)[0], g=c.glucose.find(x=>localDayKey(x.ts)===k), from=g.ts-todMin(g.ts)*60e3; const M=dayMoments(c,from,from+864e5); return M.length>0&&M.every(m=>Array.isArray(_momFactors(c,m))); }),'momentfactoren');
+// werkt het advies, vaste maaltijden
+const adv=await page.evaluate(()=>idaAdvice5(_ctx).map(a=>a.id+':'+a.verdict));
+ok(adv.length===6,'zes adviezen gemeten: '+adv);
+const fix=await page.evaluate(()=>idaFixedMeals5(_ctx));
+ok(fix.length>=2&&fix.every(f=>f.g>0&&f.from<f.to),'vaste maaltijden herkend: '+JSON.stringify(fix.map(f=>f.id+' '+f.g)));
+await page.evaluate(()=>showTab('profiel')); await page.waitForTimeout(800);
+ok(await page.evaluate(()=>!!document.querySelector('#profBody .an5fix')),'QuickWizard-voorstel bij Profiel');
+await page.evaluate(()=>showTab('consult')); await page.waitForTimeout(2500);
+ok(await page.evaluate(()=>!!document.getElementById('an5Adv')||idaAdvice5(_ctx).every(a=>a.verdict==='weinig')),'Wat werkt bij jou bij Voortgang');
 // eten in één tik vanuit een melding: ?rise=<t0>&g=<gram>
 const t0=now-3*3600e3; await page.goto(FILE+'?rise='+t0+'&g=25',{waitUntil:'load'}); await page.waitForTimeout(3500);
 ok(await page.evaluate(async t0=>(await DB.all('annotations')).some(a=>a.type==='maaltijd'&&a.grams===25&&a.ts===t0),t0),'eten vastgelegd vanuit melding');

@@ -432,3 +432,10 @@ button.an5now{display:block;width:100%;text-align:left;font:inherit;cursor:point
 .an5why .an5wl .an5d{margin-top:.38rem}
 .an5why .an5wl .irc{margin-left:auto;color:var(--brand);font-size:1.15rem}
 .an5why .an5wl b{font-weight:600}
+.an5why .an5wl .an5sub{font-style:normal;color:var(--muted);font-size:.8rem}
+div.an5wl{cursor:default}
+.an5fix .an5fx{display:grid;grid-template-columns:1fr auto;gap:.15rem .6rem;padding:.6rem 0;border-top:1px solid var(--line)}
+.an5fix .an5fx b{font-weight:600}
+.an5fix .an5fxv{font-family:"Geist Mono",ui-monospace,monospace;font-size:.88rem;text-align:right}
+.an5fix .an5fx i{grid-column:1/-1;font-style:normal;color:var(--muted);font-size:.8rem}
+.an5fix .an5fx i.an5warn{color:var(--hi-t)}

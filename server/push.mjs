@@ -24,7 +24,7 @@ import { createRequire } from 'node:module';
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { createServer } from 'node:http';
 const require = createRequire(import.meta.url);
-const { idaMoments, newMoments } = require('./moments.cjs');
+const { idaMoments, newMoments, watchdog } = require('./moments.cjs');
 
 const env = process.env, MIN = 60e3, DAY = 864e5;
 const MG = 18.0182;
@@ -107,7 +107,9 @@ async function check({ stateless, sent, file }) {
   // logboek en uitgezette meldingen uit de back-up van de app; actieve insuline uit de laatste loopstatus
   let anns = [], mute = [], iob = null;
   try { const st = await store.getState(file); if (st) { anns = st.annotations || []; mute = (st.cfg && st.cfg.mute5) || []; } } catch (e) { console.error(e.message); }
-  try { const ds = await ns('/api/v1/devicestatus.json', { count: 3 }); for (const d of ds) { const oa = d.openaps || {}, io = Array.isArray(oa.iob) ? oa.iob[0] : oa.iob; const v = io && +io.iob; if (isFinite(v) && Date.parse(d.created_at) > now - 15 * MIN) { iob = v; break; } } } catch (e) { console.error(e.message); }
+  let loopTs = null;
+  try { const ds = await ns('/api/v1/devicestatus.json', { count: 5 }); for (const d of ds) { const oa = d.openaps || {}, io = Array.isArray(oa.iob) ? oa.iob[0] : oa.iob; const v = io && +io.iob, ts = Date.parse(d.created_at);
+      if (d.openaps && isFinite(ts) && (!loopTs || ts > loopTs)) loopTs = ts; if (iob == null && isFinite(v) && ts > now - 15 * MIN) iob = v; } } catch (e) { console.error(e.message); }
   // ISF en KH-ratio van nu (voor de schatting bij "stijging zonder eten")
   let prof = null;
   try { const pr = await ns('/api/v1/profile.json', { count: 1 }); const doc = Array.isArray(pr) ? pr[0] : pr; const st = doc && doc.store && doc.store[doc.defaultProfile || Object.keys(doc.store)[0]];
@@ -118,6 +120,8 @@ async function check({ stateless, sent, file }) {
   const opts = { now, tzOffsetMin: off, anns, mute, iob, prof };
   const iv = (+env.INTERVAL_MIN || 10) * MIN;
   let list = stateless ? newMoments(glucose, treatments, opts, iv) : idaMoments(glucose, treatments, opts);
+  if (!stateless) list = watchdog(glucose, treatments, { ...opts, loopTs }).concat(list);
+  status.lastLoop = loopTs ? new Date(loopTs).toISOString() : null;
   if (!stateless) { const keep = []; for (const m of list) if (!(await store.wasSent(m.key, sent))) keep.push(m); list = keep; }
   if (!list.length) { console.log('Geen nieuw moment.'); return; }
   const webpush = (await import('web-push')).default;

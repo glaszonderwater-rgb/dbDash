@@ -162,6 +162,28 @@
     return out.filter(x => !mute.has(x.kind)).sort((x, y) => x.prio - y.prio);
   }
 
+  /* Waakhond (alleen op de server): komt er nog data binnen? Je telefoon of AAPS kan zelf niet melden dat hij
+     stilstaat (leeg, uit, geen bereik), de server wel. Eén melding per onderbreking, ook 's nachts.
+     opts: { now, tzOffsetMin, loopTs (laatste loopstatus), mute } */
+  function watchdog(glucose, treatments, opts) {
+    opts = opts || {}; const now = opts.now || Date.now(), off = opts.tzOffsetMin || 0, out = [];
+    const lastG = glucose && glucose.length ? glucose[glucose.length - 1].ts : null, lastL = opts.loopTs || null;
+    const gAge = lastG ? (now - lastG) / MIN : Infinity, lAge = lastL ? (now - lastL) / MIN : Infinity;
+    const at = ts => ts ? hm(tod(ts, off)) : '—';
+    if (gAge >= 30 && lAge >= 30 && lastG) {
+      out.push({ key: `wd-stil-${Math.min(lastG, lastL || lastG)}`, kind: 'waakhond', prio: 0, title: `Al ${Math.round(Math.min(gAge, lAge))} min niets van je telefoon`,
+        body: `Laatste glucose ${at(lastG)}, laatste loop ${at(lastL)}. Telefoon leeg, uit of zonder bereik? Zolang dit duurt, ziet niemand je waarden.`, since: now });
+    } else if (gAge >= 30 && lastG) {
+      out.push({ key: `wd-cgm-${lastG}`, kind: 'waakhond', prio: 0, title: `Al ${Math.round(gAge)} min geen glucose`,
+        body: `Laatste waarde om ${at(lastG)}. Controleer xDrip+ en je sensor; de loop werkt zonder glucose niet.`, since: now });
+    } else if (lAge >= 30 && lastL && gAge < 15) {
+      out.push({ key: `wd-loop-${lastL}`, kind: 'waakhond', prio: 0, title: `Loop al ${Math.round(lAge)} min stil`,
+        body: `Glucose komt binnen, maar AAPS stuurt sinds ${at(lastL)} niets meer. Open AAPS en kijk of de loop aanstaat en de pod verbonden is.`, since: now });
+    }
+    const mute = new Set(opts.mute || []);
+    return out.filter(x => !mute.has(x.kind));
+  }
+
   /* Alleen wat nieuw is t.o.v. een eerder tijdstip (voor een server zonder geheugen). */
   function newMoments(glucose, treatments, opts, sinceMs) {
     const nowL = idaMoments(glucose, treatments, opts);
@@ -169,7 +191,7 @@
     return nowL.filter(x => !before.has(x.key));
   }
 
-  const api = { idaMoments, newMoments, mealWindows, fallStats, recentLow };
+  const api = { idaMoments, newMoments, mealWindows, fallStats, recentLow, watchdog };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else Object.assign(root, api);
 })(typeof self !== "undefined" ? self : this);

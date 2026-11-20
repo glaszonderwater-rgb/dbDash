@@ -25,6 +25,8 @@ window.showTab = function(tab){
   window.scrollTo({top:0});
   if(tab==="dag") try{ idaDag(); }catch(e){ console.error(e); }
   if(tab==="profiel" && _ctx) try{ idaProfiel(_ctx); }catch(e){ console.error(e); }
+  if(tab==="inzicht") try{ idaInzicht(); }catch(e){ console.error(e); }
+  if(tab==="consult") setTimeout(()=>{ try{ _new5(); }catch(e){ console.error(e); } try{ _advView5(); }catch(e){ console.error(e); } },60);
   if(tab!==prev && prev!=="detail") idaEnter(tab);
 };
 document.querySelectorAll("[data-back]").forEach(b=>b.onclick=()=>showTab(b.dataset.back));
@@ -168,7 +170,7 @@ function idaHero4(c){
   if(foot){ foot.innerHTML=`<span class="hage">${TL("laatste 24 uur","last 24 hours","últimas 24 horas")}</span><button class="hchip" type="button" id="idaDrive"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 17h14M6 17l1.5-5h9L18 17M7 17v2M17 17v2"/></svg>${TL("Rijcheck","Drive check","Condução")}</button>`;
     _e4("idaDrive").onclick=()=>{ try{ openDrive(); }catch(e){ console.error(e); } }; }
 }
-(function(){ const o=idaVandaag; window.idaVandaag=function(c){ o(c); try{ idaHero4(c); }catch(e){ console.error(e); } }; })();
+(function(){ const o=idaVandaag; window.idaVandaag=function(c){ o(c); try{ idaHero4(c); }catch(e){ console.error(e); } try{ _now5(c); }catch(e){ console.error(e); } }; })();
 
 /* ── Dag ─────────────────────────────────────────────────────────────────── */
 function _dayData(c){
@@ -325,6 +327,7 @@ function idaDag(){
   _e4("dagNext").onclick=()=>{ _i4.dagKey=keys[Math.min(keys.length-1,idx+1)]; idaDag(); };
   host.querySelectorAll("[data-go]").forEach(b=>b.onclick=()=>showTab(b.dataset.go));
   host.querySelectorAll("[data-mom]").forEach(b=>b.onclick=()=>{ const m=M.find(x=>x.n===+b.dataset.mom); if(m) openMoment(c,m,from); });
+  try{ _dagLink5(host); }catch(e){ console.error(e); }
 }
 
 /* ── Wat meespeelde: per moment meerdere factoren, vergeleken met je eigen gewone waarden ──
@@ -417,11 +420,14 @@ function _momFactors(c, m){
     if(hr<4&&!m.carbs3&&!late&&P&&!F.some(f=>f.w>=2&&f.tip)){ const nb=newBasal(hr), cur=profileAt(c.timeline,m.ts); if(nb!=null&&cur&&cur.basal!=null) F.push({w:2,txt:TL(`Hoog in de nacht zonder eten ervoor (basaal nu ${_idaN(cur.basal,2)} ${E}/u).`,`High at night without food before (basal now ${_idaN(cur.basal,2)} U/h).`,`Alta à noite sem comida.`),tip:nb>cur.basal+0.02?TL(`Het voorstel bij Profiel zet dit uur op ${_idaN(nb,2)}.`,`The Profile proposal sets this hour to ${_idaN(nb,2)}.`,`A proposta põe esta hora em ${_idaN(nb,2)}.`):TL("Gebeurt dit vaker op dit uur, dan gaat het basaalblok bij Profiel vanzelf mee omhoog.","If this happens more often at this hour, the basal block under Profile will follow.","Se acontecer mais vezes, a basal acompanha.")}); }
     if(m.smb>=1) F.push({w:0,txt:TL(`De loop gaf ${_idaN(m.smb)} ${E} SMB tijdens deze hoogte.`,`The loop gave ${_idaN(m.smb)} ${E} SMB during this high.`,`O loop deu ${_idaN(m.smb)} ${E} de SMB.`)});
   }
-  return F.sort((a,b)=>b.w-a.w);
+  try{ _facEnrich5(c,m,F); _anEnrich5(c,m,F); }catch(e){ console.error(e); }
+  return F.filter(f=>!f.drop).sort((a,b)=>b.w-a.w);
 }
 function _momTips4(c,m,F){
   if(m.k==="meal"&&!m.lowAfter&&!(m.peak>HI_T)) return [TL(`Goed gegaan: piek ${m.peak!=null?_idaN(m.peak):"—"}, niet laag erna. Zo houden.`,`Went well: peak ${m.peak!=null?_idaN(m.peak):"—"}, no low afterwards. Keep it this way.`,`Correu bem: pico ${m.peak!=null?_idaN(m.peak):"—"}.`)];
-  const tips=[]; for(const f of F){ if(f.tip&&!tips.includes(f.tip)) tips.push(f.tip); if(tips.length>=2) break; }
+  const tips=[], seen=new Set(); for(const f of F){ if(!f.tip||seen.has(f.tip)) continue; seen.add(f.tip);
+    let ev={ tip:f.tip }; try{ if(typeof _tipEvidence5==="function") ev=_tipEvidence5(c,f.tip); }catch(_){}
+    if(ev.drop) continue; tips.push(ev.tip); if(tips.length>=2) break; }
   if(!tips.length) return _momNext(c,m);
   return tips;
 }
@@ -476,7 +482,7 @@ function idaProfiel(c){
     const why = !_P ? TL("Nog geen berekening.","No calculation yet.","Ainda sem cálculo.")
       : _P.none==="profiel" ? TL("Er is geen AAPS-profiel gevonden in je Nightscout.","No AAPS profile found in your Nightscout.","Nenhum perfil AAPS encontrado.")
       : TL("Te weinig loop-data (temp-basaal) om een profiel te berekenen. Synchroniseer minstens 14 dagen.","Too little loop data to calculate a profile. Sync at least 14 days.","Poucos dados do loop.");
-    host.innerHTML=`<section class="ibox"><b class="ittl">${TL("Nog geen profielvoorstel","No profile proposal yet","Ainda sem proposta")}</b><p class="its" style="margin-top:.3rem">${why}</p></section>`; return;
+    host.innerHTML=`<section class="ibox"><b class="ittl">${TL("Nog geen profielvoorstel","No profile proposal yet","Ainda sem proposta")}</b><p class="its" style="margin-top:.3rem">${why}</p></section>`; try{ _profWhy5(c); }catch(e){ console.error(e); } return;
   }
   const P=_P, E=TL("E","U","U"), isfNew=_pMed(P.isf.map(b=>b.value));
   const icCh=P.ic.filter(b=>Math.abs(b.value-b.now)>=0.1);
@@ -549,6 +555,7 @@ function idaProfiel(c){
     try{ await navigator.clipboard.writeText(txt); toast(TL("Gekopieerd.","Copied.","Copiado.")); }
     catch(_){ const ta=document.createElement("textarea"); ta.value=txt; document.body.appendChild(ta); ta.select(); try{ document.execCommand("copy"); toast(TL("Gekopieerd.","Copied.","Copiado.")); }catch(__){} ta.remove(); } };
   _e4("profAct").onclick=()=>profActivate();
+  try{ _profWhy5(c); }catch(e){ console.error(e); }
 }
 async function profActivate(){
   const P=_P; if(!P||!P.basal) return;
